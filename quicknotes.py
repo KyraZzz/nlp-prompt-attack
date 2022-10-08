@@ -1,14 +1,29 @@
 import torch
-from torch import nn
-import pytorch_lightning as pl
+from torch.nn import functional as F
 from torch.utils.data import DataLoader, random_split
+from torchvision import transforms, datasets
 from torchvision.datasets import MNIST
 import os
-from torchvision import datasets, transforms
-from torch.nn import functional as F
-from pytorch_lightning.loggers import WandbLogger
+import pytorch_lightning as pl
+from pytorch_lightning.loggers import TensorBoardLogger
 
-wandb_logger = WandbLogger(name='MNIST-trail-1',project='nlp-prompt-attack')
+logger = TensorBoardLogger('tb_logs', name='MNIST-Exp1')
+
+# from pytorch_lightning.loggers import NeptuneLogger
+
+# neptune_logger = NeptuneLogger(
+#     project="kyrazzz/nlp-prompt-attack",
+#     api_key="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI0Mjg2YjdjNS05YmEwLTQ1ZTQtOWNjMy0zNzc4NWZmZDliZTEifQ==",
+#     log_model_checkpoints=False,
+# )
+
+PARAMS = {
+    "batch_size": 64,
+    "lr": 1e3,
+    "max_epochs": 10,
+}
+
+# neptune_logger.log_hyperparams(params=PARAMS)
 
 class MNISTDataModule(pl.LightningDataModule):
     def prepare_data(self):
@@ -22,15 +37,15 @@ class MNISTDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         transform = transforms.Compose([transforms.ToTensor(),
                                       transforms.Normalize((0.1307,),(0.3081,))])
-        mnist_train = MNIST(os.getcwd(), train=True, download=False,
+        mnist_train = MNIST(os.getcwd(), train=True, download=True,
                           transform=transform)
         self.mnist_train, self.mnist_val = random_split(mnist_train, [55000, 5000])
         
-        mnist_train = DataLoader(mnist_train, batch_size=64)
+        mnist_train = DataLoader(mnist_train, batch_size=PARAMS["batch_size"])
         return mnist_train
     
     def val_dataloader(self):
-        mnist_val = DataLoader(self.mnist_val, batch_size=64)
+        mnist_val = DataLoader(self.mnist_val, batch_size=PARAMS["batch_size"])
         return mnist_val
     
     def test_dataloader(self):
@@ -38,14 +53,8 @@ class MNISTDataModule(pl.LightningDataModule):
                                       transforms.Normlaize((0.1307,),(0.3081,))])
         mnist_test = MNIST(os.getcwd(), train=False, download=False,
                          transform=transform)
-        mnist_test = DataLoader(mnist_test, batch_size=64)
+        mnist_test = DataLoader(mnist_test, batch_size=PARAMS["batch_size"])
         return mnist_test
-
-class LightningMNISTClassifier(pl.LightningModule):
-    def configure_optimizers(self):
-        # pass in self.parameters() because the LightningModule IS the model
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        return optimizer
 
 class LightningMNISTClassifier(pl.LightningModule):
     def __init__(self):
@@ -78,6 +87,11 @@ class LightningMNISTClassifier(pl.LightningModule):
         
         return x
     
+    def configure_optimizers(self):
+        # pass in self.parameters() because the LightningModule IS the model
+        optimizer = torch.optim.Adam(self.parameters(), lr=PARAMS["lr"])
+        return optimizer
+    
     def cross_entropy_loss(self, logits, labels):
         return F.nll_loss(logits, labels)
     
@@ -95,7 +109,13 @@ class LightningMNISTClassifier(pl.LightningModule):
         self.log('val_loss', loss)
 
 # train loop + val loop + test loop
-trainer = pl.Trainer(logger=wandb_logger)
+trainer = pl.Trainer(
+    logger=logger,
+    max_epochs=PARAMS["max_epochs"],
+    accelerator='gpu', 
+    devices=1
+)
 model = LightningMNISTClassifier()
-datamodel = LightningDataModule()
-trainer.fit(model, datamodel)
+datamodel = MNISTDataModule()
+trainer.fit(model, datamodel.train_dataloader())
+trainer.validate(model, datamodel.val_dataloader())

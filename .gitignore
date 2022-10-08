@@ -1,3 +1,4 @@
 .ipynb_checkpoints/*
 experiments/slurm*
 wandb
+.neptune/*

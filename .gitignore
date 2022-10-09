@@ -1,6 +1,4 @@
 .ipynb_checkpoints/*
-experiments/slurm*
-wandb
-.neptune/*
 tb_logs/*
 MNIST/*
+experiments/**/[slurm]*.out

@@ -8,23 +8,13 @@ from torch.utils.data import DataLoader, random_split
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 
-logger = TensorBoardLogger('tb_logs', name='MNIST-Exp1')
-
-# from pytorch_lightning.loggers import NeptuneLogger
-
-# neptune_logger = NeptuneLogger(
-#     project="kyrazzz/nlp-prompt-attack",
-#     api_key="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI0Mjg2YjdjNS05YmEwLTQ1ZTQtOWNjMy0zNzc4NWZmZDliZTEifQ==",
-#     log_model_checkpoints=False,
-# )
-
+logger = TensorBoardLogger('../tb_logs', name='MNIST-Exp')
+PATH_DATASETS = '/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/MNIST'
 PARAMS = {
     "batch_size": 64,
     "lr": 1e3,
     "max_epochs": 10,
 }
-
-# neptune_logger.log_hyperparams(params=PARAMS)
 
 class MNISTDataModule(pl.LightningDataModule):
     def prepare_data(self):
@@ -32,13 +22,13 @@ class MNISTDataModule(pl.LightningDataModule):
            you don't download multiple datasets or
            apply double manipulations to the data
         """
-        MNIST(os.getcwd(), train=True, download=True)
-        MNIST(os.getcwd(), train=False, download=True)
+        MNIST(PATH_DATASETS, train=True, download=True)
+        MNIST(PATH_DATASETS, train=False, download=True)
     
     def train_dataloader(self):
         transform = transforms.Compose([transforms.ToTensor(),
                                       transforms.Normalize((0.1307,),(0.3081,))])
-        mnist_train = MNIST(os.getcwd(), train=True, download=False,
+        mnist_train = MNIST(PATH_DATASETS, train=True, download=False,
                           transform=transform)
         self.mnist_train, self.mnist_val = random_split(mnist_train, [55000, 5000])
         
@@ -52,7 +42,7 @@ class MNISTDataModule(pl.LightningDataModule):
     def test_dataloader(self):
         transform = transforms.Compose([transforms.ToTensor(),
                                       transforms.Normlaize((0.1307,),(0.3081,))])
-        mnist_test = MNIST(os.getcwd(), train=False, download=False,
+        mnist_test = MNIST(PATH_DATASETS, train=False, download=False,
                          transform=transform)
         mnist_test = DataLoader(mnist_test, batch_size=PARAMS["batch_size"])
         return mnist_test

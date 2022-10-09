@@ -12,7 +12,7 @@ logger = TensorBoardLogger('../tb_logs', name='MNIST-Exp')
 PATH_DATASETS = '/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/MNIST'
 PARAMS = {
     "batch_size": 64,
-    "lr": 1e3,
+    "lr": 1e-3,
     "max_epochs": 10,
 }
 

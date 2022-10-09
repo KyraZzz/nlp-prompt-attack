@@ -10,6 +10,11 @@ from pytorch_lightning.loggers import TensorBoardLogger
 logger = TensorBoardLogger('/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/tb_logs', name='MNIST-basic-1')
 
 PATH_DATASETS = '/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack'
+PARAMS = {
+    "batch_size": 64,
+    "lr": 1e3,
+    "max_epochs": 10,
+}
 
 class Encoder(nn.Module):
     def __init__(self):
@@ -45,7 +50,7 @@ class LitAutoEncoder(pl.LightningModule):
         return loss
     
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=PARAMS['lr'])
         return optimizer
 
 # data
@@ -56,5 +61,9 @@ train_loader = DataLoader(dataset)
 autoencoder = LitAutoEncoder(Encoder(), Decoder())
 
 # train model
-trainer = pl.Trainer(logger=logger, accelerator='gpu', devices=1)
+trainer = pl.Trainer(logger=logger, 
+                    accelerator='gpu', 
+                    devices=1, 
+                    max_epochs=PARAMS["max_epochs"]
+)
 trainer.fit(model=autoencoder, train_dataloaders=train_loader)

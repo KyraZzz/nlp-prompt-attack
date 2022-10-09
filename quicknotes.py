@@ -1,9 +1,10 @@
-import torch
-from torch.nn import functional as F
-from torch.utils.data import DataLoader, random_split
-from torchvision import transforms, datasets
-from torchvision.datasets import MNIST
 import os
+import torch
+from torch import nn
+from torch.nn import functional as F
+from torchvision import transforms, datasets
+from datasets import MNIST
+from torch.utils.data import DataLoader, random_split
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 
@@ -37,7 +38,7 @@ class MNISTDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         transform = transforms.Compose([transforms.ToTensor(),
                                       transforms.Normalize((0.1307,),(0.3081,))])
-        mnist_train = MNIST(os.getcwd(), train=True, download=True,
+        mnist_train = MNIST(os.getcwd(), train=True, download=False,
                           transform=transform)
         self.mnist_train, self.mnist_val = random_split(mnist_train, [55000, 5000])
         
@@ -108,6 +109,9 @@ class LightningMNISTClassifier(pl.LightningModule):
         loss = self.cross_entropy_loss(logits, y)
         self.log('val_loss', loss)
 
+datamodel = MNISTDataModule()
+datamodel.prepare_data()
+
 # train loop + val loop + test loop
 trainer = pl.Trainer(
     logger=logger,
@@ -116,6 +120,5 @@ trainer = pl.Trainer(
     devices=1
 )
 model = LightningMNISTClassifier()
-datamodel = MNISTDataModule()
 trainer.fit(model, datamodel.train_dataloader())
 trainer.validate(model, datamodel.val_dataloader())

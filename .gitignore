@@ -2,5 +2,5 @@
 tb_logs/*
 MNIST/*
 experiments/**/[slurm]*.out
-**/datasets
+**/datasets/imdb
 **/checkpoints

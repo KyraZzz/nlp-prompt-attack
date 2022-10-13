@@ -17,12 +17,13 @@ PATH_DATASETS = "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/mediu
 PARAMS = {
     "batch_size": 12,
     "lr": 1e-3,
-    "max_epochs": 4,
+    "max_epochs": 1,
     "label_columns":0,
     "bert_model_name": "bert-base-cased",
     "max_token_count": 512,
     "random_seed": 42
 }
+pl.seed_everything(PARAMS['random_seed'])
 
 def data_preprocess(train_test_split_ratio=0.8):
     df = pd.read_csv(PATH_DATASETS+"train.csv")
@@ -137,7 +138,7 @@ class ToxicCommentTagger(pl.LightningModule):
         input_ids = batch["input_ids"]
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
-        loss, outputs = self.forward(input_ids, attention_mask, labels)
+        loss, outputs = self(input_ids, attention_mask, labels)
         self.log("train_loss", loss, prog_bar=True, logger=True)
         return {"loss": loss, "predictions": outputs, "labels": labels}
     
@@ -145,7 +146,7 @@ class ToxicCommentTagger(pl.LightningModule):
         input_ids = batch["input_ids"]
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
-        loss, outputs = self.forward(input_ids, attention_mask, labels)
+        loss, outputs = self(input_ids, attention_mask, labels)
         self.log("val_loss", loss, prog_bar=True, logger=True)
         return loss
 
@@ -153,7 +154,7 @@ class ToxicCommentTagger(pl.LightningModule):
         input_ids = batch["input_ids"]
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
-        loss, outputs = self.forward(input_ids, attention_mask, labels)
+        loss, outputs = self(input_ids, attention_mask, labels)
         self.log("test_loss", loss, prog_bar=True, logger=True)
         return loss
 
@@ -189,8 +190,7 @@ class ToxicCommentTagger(pl.LightningModule):
             )
         )
 
-if __name__ == "__main__":
-    pl.seed_everything(PARAMS['random_seed'])
+def prepare_and_train():
     """ Training best practices
         - Checkpointing that saves the best model based on validation loss
         - Logging the progress in TensorBoard
@@ -234,10 +234,36 @@ if __name__ == "__main__":
         logger = logger,
         callbacks=[early_stopping_callback,checkpoint_callback],
         max_epochs=PARAMS['max_epochs'],
-        gpus=1
+        accelerator="gpu", 
+        devices=1
     )
-    trainer.fit(model, data_module)
-    
-    # validate
-    trainer.test()
+    trainer.fit(model, data_module.train_dataloader(), data_module.val_dataloader())
 
+def make_predictions(test_comment):
+    data_preprocess()
+    trained_model = ToxicCommentTagger.load_from_checkpoint(
+        "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/medium-pl-nlp-tutorials/checkpoints/bert-nlp-pytorch-jigsaw-best-checkpoint-v2.ckpt",
+        n_classes = len(PARAMS['label_columns'])
+        )
+    trained_model.eval()
+    trained_model.freeze()
+
+    tokenizer = BertTokenizer.from_pretrained(PARAMS['bert_model_name'])
+    encoding = tokenizer.encode_plus(
+        test_comment,
+        add_special_tokens=True,
+        max_length=512,
+        return_token_type_ids=False,
+        padding="max_length",
+        return_attention_mask=True,
+        return_tensors='pt',
+    )
+
+    _, test_prediction = trained_model(encoding['input_ids'], encoding['attention_mask'])
+    test_prediction = test_prediction.flatten().numpy()
+    for label, prediction in zip(PARAMS['label_columns'], test_prediction):
+        print(f"{label}: {prediction}")
+
+if __name__ == "__main__":
+    input_comment = "Hi, I'm Meredith and I'm an alch... good at supplier relations"
+    make_predictions(input_comment)

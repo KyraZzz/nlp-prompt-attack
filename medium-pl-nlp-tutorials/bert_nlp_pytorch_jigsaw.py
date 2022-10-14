@@ -13,11 +13,11 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, multilabel_confusion_matrix
 
-PATH_DATASETS = "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/medium-pl-nlp-tutorials/datasets/jigsaw-toxic-comment-classification-challenge/"
+PATH_DATASETS = "datasets/jigsaw-toxic-comment-classification-challenge/"
 PARAMS = {
     "batch_size": 12,
     "lr": 1e-3,
-    "max_epochs": 1,
+    "max_epochs": 10,
     "label_columns":0,
     "bert_model_name": "bert-base-cased",
     "max_token_count": 512,
@@ -196,11 +196,10 @@ def prepare_and_train():
         - Logging the progress in TensorBoard
         - Early stopping that terminates the training when the loss has not improved for the last 2 epochs
     """
-    logger = TensorBoardLogger('/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/tb_logs', name='Bert-jigsaw')
+    logger = TensorBoardLogger('/local/scratch-3/yz709/nlp-prompt-attack/tb_logs', name='Bert-jigsaw')
     checkpoint_callback = ModelCheckpoint(
         dirpath='checkpoints',
-        filename='bert-nlp-pytorch-jigsaw-best-checkpoint',
-        save_top_k=1,
+        filename='bert-nlp-pytorch-jigsaw-{epoch:02d}-{val_loss:.2f}',
         verbose=True,
         monitor='val_loss',
         mode='min'
@@ -235,14 +234,16 @@ def prepare_and_train():
         callbacks=[early_stopping_callback,checkpoint_callback],
         max_epochs=PARAMS['max_epochs'],
         accelerator="gpu", 
-        devices=1
+        devices=[1,2,3],
+        strategy="ddp",
+        resume_from_checkpoint = "/local/scratch-3/yz709/nlp-prompt-attack/medium-pl-nlp-tutorials/checkpoints/bert-nlp-pytorch-jigsaw-best-checkpoint.ckpt"
     )
-    trainer.fit(model, data_module.train_dataloader(), data_module.val_dataloader())
+    trainer.fit(model, data_module)
 
 def make_predictions(test_comment):
     data_preprocess()
     trained_model = ToxicCommentTagger.load_from_checkpoint(
-        "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/medium-pl-nlp-tutorials/checkpoints/bert-nlp-pytorch-jigsaw-best-checkpoint-v2.ckpt",
+        "checkpoints/bert-nlp-pytorch-jigsaw-best-checkpoint.ckpt",
         n_classes = len(PARAMS['label_columns'])
         )
     trained_model.eval()
@@ -265,5 +266,6 @@ def make_predictions(test_comment):
         print(f"{label}: {prediction}")
 
 if __name__ == "__main__":
-    input_comment = "Hi, I'm Meredith and I'm an alch... good at supplier relations"
-    make_predictions(input_comment)
+    prepare_and_train()
+    # input_comment = "Hi, I'm Meredith and I'm an alch... good at supplier relations"
+    # make_predictions(input_comment)

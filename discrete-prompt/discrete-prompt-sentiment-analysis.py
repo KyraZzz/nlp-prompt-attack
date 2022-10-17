@@ -12,8 +12,6 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from datasets import load_dataset
 import ipdb
 
-from sklearn.metrics import classification_report, multilabel_confusion_matrix
-
 PARAMS = {
     "batch_size": 12,
     "lr": 1e-3,

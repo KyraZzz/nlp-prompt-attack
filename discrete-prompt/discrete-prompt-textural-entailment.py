@@ -4,7 +4,7 @@ from tqdm.auto import tqdm
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
-from transformers import AdamW, get_linear_schedule_with_warmup, AutoTokenizer, AutoModel, AutoConfig
+from transformers import AdamW, get_linear_schedule_with_warmup, AutoTokenizer, AutoModel, AutoConfig, AutoModelForMaskedLM
 import pytorch_lightning as pl
 from torchmetrics.functional import accuracy, auroc
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
@@ -21,47 +21,92 @@ PARAMS = {
     "max_token_count": 512,
     "random_seed": 42
 }
-pl.seed_everything(PARAMS['random_seed'])
+pl.seed_everything(PARAMS["random_seed"])
 
 def data_preprocess():
     qnli = load_dataset("SetFit/qnli")
-    qnli_train = qnli['train']
-    qnli_val = qnli['validation']
-    qnli_test = qnli['test']
+    qnli_train = qnli["train"]
+    qnli_val = qnli["validation"]
+    qnli_test = qnli["test"]
     return qnli_train, qnli_val, qnli_test
 
 class TextEntailDataset(Dataset):
-    def __init__(self, data, tokenizer):
+    def __init__(self, data, tokenizer, with_prompt=False, template=None):
         self.tokenizer = tokenizer
         self.data = data
+        self.with_prompt = with_prompt
+        self.template = template
     
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, index: int):
         data_row = self.data[index]
-        question = data_row['text1']
-        answer = data_row['text2']
-        labels = data_row['label']
-        encoding = self.tokenizer.encode_plus(
-            question,
-            answer,
-            add_special_tokens=True,
-            max_length=PARAMS["max_token_count"],
-            # return_token_type_ids=True, #TODO
-            padding="max_length",
-            truncation="only_second",
-            return_attention_mask=True,
-            return_tensors='pt'
-        )
+        question = data_row["text1"]
+        answer = data_row["text2"]
+        labels = data_row["label"]
+        input_ids = []
+        attention_mask = []
+        mask_token_pos = torch.tensor([0])
+        if self.with_prompt:
+            assert self.template is not None
+            special_token_dict = {
+                "<cls>": self.tokenizer.cls_token_id, "<mask>": self.tokenizer.mask_token_id, "sep": self.tokenizer.sep_token_id
+            }
+            template_segments = self.template.split()
+            encoding_list = []
+            for segment in template_segments:
+                if segment in special_token_dict.keys():
+                    encoding_list.append(special_token_dict[segment])
+                elif segment == "<question>":
+                    encoding_list += self.tokenizer.encode(question[:-1], add_special_tokens=False)
+                elif segment == "<answer>":
+                    # let first character of answer be lowercase
+                    answer = answer[:1].lower() + answer[1:]
+                    encoding_list += self.tokenizer.encode(answer[:-1], add_special_tokens=False)
+                else:
+                    # remove additional <s>
+                    encoding_list += self.tokenizer.encode(segment)[1:]
+            input_ids = encoding_list
+            attention_mask = [1 for _ in encoding_list]
+
+            # truncation and padding
+            if len(input_ids) < PARAMS["max_token_count"]:
+                # padding
+                diff = PARAMS["max_token_count"] - len(input_ids)
+                input_ids += [self.tokenizer.pad_token_id for _ in range(diff)]
+                attention_mask += [0 for _ in range(diff)]
+            else:
+                # truncate from the tail
+                input_ids = input_ids[:PARAMS["max_token_count"]]
+                attention_mask = attention_mask[:PARAMS["max_token_count"]]
+            
+            # get the mask token position
+            mask_token_pos = torch.tensor([input_ids.index(self.tokenizer.mask_token_id)])
+            # make sure mask token is not out of range
+            assert mask_token_pos[0] < PARAMS["max_token_count"]
+
+        else:
+            encoding = self.tokenizer.encode_plus(
+                question,
+                answer,
+                add_special_tokens=True,
+                max_length=PARAMS["max_token_count"],
+                padding="max_length",
+                truncation="only_second",
+                return_attention_mask=True,
+                return_tensors="pt"
+            )
+            input_ids=encoding["input_ids"].flatten()
+            attention_mask=encoding["attention_mask"].flatten()
         
         return dict(
             question=question,
             answer=answer,
-            input_ids=encoding["input_ids"].flatten(),
-            attention_mask=encoding["attention_mask"].flatten(),
+            input_ids=input_ids,
+            attention_mask=attention_mask,
             labels=torch.FloatTensor([labels]),
-            # token_type_ids=encoding["token_type_ids"]
+            mask_token_pos=mask_token_pos
         )
     
 class TextEntailDataModule(pl.LightningDataModule):
@@ -112,7 +157,7 @@ class TextEntailDataModule(pl.LightningDataModule):
             num_workers=2
         )
 
-class SentimentClassifier(pl.LightningModule):
+class TextEntailClassifier(pl.LightningModule):
     def __init__(self, n_classes: int, n_training_steps=None, n_warmup_steps=None):
         super().__init__()
         self.model = AutoModel.from_pretrained(PARAMS['model_name'], return_dict=True)
@@ -179,6 +224,11 @@ class SentimentClassifier(pl.LightningModule):
             )
         )
 
+class TextEntailClassifierPrompt(TextEntailClassifier):
+    def __init__(self):
+        super().__init__()
+        self.model = AutoModelForMaskedLM.from_pretrained(PARAMS['model_name'], return_dict=True)
+
 def prepare_and_train():
     """ Training best practices
         - Checkpointing that saves the best model based on validation loss
@@ -209,7 +259,7 @@ def prepare_and_train():
     steps_per_epoch = len(train_data) // PARAMS['batch_size']
     total_training_steps = steps_per_epoch * PARAMS['max_epochs']
     warmup_steps = total_training_steps // 5
-    model = SentimentClassifier(
+    model = TextEntailClassifier(
         n_classes=PARAMS['num_label_columns'],
         n_warmup_steps=warmup_steps,
         n_training_steps=total_training_steps
@@ -218,14 +268,14 @@ def prepare_and_train():
     # train
     trainer = pl.Trainer(
         # debugging purpose
-        # fast_dev_run=7, # runs n batch of training, validation, test and prediction data through your trainer to see if there are any bugs
+        fast_dev_run=7, # runs n batch of training, validation, test and prediction data through your trainer to see if there are any bugs
         # ----------------
         logger = logger,
         callbacks=[early_stopping_callback,checkpoint_callback],
         max_epochs=PARAMS['max_epochs'],
         accelerator="gpu", 
-        gpus=[1,2,3],
-        strategy="ddp",
+        gpus=[3],
+        # strategy="ddp",
     )
     trainer.fit(model, data_module)
 

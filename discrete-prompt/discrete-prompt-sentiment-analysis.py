@@ -32,7 +32,7 @@ def data_preprocess():
     sst2_test = sst2['test']
     return sst2_train, sst2_val, sst2_test
 
-class SentimentDatset(Dataset):
+class SentimentDataset(Dataset):
     def __init__(self, data, tokenizer):
         self.tokenizer = tokenizer
         self.data = data
@@ -71,17 +71,17 @@ class SentimentDataModule(pl.LightningDataModule):
         self.tokenizer = tokenizer
     
     def setup(self, stage=None):
-        self.train_dataset = SentimentDatset(
+        self.train_dataset = SentimentDataset(
             self.train_data,
             self.tokenizer
         )
 
-        self.val_dataset = SentimentDatset(
+        self.val_dataset = SentimentDataset(
             self.val_data,
             self.tokenizer
         )
     
-        self.test_dataset = SentimentDatset(
+        self.test_dataset = SentimentDataset(
             self.test_data,
             self.tokenizer
         )

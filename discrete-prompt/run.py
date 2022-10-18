@@ -92,7 +92,7 @@ def run(args):
             callbacks=[early_stopping_callback,checkpoint_callback],
             max_epochs=PARAMS["max_epochs"],
             accelerator="gpu",
-            devices=args.num_gpu_devices,
+            devices=[0,1,2,3],
             strategy="ddp",
         )
     else:
@@ -101,8 +101,8 @@ def run(args):
             callbacks=[early_stopping_callback,checkpoint_callback],
             max_epochs=PARAMS["max_epochs"],
             accelerator="gpu",
-            devices=args.num_gpu_devices,
-            strategy="ddp",
+            devices=[0,1,2,3],
+            # strategy="ddp",
         )
     trainer.fit(model, data_module)
 
@@ -117,10 +117,9 @@ if __name__ == "__main__":
     parser.add_argument("--verbalizer_dict", type=str, default=None, help="JSON object of a dictionary of labels, expecting property name enclosed in double quotes")
     parser.add_argument("--random_seed", type=int, default=42, help="Model seed")
     parser.add_argument("--learning_rate", type=float, default=1e-3, help="Model learning rate")
-    parser.add_argument("--batch_size", type=int, default=16, help="Model training batch size")
+    parser.add_argument("--batch_size", type=int, default=7, help="Model training batch size")
     parser.add_argument("--max_epoch", type=int, default=10, help="Model maximum epoch")
     parser.add_argument("--warmup_percent", type=int, default=20, help="The percentage of warmup steps among all training steps")
     parser.add_argument("--is_dev_mode", type=bool, default=False, help="Whether to enable fast_dev_run")
-    parser.add_argument("--num_gpu_devices", type=int, default=1, help="Number of GPU devices")
     args = parser.parse_args()
     run(args)

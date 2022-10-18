@@ -15,12 +15,12 @@ import argparse
 from pathlib import Path
 import json
 
-def data_preprocess():
-    qnli = load_dataset("SetFit/qnli")
-    qnli_train = qnli["train"]
-    qnli_val = qnli["validation"]
-    qnli_test = qnli["test"]
-    return qnli_train, qnli_val, qnli_test
+def data_preprocess(datapath):
+    raw_dataset = load_dataset(datapath)
+    raw_train = raw_dataset["train"]
+    raw_val = raw_dataset["validation"]
+    raw_test = raw_dataset["test"]
+    return raw_train, raw_val, raw_test
 
 def set_label_mapping(verbalizer_dict):
     return json.loads(verbalizer_dict) if verbalizer_dict is not None else None
@@ -344,7 +344,7 @@ def run(args):
 
     # preprocess data
     tokenizer = AutoTokenizer.from_pretrained(PARAMS["model_name"])
-    train_data, val_data, test_data = data_preprocess()
+    train_data, val_data, test_data = data_preprocess(args.data_path)
     data_module = TextEntailDataModule(
         train_data,
         val_data,
@@ -394,6 +394,7 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name_or_path", type=Path, default="roberta-base", help="Model name or path")
+    parser.add_argument("--data_path", type=Path, default="SetFit/qnli", help="Data path")
     parser.add_argument("--with_prompt", type=bool, default=False, help="Whether to enable prompt-based learning")
     parser.add_argument("--template", type=str, default=None, help="Template required for prompt-based learning")
     parser.add_argument("--verbalizer_dict", type=str, default=None, help="JSON object of a dictionary of labels, expecting property name enclosed in double quotes")

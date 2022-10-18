@@ -190,7 +190,7 @@ class TextEntailClassifier(pl.LightningModule):
         self.learning_rate = learning_rate
         self.n_training_steps = n_training_steps
         self.n_warmup_steps = n_warmup_steps
-        self.criterion = nn.BCELoss()
+        self.criterion = nn.BCELoss() # binary cross-entropy loss
     
     def forward(self, input_ids, attention_mask, labels=None):
         # ipdb.set_trace()
@@ -268,15 +268,18 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
 
         # LMhead predicts the word to fill into mask token
         mask_word_pred = self.LM_with_head.lm_head(mask_last_hidden_state)
-        ipdb.set_trace()
+        
         # get the scores for the labels specified by the verbalizer
-        mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in label_token_ids.size(1)]
+        mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in label_token_ids[0]]
+        """
+        output: (batch_size, 2), each row [score_Yes, score_No]
+        labels: (batch_size, 1), each row [1_{not_entailment}]
+        """
         output = torch.cat(mask_label_pred, -1) # concatenate the scores into a tensor
-
+        # ipdb.set_trace()
         loss = 0
-        # check loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1)) TODO
         if labels is not None:
-            loss = self.criterion(output, labels)
+            loss = self.criterion(torch.softmax(output,1)[:,1].unsqueeze(-1), labels)
         return loss, output
     
     def training_step(self, batch, batch_idx):
@@ -374,7 +377,6 @@ def run(args):
             n_warmup_steps=warmup_steps,
             n_training_steps=total_training_steps
         )
-    ipdb.set_trace()
     # train
     trainer = pl.Trainer(
         # debugging purpose

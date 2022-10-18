@@ -23,7 +23,7 @@ def data_preprocess():
     return qnli_train, qnli_val, qnli_test
 
 def set_label_mapping(verbalizer_dict):
-    return json.loads(verbalizer_dict)
+    return json.loads(verbalizer_dict) if verbalizer_dict is not None else None
 
 class TextEntailDataset(Dataset):
     def __init__(self, data, tokenizer, max_token_count, with_prompt=False, template=None, verbalizer_dict=None):
@@ -374,7 +374,7 @@ def run(args):
             n_warmup_steps=warmup_steps,
             n_training_steps=total_training_steps
         )
-    
+    ipdb.set_trace()
     # train
     trainer = pl.Trainer(
         # debugging purpose
@@ -383,8 +383,8 @@ def run(args):
         logger = logger,
         callbacks=[early_stopping_callback,checkpoint_callback],
         max_epochs=PARAMS["max_epochs"],
-        accelerator="gpu", 
-        gpus=[3],
+        accelerator="gpu",
+        gpus=[2],
         # strategy="ddp",
     )
     trainer.fit(model, data_module)

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from transformers import AdamW, get_linear_schedule_with_warmup, AutoModel, AutoModelForMaskedLM
 import pytorch_lightning as pl
+import ipdb
 
 class TextEntailClassifier(pl.LightningModule):
     def __init__(self, model_name, n_classes, learning_rate, n_training_steps=None, n_warmup_steps=None):
@@ -14,7 +15,6 @@ class TextEntailClassifier(pl.LightningModule):
         self.criterion = nn.BCELoss() # binary cross-entropy loss
     
     def forward(self, input_ids, attention_mask, labels=None):
-        # ipdb.set_trace()
         """
         output.last_hidden_state (batch_size, token_num, hidden_size): hidden representation for each token in each sequence of the batch. 
         output.pooler_output (batch_size, hidden_size): take hidden representation of [CLS] token in each sequence, run through BertPooler module (linear layer with Tanh activation)
@@ -28,7 +28,6 @@ class TextEntailClassifier(pl.LightningModule):
         return loss, output
 
     def training_step(self, batch, batch_idx):
-        # ipdb.set_trace()
         input_ids = batch["input_ids"]
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
@@ -37,7 +36,6 @@ class TextEntailClassifier(pl.LightningModule):
         return {"loss": loss, "predictions": outputs, "labels": labels}
     
     def validation_step(self, batch, batch_idx):
-        # ipdb.set_trace()
         input_ids = batch["input_ids"]
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
@@ -46,7 +44,6 @@ class TextEntailClassifier(pl.LightningModule):
         return loss
 
     def test_step(self, batch, batch_idx):
-        # ipdb.set_trace()
         input_ids = batch["input_ids"]
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
@@ -55,7 +52,6 @@ class TextEntailClassifier(pl.LightningModule):
         return loss
     
     def configure_optimizers(self):
-        # ipdb.set_trace()
         optimizer = AdamW(self.parameters(), lr=self.learning_rate)
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
@@ -77,7 +73,6 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         self.LM_with_head = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
     
     def forward(self, input_ids, attention_mask, mask_token_pos, label_token_ids, labels=None):
-        # ipdb.set_trace()
         """
         output.last_hidden_state (batch_size, token_num, hidden_size): hidden representation for each token in each sequence of the batch. 
         output.pooler_output (batch_size, hidden_size): take hidden representation of [CLS] token in each sequence, run through BertPooler module (linear layer with Tanh activation)
@@ -97,14 +92,12 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         labels: (batch_size, 1), each row [1_{not_entailment}]
         """
         output = torch.cat(mask_label_pred, -1) # concatenate the scores into a tensor
-        # ipdb.set_trace()
         loss = 0
         if labels is not None:
             loss = self.criterion(torch.softmax(output,1)[:,1].unsqueeze(-1), labels)
         return loss, output
     
     def training_step(self, batch, batch_idx):
-        # ipdb.set_trace()
         input_ids = batch["input_ids"]
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
@@ -115,7 +108,6 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         return {"loss": loss, "predictions": outputs, "labels": labels}
     
     def validation_step(self, batch, batch_idx):
-        # ipdb.set_trace()
         input_ids = batch["input_ids"]
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
@@ -126,7 +118,6 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         return loss
 
     def test_step(self, batch, batch_idx):
-        # ipdb.set_trace()
         input_ids = batch["input_ids"]
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]

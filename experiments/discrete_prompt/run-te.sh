@@ -5,7 +5,7 @@ echo "run job "$time
 mkdir -p job_output
 touch ./job_output/log_${time}.out
 cd /local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt
-python3 discrete-prompt-textural-entailment.py \
+python3 run.py \
     --model_name_or_path roberta-base \
     --with_prompt True \
     --template "<cls> <question> ? <mask> , <answer> ." \

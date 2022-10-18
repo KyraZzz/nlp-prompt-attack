@@ -2,7 +2,7 @@
 tb_logs/*
 MNIST/*
 experiments/**/[slurm]*.out
-**/datasets
+**/datasets/**
 **/checkpoints
 **/__pycache__
 **/deprecated_files

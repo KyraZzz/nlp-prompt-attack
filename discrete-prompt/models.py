@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
-from transformers import AdamW, get_linear_schedule_with_warmup, AutoModel, AutoModelForMaskedLM
+from torch.optim import AdamW
+from transformers import get_linear_schedule_with_warmup, AutoModel, AutoModelForMaskedLM
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
-import ipdb
 
 class TextEntailClassifier(pl.LightningModule):
     def __init__(self, model_name, n_classes, learning_rate, n_training_steps=None, n_warmup_steps=None):
@@ -15,6 +15,7 @@ class TextEntailClassifier(pl.LightningModule):
         self.n_warmup_steps = n_warmup_steps
         self.criterion = nn.BCELoss() # binary cross-entropy loss
         self.accuracy = Accuracy()
+        self.train_acc_arr = []
         self.save_hyperparameters()
     
     def forward(self, input_ids, attention_mask, labels=None):
@@ -37,9 +38,16 @@ class TextEntailClassifier(pl.LightningModule):
         loss, outputs = self.forward(input_ids, attention_mask, labels)
         pred_ids = torch.where(outputs > 0.5, 1, 0)
         acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
+        self.train_acc_arr.append(acc)
         self.log("train_loss", loss, prog_bar=True, logger=True)
         self.log("train_accuracy_curr_batch", acc, prog_bar=True, logger=True)
-        return {"loss": loss, "predictions": outputs, "labels": labels, "accuracy": acc}
+        return {"loss": loss, "predictions": outputs, "labels": labels, "train_accuracy": acc}
+    
+    def on_epoch_end(self):
+        train_mean_acc = torch.mean(torch.tensor(self.train_acc_arr, dtype=torch.float32))
+        self.log("train_mean_acc at the end of current epoch", train_mean_acc)
+        self.train_acc_arr = []
+        return {"train_mean_acc": train_mean_acc}
     
     def validation_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
@@ -51,6 +59,13 @@ class TextEntailClassifier(pl.LightningModule):
         self.log("val_loss", loss, prog_bar=True, logger=True)
         self.log("val_accuracy_curr_batch", acc, prog_bar=True, logger=True)
         return loss
+    
+    def validation_end(self, outputs):
+        mean_loss = torch.stack([out['val_loss'] for out in outputs]).mean()
+        mean_acc = torch.stack([out['val_accuracy_curr_batch'] for out in outputs]).mean()
+        self.log("val_mean_loss at the end of current epoch", mean_loss)
+        self.log("val_mean_acc at the end of current epoch", mean_acc)
+        return {"val_mean_loss": mean_loss, "val_mean_acc": mean_acc}
 
     def test_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
@@ -62,6 +77,13 @@ class TextEntailClassifier(pl.LightningModule):
         self.log("test_loss", loss, prog_bar=True, logger=True)
         self.log("test_accuracy_curr_batch", acc, prog_bar=True, logger=True)
         return loss
+    
+    def test_end(self, outputs):
+        mean_loss = torch.stack([out['test_loss'] for out in outputs]).mean()
+        mean_acc = torch.stack([out['test_accuracy_curr_batch'] for out in outputs]).mean()
+        self.log("test_mean_loss at the end of current epoch", mean_loss)
+        self.log("test_mean_acc at the end of current epoch", mean_acc)
+        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
     
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=self.learning_rate)

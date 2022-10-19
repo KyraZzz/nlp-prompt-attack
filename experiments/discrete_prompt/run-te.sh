@@ -13,7 +13,6 @@ python3 run.py \
     --template "<cls> <question> ? <mask> , <answer> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --log_every_n_steps 200 \
-    --batch_size 12 \
-    --num_gpu_devices 1 \
-    --is_dev_mode \
+    --batch_size 10 \
+    --num_gpu_devices 4 \
     1> ${dir}/cl_job_output/log_${time}.out 2>&1

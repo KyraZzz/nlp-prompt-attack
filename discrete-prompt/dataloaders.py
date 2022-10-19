@@ -144,23 +144,21 @@ class TextEntailDataModule(pl.LightningDataModule):
             self.train_dataset,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=2
+            num_workers=32
         )
     
     def val_dataloader(self):
         return DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
-            shuffle=True,
-            num_workers=2
+            num_workers=32
         )
     
     def test_dataloader(self):
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
-            shuffle=True,
-            num_workers=2
+            num_workers=32
         )
 
 class TextEntailDataModulePrompt(TextEntailDataModule):

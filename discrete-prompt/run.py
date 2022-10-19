@@ -136,7 +136,6 @@ def run(args):
 
     # testing
     if args.do_test:
-        assert args.checkpoint_file_path is not None
         if args.with_prompt:
             model = TextEntailClassifierPrompt.load_from_checkpoint(ckpt_path="best")
         else:

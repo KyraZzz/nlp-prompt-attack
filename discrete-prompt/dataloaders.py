@@ -34,7 +34,7 @@ class TextEntailDataset(Dataset):
             answer=answer,
             input_ids=input_ids,
             attention_mask=attention_mask,
-            labels=torch.FloatTensor([labels])
+            labels=torch.tensor([labels])
         )
 
 class TextEntailDatasetPrompt(TextEntailDataset):
@@ -105,7 +105,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
             answer=answer,
             input_ids=input_ids,
             attention_mask=attention_mask,
-            labels=torch.FloatTensor([labels]),
+            labels=torch.tensor([labels]),
             mask_token_pos=mask_token_pos,
             label_token_ids=label_token_ids
         )

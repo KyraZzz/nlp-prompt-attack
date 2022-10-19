@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from transformers import AdamW, get_linear_schedule_with_warmup, AutoModel, AutoModelForMaskedLM
 import pytorch_lightning as pl
+from torchmetrics import Accuracy
+import ipdb
 
 class TextEntailClassifier(pl.LightningModule):
     def __init__(self, model_name, n_classes, learning_rate, n_training_steps=None, n_warmup_steps=None):
@@ -12,6 +14,7 @@ class TextEntailClassifier(pl.LightningModule):
         self.n_training_steps = n_training_steps
         self.n_warmup_steps = n_warmup_steps
         self.criterion = nn.BCELoss() # binary cross-entropy loss
+        self.accuracy = Accuracy()
         self.save_hyperparameters()
     
     def forward(self, input_ids, attention_mask, labels=None):
@@ -24,7 +27,7 @@ class TextEntailClassifier(pl.LightningModule):
         output = torch.sigmoid(output)
         loss = 0
         if labels is not None:
-            loss = self.criterion(output, labels)
+            loss = self.criterion(output, labels.type(torch.float32))
         return loss, output
 
     def training_step(self, batch, batch_idx):
@@ -32,15 +35,21 @@ class TextEntailClassifier(pl.LightningModule):
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         loss, outputs = self.forward(input_ids, attention_mask, labels)
+        pred_ids = torch.where(outputs > 0.5, 1, 0)
+        acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
         self.log("train_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss, "predictions": outputs, "labels": labels}
+        self.log("train_accuracy_curr_batch", acc, prog_bar=True, logger=True)
+        return {"loss": loss, "predictions": outputs, "labels": labels, "accuracy": acc}
     
     def validation_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         loss, outputs = self.forward(input_ids, attention_mask, labels)
+        pred_ids = torch.where(outputs > 0.5, 1, 0)
+        acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
         self.log("val_loss", loss, prog_bar=True, logger=True)
+        self.log("val_accuracy_curr_batch", acc, prog_bar=True, logger=True)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -48,7 +57,10 @@ class TextEntailClassifier(pl.LightningModule):
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         loss, outputs = self.forward(input_ids, attention_mask, labels)
+        pred_ids = torch.where(outputs > 0.5, 1, 0)
+        acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
         self.log("test_loss", loss, prog_bar=True, logger=True)
+        self.log("test_accuracy_curr_batch", acc, prog_bar=True, logger=True)
         return loss
     
     def configure_optimizers(self):
@@ -95,7 +107,7 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         output = torch.cat(mask_label_pred, -1) # concatenate the scores into a tensor
         loss = 0
         if labels is not None:
-            loss = self.criterion(torch.softmax(output,1)[:,1].unsqueeze(-1), labels)
+            loss = self.criterion(torch.softmax(output,1)[:,1].unsqueeze(-1), labels.type(torch.float32))
         return loss, output
     
     def training_step(self, batch, batch_idx):
@@ -105,8 +117,11 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         mask_token_pos = batch["mask_token_pos"]
         label_token_ids = batch["label_token_ids"]
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+        _, pred_ids = torch.max(outputs, dim=1)
+        acc = self.accuracy(pred_ids, labels.squeeze())
         self.log("train_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss, "predictions": outputs, "labels": labels}
+        self.log("train_accuracy_curr_batch", acc, prog_bar=True, logger=True)
+        return {"loss": loss, "predictions": outputs, "labels": labels, "accuracy": acc}
     
     def validation_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
@@ -115,7 +130,10 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         mask_token_pos = batch["mask_token_pos"]
         label_token_ids = batch["label_token_ids"]
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+        _, pred_ids = torch.max(outputs, dim=1)
+        acc = self.accuracy(pred_ids, labels.squeeze())
         self.log("val_loss", loss, prog_bar=True, logger=True)
+        self.log("val_accuracy_curr_batch", acc, prog_bar=True, logger=True)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -125,5 +143,8 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         mask_token_pos = batch["mask_token_pos"]
         label_token_ids = batch["label_token_ids"]
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+        _, pred_ids = torch.max(outputs, dim=1)
+        acc = self.accuracy(pred_ids, labels.squeeze())
         self.log("test_loss", loss, prog_bar=True, logger=True)
+        self.log("test_accuracy_curr_batch", acc, prog_bar=True, logger=True)
         return loss

@@ -21,7 +21,7 @@ def set_label_mapping(verbalizer_dict):
     return json.loads(verbalizer_dict)
 
 def run(args):
-    print(f"Parameter list: {chr(10)}\
+    print(f"Parameter list: {chr(10)} \
     task name: {args.task_name}{chr(10)} \
     model name or path: {args.model_name_or_path}{chr(10)} \
     data path: {args.data_path}{chr(10)} \
@@ -38,14 +38,16 @@ def run(args):
     number of gpu devices: {args.num_gpu_devices}{chr(10)} \
     log every n steps: {args.log_every_n_steps}{chr(10)} \
     ")
+
+    # set a general random seed
     pl.seed_everything(args.random_seed)
-    # logging the progress in TensorBoard
+    # log the progress in TensorBoard
     log_dir = os.path.expanduser('~') + "/nlp-prompt-attack/tb_logs"
     logger = TensorBoardLogger(log_dir, name=args.task_name)
-    # checkpointing that saves the best model based on validation loss
+    # checkpointing saves best model based on validation loss
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints",
-        filename="{args.task_name}-{epoch:02d}-{val_loss:.2f}",
+        filename=f"{args.task_name}"+"-{epoch:02d}-{val_loss:.2f}",
         verbose=True,
         monitor="val_loss",
         mode="min"

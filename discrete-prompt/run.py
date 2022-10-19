@@ -25,6 +25,8 @@ def run(args):
     task name: {args.task_name}{chr(10)} \
     model name or path: {args.model_name_or_path}{chr(10)} \
     data path: {args.data_path}{chr(10)} \
+    do train: {args.do_train}{chr(10)} \
+    do test: {args.do_test}{chr(10)} \
     batch size: {args.batch_size}{chr(10)} \
     learning rate: {args.learning_rate}{chr(10)} \
     maximum epochs: {args.max_epoch}{chr(10)} \
@@ -105,13 +107,12 @@ def run(args):
             n_warmup_steps=warmup_steps,
             n_training_steps=total_training_steps
         )
-    # train
-    trainer = None
+
+    # training
     if args.is_dev_mode:
         trainer = pl.Trainer(
-            # debugging purpose
-            fast_dev_run=7, # runs n batch of training, validation, test and prediction data through your trainer to see if there are any bugs
-            # ----------------
+            # debugging purpose: runs n batch of training, validation, test and prediction data through your trainer to see if there are any bugs
+            fast_dev_run=7,
             logger = logger,
             callbacks=[early_stopping_callback,checkpoint_callback],
             max_epochs=args.max_epoch,
@@ -129,14 +130,25 @@ def run(args):
             devices=args.num_gpu_devices,
             strategy="ddp",
         )
-    trainer.fit(model, data_module)
+    if args.do_train:
+        trainer.fit(model, data_module)
 
+    # testing
+    if args.do_test:
+        assert args.checkpoint_file_path is not None
+        if args.with_prompt:
+            model = TextEntailClassifierPrompt.load_from_checkpoint(ckpt_path="best")
+        else:
+            model = TextEntailClassifier.load_from_checkpoint(ckpt_path="best")
+        trainer.test(model=model, dataloaders=data_module)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task_name", type=str, required=True, help="Task name")
     parser.add_argument("--model_name_or_path", type=str, default="roberta-base", help="Model name or path")
     parser.add_argument("--data_path", type=str, required=True, default="SetFit/qnli", help="Data path")
+    parser.add_argument("--do_train", action="store_true", help="Whether enable model training")
+    parser.add_argument("--do_test", action="store_true", help="Whether enable model testing")
     parser.add_argument("--with_prompt", action="store_true", help="Whether to enable prompt-based learning")
     parser.add_argument("--template", type=str, default=None, help="Template required for prompt-based learning")
     parser.add_argument("--verbalizer_dict", type=str, default=None, help="JSON object of a dictionary of labels, expecting property name enclosed in double quotes")

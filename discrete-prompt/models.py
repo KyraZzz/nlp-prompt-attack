@@ -13,6 +13,7 @@ class TextEntailClassifier(pl.LightningModule):
         self.n_training_steps = n_training_steps
         self.n_warmup_steps = n_warmup_steps
         self.criterion = nn.BCELoss() # binary cross-entropy loss
+        self.save_hyperparameters()
     
     def forward(self, input_ids, attention_mask, labels=None):
         """
@@ -71,6 +72,7 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
     def __init__(self, model_name, n_classes, learning_rate, n_training_steps=None, n_warmup_steps=None):
         super().__init__(model_name, n_classes, learning_rate, n_training_steps, n_warmup_steps)
         self.LM_with_head = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
+        self.save_hyperparameters()
     
     def forward(self, input_ids, attention_mask, mask_token_pos, label_token_ids, labels=None):
         """

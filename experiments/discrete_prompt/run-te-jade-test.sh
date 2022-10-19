@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=10:00:00
+#SBATCH --time=1:00:00
 #SBATCH --job-name=TE-roberta-manual-prompt
-#SBATCH --gres=gpu:8
+#SBATCH --gres=gpu:1
 
 # run the application
 . /etc/profile.d/modules.sh                                   # Leave this line (enables the module command)
@@ -12,13 +12,9 @@ conda activate nlp-prompt-attack-env                          # activate target 
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
-    --task_name "qnli-roberta-base-manual-prompt" \
+    --task_name "qnli-roberta-base-manual-prompt-test" \
     --model_name_or_path "roberta-base" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/qnli" \
-    --do_train \
-    --with_prompt \
-    --template "<cls> <question> ? <mask> , <answer> ." \
-    --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
-    --log_every_n_steps 400 \
-    --batch_size 12 \
-    --num_gpu_devices 8
+    --do_test \
+    --checkpoint_file_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/args.task_name=0-epoch=00-val_loss=0.25.ckpt" \
+    --num_gpu_devices 1

@@ -1,7 +1,7 @@
 import argparse
 import json
 import pytorch_lightning as pl
-from datasets import load_dataset
+from datasets import load_from_disk
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from transformers import AutoTokenizer
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -10,7 +10,7 @@ from dataloaders import TextEntailDataModule
 from models import TextEntailClassifier, TextEntailClassifierPrompt
 
 def data_preprocess(datapath):
-    raw_dataset = load_dataset(datapath)
+    raw_dataset = load_from_disk(datapath)
     raw_train = raw_dataset["train"]
     raw_val = raw_dataset["validation"]
     raw_test = raw_dataset["test"]
@@ -92,7 +92,7 @@ def run(args):
             callbacks=[early_stopping_callback,checkpoint_callback],
             max_epochs=PARAMS["max_epochs"],
             accelerator="gpu",
-            devices=[0,1,2,3],
+            devices=args.num_gpu_devices,
             strategy="ddp",
         )
     else:
@@ -101,8 +101,8 @@ def run(args):
             callbacks=[early_stopping_callback,checkpoint_callback],
             max_epochs=PARAMS["max_epochs"],
             accelerator="gpu",
-            devices=[0,1,2,3],
-            # strategy="ddp",
+            devices=args.num_gpu_devices,
+            strategy="ddp",
         )
     trainer.fit(model, data_module)
 
@@ -111,8 +111,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task_name", type=str, required=True, help="Task name")
     parser.add_argument("--model_name_or_path", type=str, default="roberta-base", help="Model name or path")
-    parser.add_argument("--data_path", type=str, default="SetFit/qnli", help="Data path")
-    parser.add_argument("--with_prompt", type=bool, default=False, help="Whether to enable prompt-based learning")
+    parser.add_argument("--data_path", type=str, required=True, default="SetFit/qnli", help="Data path")
+    parser.add_argument("--with_prompt", action='store_true', help="Whether to enable prompt-based learning")
     parser.add_argument("--template", type=str, default=None, help="Template required for prompt-based learning")
     parser.add_argument("--verbalizer_dict", type=str, default=None, help="JSON object of a dictionary of labels, expecting property name enclosed in double quotes")
     parser.add_argument("--random_seed", type=int, default=42, help="Model seed")
@@ -120,6 +120,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=7, help="Model training batch size")
     parser.add_argument("--max_epoch", type=int, default=10, help="Model maximum epoch")
     parser.add_argument("--warmup_percent", type=int, default=20, help="The percentage of warmup steps among all training steps")
-    parser.add_argument("--is_dev_mode", type=bool, default=False, help="Whether to enable fast_dev_run")
+    parser.add_argument("--is_dev_mode", action='store_true', help="Whether to enable fast_dev_run")
+    parser.add_argument("--num_gpu_devices", type=int, default=1, help="The number of required GPU devices")
     args = parser.parse_args()
     run(args)

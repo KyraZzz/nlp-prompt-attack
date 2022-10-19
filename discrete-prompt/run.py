@@ -39,6 +39,7 @@ def run(args):
     is developing mode: {args.is_dev_mode}{chr(10)} \
     number of gpu devices: {args.num_gpu_devices}{chr(10)} \
     log every n steps: {args.log_every_n_steps}{chr(10)} \
+    early stopping patience value: {args.early_stopping_patience}{chr(10)} \
     ")
 
     # set a general random seed
@@ -54,8 +55,8 @@ def run(args):
         monitor="val_loss",
         mode="min"
     )
-    # early stopping that terminates the training when the loss has not improved for the last 2 epochs
-    early_stopping_callback = EarlyStopping(monitor="val_loss", patience=2)
+    # early stopping terminates training when the loss has not improved for the last n epochs
+    early_stopping_callback = EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience)
 
     # preprocess data
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
@@ -161,5 +162,6 @@ if __name__ == "__main__":
     parser.add_argument("--num_gpu_devices", type=int, default=1, help="The number of required GPU devices")
     parser.add_argument("--log_every_n_steps", type=int, default=50, help="The logging frequency")
     parser.add_argument("--max_token_count", type=int, default=512, help="The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
+    parser.add_argument("--early_stopping_patience", type=int, default=2, help="Early stopping terminates training when the loss has not improved for the last n epochs")
     args = parser.parse_args()
     run(args)

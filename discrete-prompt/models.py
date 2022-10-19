@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from transformers import AdamW, get_linear_schedule_with_warmup, AutoModel, AutoModelForMaskedLM
 import pytorch_lightning as pl
-import ipdb
 
 class TextEntailClassifier(pl.LightningModule):
     def __init__(self, model_name, n_classes, learning_rate, n_training_steps=None, n_warmup_steps=None):

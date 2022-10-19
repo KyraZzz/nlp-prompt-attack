@@ -16,6 +16,7 @@ python3 run.py \
     --model_name_or_path "roberta-base" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/qnli" \
     --do_train \
+    --do_test \
     --with_prompt \
     --template "<cls> <question> ? <mask> , <answer> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \

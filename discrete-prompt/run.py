@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import pytorch_lightning as pl
 from datasets import load_from_disk
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
@@ -31,7 +32,8 @@ def run(args):
     }
     pl.seed_everything(PARAMS["random_seed"])
     # logging the progress in TensorBoard
-    logger = TensorBoardLogger("/local/scratch-3/yz709/nlp-prompt-attack/tb_logs", name=args.task_name)
+    log_dir = os.path.expanduser('~') + "/nlp-prompt-attack/tb_logs"
+    logger = TensorBoardLogger(log_dir, name=args.task_name)
     # checkpointing that saves the best model based on validation loss
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints",
@@ -91,15 +93,16 @@ def run(args):
             logger = logger,
             callbacks=[early_stopping_callback,checkpoint_callback],
             max_epochs=PARAMS["max_epochs"],
+            log_every_n_steps=args.log_every_n_steps,
             accelerator="gpu",
-            devices=args.num_gpu_devices,
-            strategy="ddp",
+            devices=1,
         )
     else:
         trainer = pl.Trainer(
             logger = logger,
             callbacks=[early_stopping_callback,checkpoint_callback],
             max_epochs=PARAMS["max_epochs"],
+            log_every_n_steps=args.log_every_n_steps,
             accelerator="gpu",
             devices=args.num_gpu_devices,
             strategy="ddp",
@@ -122,5 +125,6 @@ if __name__ == "__main__":
     parser.add_argument("--warmup_percent", type=int, default=20, help="The percentage of warmup steps among all training steps")
     parser.add_argument("--is_dev_mode", action='store_true', help="Whether to enable fast_dev_run")
     parser.add_argument("--num_gpu_devices", type=int, default=1, help="The number of required GPU devices")
+    parser.add_argument("--log_every_n_steps", type=int, default=50, help="The logging frequency")
     args = parser.parse_args()
     run(args)

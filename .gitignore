@@ -1,8 +1,0 @@
-**/.ipynb_checkpoints/*
-tb_logs/*
-MNIST/*
-experiments/**/[slurm]*.out
-**/datasets/**
-**/checkpoints
-**/__pycache__
-**/deprecated_files

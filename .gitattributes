@@ -1,3 +1,0 @@
-~/**/*.ckpt filter=lfs diff=lfs merge=lfs -text
-/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/qnli-roberta-base-manual-prompt-epoch=08-val_loss=0.22.ckpt filter=lfs diff=lfs merge=lfs -text
-/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/qnli-roberta-base-no-prompt-epoch=08-val_loss=0.22.ckpt filter=lfs diff=lfs merge=lfs -text

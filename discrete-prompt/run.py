@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import string
 import pytorch_lightning as pl
 from datasets import load_from_disk
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
@@ -20,6 +21,20 @@ def data_preprocess(datapath):
 
 def set_label_mapping(verbalizer_dict):
     return json.loads(verbalizer_dict)
+
+def prep_template(template):
+    segments = template.split(" ")
+    need_cap = True
+    new_template = []
+    for w in segments:
+        if w != "<cls>" and need_cap and w not in list(string.punctuation):
+            new_template.append("<cap>")
+        elif w in ["?", ".", "!"]:
+            need_cap = True
+        elif w in [",", ":", ";"]:
+            need_cap = False
+        new_template.append(w)
+    return " ".join(new_template)
 
 def run(args):
     print(f"Parameter list: {chr(10)} \
@@ -72,6 +87,8 @@ def run(args):
         assert args.verbalizer_dict is not None
         # preprocess verbalizer_dict
         verbalizer_dict = set_label_mapping(args.verbalizer_dict)
+        # preprocess template
+        template = prep_template(args.template)
 
         data_module = TextEntailDataModulePrompt(
             train_data,
@@ -81,7 +98,7 @@ def run(args):
             args.batch_size,
             args.max_token_count,
             args.with_prompt,
-            args.template,
+            template,
             verbalizer_dict
         )
 

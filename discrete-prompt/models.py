@@ -43,6 +43,7 @@ class TextEntailClassifier(pl.LightningModule):
         self.log("train_accuracy_curr_batch", acc, prog_bar=True, logger=True)
         return {"loss": loss, "predictions": outputs, "labels": labels, "train_accuracy": acc}
     
+    # TODO
     def on_epoch_end(self):
         train_mean_acc = torch.mean(torch.tensor(self.train_acc_arr, dtype=torch.float32))
         self.log("train_mean_acc at the end of current epoch", train_mean_acc)
@@ -60,6 +61,7 @@ class TextEntailClassifier(pl.LightningModule):
         self.log("val_accuracy_curr_batch", acc, prog_bar=True, logger=True)
         return loss
     
+    # TODO
     def validation_end(self, outputs):
         mean_loss = torch.stack([out['val_loss'] for out in outputs]).mean()
         mean_acc = torch.stack([out['val_accuracy_curr_batch'] for out in outputs]).mean()

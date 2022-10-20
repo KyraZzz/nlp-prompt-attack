@@ -136,11 +136,25 @@ def run(args):
 
     # testing
     if args.do_test:
-        if args.with_prompt:
-            model = TextEntailClassifierPrompt.load_from_checkpoint(ckpt_path="best")
-        else:
-            model = TextEntailClassifier.load_from_checkpoint(ckpt_path="best")
-        trainer.test(model=model, dataloaders=data_module)
+        if args.ckpt_path is not None and args.with_prompt:
+            model = TextEntailClassifierPrompt.load_from_checkpoint(
+                model_name=args.model_name_or_path,
+                n_classes=1,
+                learning_rate=args.learning_rate,
+                n_warmup_steps=warmup_steps,
+                n_training_steps=total_training_steps,
+                checkpoint_path=args.ckpt_path
+                )
+        elif args.ckpt_path is not None and not args.with_prompt:
+            model = TextEntailClassifier.load_from_checkpoint(
+                model_name=args.model_name_or_path,
+                n_classes=1,
+                learning_rate=args.learning_rate,
+                n_warmup_steps=warmup_steps,
+                n_training_steps=total_training_steps,
+                checkpoint_path=args.ckpt_path
+                )
+        trainer.test(model=model, dataloaders=data_module, verbose=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -149,6 +163,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_path", type=str, required=True, default="SetFit/qnli", help="Data path")
     parser.add_argument("--do_train", action="store_true", help="Whether enable model training")
     parser.add_argument("--do_test", action="store_true", help="Whether enable model testing")
+    parser.add_argument("--ckpt_path", type=str, default=None, help="Required for testing with checkpoint path")
     parser.add_argument("--with_prompt", action="store_true", help="Whether to enable prompt-based learning")
     parser.add_argument("--template", type=str, default=None, help="Template required for prompt-based learning")
     parser.add_argument("--verbalizer_dict", type=str, default=None, help="JSON object of a dictionary of labels, expecting property name enclosed in double quotes")

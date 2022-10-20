@@ -12,9 +12,10 @@ from models import TextEntailClassifier, TextEntailClassifierPrompt
 
 def data_preprocess(datapath):
     raw_dataset = load_from_disk(datapath)
-    raw_train = raw_dataset["train"]
-    raw_val = raw_dataset["validation"]
-    raw_test = raw_dataset["test"]
+    raw_train_val = raw_dataset["train"]
+    raw_test = raw_dataset["validation"]
+    raw_dict = raw_train_val.train_test_split(test_size=0.05)
+    raw_train, raw_val = raw_dict['train'], raw_dict['test']
     return raw_train, raw_val, raw_test
 
 def set_label_mapping(verbalizer_dict):

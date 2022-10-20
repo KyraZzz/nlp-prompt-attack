@@ -16,6 +16,7 @@ python3 run.py \
     --model_name_or_path "roberta-base" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/qnli" \
     --do_train \
-    --log_every_n_steps 400 \
+    --do_test \
+    --log_every_n_steps 100 \
     --batch_size 16 \
     --num_gpu_devices 8

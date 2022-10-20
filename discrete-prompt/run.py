@@ -113,8 +113,12 @@ def run(args):
     # training
     if args.is_dev_mode:
         trainer = pl.Trainer(
-            # debugging purpose: runs n batch of training, validation, test and prediction data through your trainer to see if there are any bugs
-            fast_dev_run=24,
+            # debugging method 1: runs n batch of training, validation, test and prediction data
+            # fast_dev_run=24,
+            # debugging method 2: shorten epoch length
+            limit_train_batches=0.01,
+            limit_val_batches=0.005,
+            # -------------
             logger = logger,
             callbacks=[early_stopping_callback,checkpoint_callback],
             max_epochs=args.max_epoch,

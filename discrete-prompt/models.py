@@ -15,7 +15,12 @@ class TextEntailClassifier(pl.LightningModule):
         self.n_warmup_steps = n_warmup_steps
         self.criterion = nn.BCELoss() # binary cross-entropy loss
         self.accuracy = Accuracy()
+        self.train_loss_arr = []
         self.train_acc_arr = []
+        self.val_loss_arr = []
+        self.val_acc_arr = []
+        self.test_loss_arr = []
+        self.test_acc_arr = []
         self.save_hyperparameters()
     
     def forward(self, input_ids, attention_mask, labels=None):
@@ -38,17 +43,20 @@ class TextEntailClassifier(pl.LightningModule):
         loss, outputs = self.forward(input_ids, attention_mask, labels)
         pred_ids = torch.where(outputs > 0.5, 1, 0)
         acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
+        self.train_loss_arr.append(loss)
         self.train_acc_arr.append(acc)
-        self.log("train_loss", loss, prog_bar=True, logger=True)
-        self.log("train_accuracy_curr_batch", acc, prog_bar=True, logger=True)
+        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_accuracy", acc, prog_bar=True)
         return {"loss": loss, "predictions": outputs, "labels": labels, "train_accuracy": acc}
     
-    # TODO
-    def on_epoch_end(self):
+    def on_train_epoch_end(self):
+        train_mean_loss = torch.mean(torch.tensor(self.train_loss_arr, dtype=torch.float32))
         train_mean_acc = torch.mean(torch.tensor(self.train_acc_arr, dtype=torch.float32))
-        self.log("train_mean_acc at the end of current epoch", train_mean_acc)
+        self.train_loss_arr = []
         self.train_acc_arr = []
-        return {"train_mean_acc": train_mean_acc}
+        self.log("train_mean_loss_per_epoch", train_mean_loss, prog_bar=True, logger=True)
+        self.log("train_mean_acc_per_epoch", train_mean_acc, prog_bar=True, logger=True)
+        return {"train_mean_loss": train_mean_loss, "train_mean_acc": train_mean_acc}
     
     def validation_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
@@ -57,16 +65,19 @@ class TextEntailClassifier(pl.LightningModule):
         loss, outputs = self.forward(input_ids, attention_mask, labels)
         pred_ids = torch.where(outputs > 0.5, 1, 0)
         acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
-        self.log("val_loss", loss, prog_bar=True, logger=True)
-        self.log("val_accuracy_curr_batch", acc, prog_bar=True, logger=True)
+        self.val_loss_arr.append(loss)
+        self.val_acc_arr.append(acc)
+        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_accuracy", acc, prog_bar=True)
         return loss
     
-    # TODO
-    def validation_end(self, outputs):
-        mean_loss = torch.stack([out['val_loss'] for out in outputs]).mean()
-        mean_acc = torch.stack([out['val_accuracy_curr_batch'] for out in outputs]).mean()
-        self.log("val_mean_loss at the end of current epoch", mean_loss)
-        self.log("val_mean_acc at the end of current epoch", mean_acc)
+    def on_validation_epoch_end(self):
+        mean_loss = torch.mean(torch.tensor(self.val_loss_arr, dtype=torch.float32))
+        mean_acc = torch.mean(torch.tensor(self.val_acc_arr, dtype=torch.float32))
+        self.val_loss_arr = []
+        self.val_acc_arr = []
+        self.log("val_mean_loss_per_epoch", mean_loss, prog_bar=True, logger=True)
+        self.log("val_mean_acc_per_epoch", mean_acc, prog_bar=True, logger=True)
         return {"val_mean_loss": mean_loss, "val_mean_acc": mean_acc}
 
     def test_step(self, batch, batch_idx):
@@ -76,15 +87,17 @@ class TextEntailClassifier(pl.LightningModule):
         loss, outputs = self.forward(input_ids, attention_mask, labels)
         pred_ids = torch.where(outputs > 0.5, 1, 0)
         acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
-        self.log("test_loss", loss, prog_bar=True, logger=True)
-        self.log("test_accuracy_curr_batch", acc, prog_bar=True, logger=True)
+        self.test_loss_arr.append(loss)
+        self.test_acc_arr.append(acc)
         return loss
     
-    def test_end(self, outputs):
-        mean_loss = torch.stack([out['test_loss'] for out in outputs]).mean()
-        mean_acc = torch.stack([out['test_accuracy_curr_batch'] for out in outputs]).mean()
-        self.log("test_mean_loss at the end of current epoch", mean_loss)
-        self.log("test_mean_acc at the end of current epoch", mean_acc)
+    def on_test_epoch_end(self):
+        mean_loss = torch.mean(torch.tensor(self.test_loss_arr, dtype=torch.float32))
+        mean_acc = torch.mean(torch.tensor(self.test_acc_arr, dtype=torch.float32))
+        self.test_loss_arr = []
+        self.test_acc_arr = []
+        self.log("test_mean_loss", mean_loss, prog_bar=True, logger=True)
+        self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True)
         return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
     
     def configure_optimizers(self):
@@ -143,8 +156,10 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
         _, pred_ids = torch.max(outputs, dim=1)
         acc = self.accuracy(pred_ids, labels.squeeze())
+        self.train_loss_arr.append(loss)
+        self.train_acc_arr.append(acc)
         self.log("train_loss", loss, prog_bar=True, logger=True)
-        self.log("train_accuracy_curr_batch", acc, prog_bar=True, logger=True)
+        self.log("train_accuracy", acc, prog_bar=True, logger=True)
         return {"loss": loss, "predictions": outputs, "labels": labels, "accuracy": acc}
     
     def validation_step(self, batch, batch_idx):
@@ -156,8 +171,10 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
         _, pred_ids = torch.max(outputs, dim=1)
         acc = self.accuracy(pred_ids, labels.squeeze())
+        self.val_loss_arr.append(loss)
+        self.val_acc_arr.append(acc)
         self.log("val_loss", loss, prog_bar=True, logger=True)
-        self.log("val_accuracy_curr_batch", acc, prog_bar=True, logger=True)
+        self.log("val_accuracy", acc, prog_bar=True, logger=True)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -169,6 +186,6 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
         _, pred_ids = torch.max(outputs, dim=1)
         acc = self.accuracy(pred_ids, labels.squeeze())
-        self.log("test_loss", loss, prog_bar=True, logger=True)
-        self.log("test_accuracy_curr_batch", acc, prog_bar=True, logger=True)
+        self.test_loss_arr.append(loss)
+        self.test_acc_arr.append(acc)
         return loss

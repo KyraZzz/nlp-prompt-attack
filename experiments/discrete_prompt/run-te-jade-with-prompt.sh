@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=10:00:00
-#SBATCH --job-name=TE-roberta-manual-prompt
+#SBATCH --job-name=manual-prompt
 #SBATCH --gres=gpu:8
 
 # run the application
@@ -20,5 +20,5 @@ python3 run.py \
     --template "<cls> <question> ? <mask> , <answer> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --log_every_n_steps 400 \
-    --batch_size 12 \
+    --batch_size 16 \
     --num_gpu_devices 8

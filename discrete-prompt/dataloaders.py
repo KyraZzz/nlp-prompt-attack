@@ -66,20 +66,23 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         for segment in template_segments:
             if segment == "<cap>":
                 need_cap = True
+                continue
             elif segment in special_token_dict.keys():
                 encoding_list.append(special_token_dict[segment])
             elif segment == "<question>":
+                # <question> input starts with capital letter and ends with ?
                 if not need_cap:
                     question = question.lower()
                 encoding_list += self.tokenizer.encode(question[:-1], add_special_tokens=False)
             elif segment == "<answer>":
-                # let first character of answer be lowercase
+                # <answer> input starts with capital letter and ends with .
                 if not need_cap:
-                    answer = question.lower()
+                    answer = answer.lower()
                 encoding_list += self.tokenizer.encode(answer[:-1], add_special_tokens=False)
             else:
-                # remove additional <s>
-                encoding_list += self.tokenizer.encode(segment)[1:]
+                # remove additional <s> </s>
+                encoding_list += self.tokenizer.encode(segment)[1:-1]
+            need_cap = False
         input_ids = encoding_list
         attention_mask = [1 for _ in encoding_list]
 

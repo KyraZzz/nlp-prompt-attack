@@ -8,8 +8,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from transformers import AutoTokenizer
 from pytorch_lightning.loggers import TensorBoardLogger
 
-from dataloaders import TextEntailDataModule, TextEntailDataModulePrompt
-from models import TextEntailClassifier, TextEntailClassifierPrompt
+from dataloaders import te_data_loader_hub
+from models import te_model_hub
 from prep_data import QNLIPrepData, MNLIPrepData, SST2PrepData
 
 def data_preprocess(dataset_name, data_path, random_seed):
@@ -25,9 +25,10 @@ def data_preprocess(dataset_name, data_path, random_seed):
     return data_obj.preprocess()
     
 def set_label_mapping(verbalizer_dict):
-    return json.loads(verbalizer_dict)
+    return json.loads(verbalizer_dict) if verbalizer_dict is not None else None
 
 def prep_template(template):
+    if template is None: return None
     segments = template.split(" ")
     need_cap = True
     new_template = []
@@ -84,55 +85,36 @@ def run(args):
     # preprocess data
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
     train_data, val_data, test_data = data_preprocess(args.dataset_name, args.data_path, args.random_seed)
+    # preprocess verbalizer_dict
+    verbalizer_dict = set_label_mapping(args.verbalizer_dict)
+    # preprocess template
+    template = prep_template(args.template)
+    # load data module
+    data_module = te_data_loader_hub(
+        args.dataset_name,
+        train_data,
+        val_data,
+        test_data,
+        tokenizer,
+        args.batch_size,
+        args.max_token_count,
+        args.with_prompt,
+        template,
+        verbalizer_dict
+    )
 
-    # model
+    # load model
     steps_per_epoch = len(train_data) // args.batch_size
     total_training_steps = steps_per_epoch * args.max_epoch
     warmup_steps = int(total_training_steps * args.warmup_percent / 100)
-    if args.with_prompt:
-        assert args.template is not None
-        assert args.verbalizer_dict is not None
-        # preprocess verbalizer_dict
-        verbalizer_dict = set_label_mapping(args.verbalizer_dict)
-        # preprocess template
-        template = prep_template(args.template)
-
-        data_module = TextEntailDataModulePrompt(
-            train_data,
-            val_data,
-            test_data,
-            tokenizer,
-            args.batch_size,
-            args.max_token_count,
-            args.with_prompt,
-            template,
-            verbalizer_dict
-        )
-
-        model = TextEntailClassifierPrompt(
-            model_name=args.model_name_or_path,
-            n_classes=1,
-            learning_rate=args.learning_rate,
-            n_warmup_steps=warmup_steps,
-            n_training_steps=total_training_steps,
-        )
-    else:
-        data_module = TextEntailDataModule(
-            train_data,
-            val_data,
-            test_data,
-            tokenizer,
-            args.batch_size,
-            args.max_token_count,
-        )
-
-        model = TextEntailClassifier(
-            model_name=args.model_name_or_path,
-            n_classes=1,
-            learning_rate=args.learning_rate,
-            n_warmup_steps=warmup_steps,
-            n_training_steps=total_training_steps
-        )
+    model = te_model_hub(
+        model_name=args.model_name_or_path,
+        n_classes=1,
+        learning_rate=args.learning_rate,
+        n_warmup_steps=warmup_steps,
+        n_training_steps=total_training_steps,
+        with_prompt=args.with_prompt
+    )
 
     # training and(or) testing
     if args.is_dev_mode:
@@ -148,7 +130,7 @@ def run(args):
             max_epochs=args.max_epoch,
             log_every_n_steps=args.log_every_n_steps,
             accelerator="gpu",
-            devices=1,
+            devices=[3],
         )
     else:
         trainer = pl.Trainer(

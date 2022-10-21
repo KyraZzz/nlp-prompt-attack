@@ -189,3 +189,8 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         self.test_loss_arr.append(loss)
         self.test_acc_arr.append(acc)
         return loss
+    
+def te_model_hub(model_name, n_classes, learning_rate, n_warmup_steps, n_training_steps, with_prompt):
+    if with_prompt:
+        return TextEntailClassifierPrompt(model_name, n_classes, learning_rate, n_training_steps, n_warmup_steps)
+    return TextEntailClassifier(model_name, n_classes, learning_rate, n_training_steps, n_warmup_steps)

@@ -4,22 +4,26 @@ import os
 import string
 from datetime import datetime
 import pytorch_lightning as pl
-from datasets import load_from_disk
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from transformers import AutoTokenizer
 from pytorch_lightning.loggers import TensorBoardLogger
 
 from dataloaders import TextEntailDataModule, TextEntailDataModulePrompt
 from models import TextEntailClassifier, TextEntailClassifierPrompt
+from prep_data import QNLIPrepData, MNLIPrepData, SST2PrepData
 
-def data_preprocess(datapath):
-    raw_dataset = load_from_disk(datapath)
-    raw_train_val = raw_dataset["train"]
-    raw_test = raw_dataset["validation"]
-    raw_dict = raw_train_val.train_test_split(test_size=0.05)
-    raw_train, raw_val = raw_dict['train'], raw_dict['test']
-    return raw_train, raw_val, raw_test
-
+def data_preprocess(dataset_name, data_path, random_seed):
+    match dataset_name:
+        case "QNLI":
+            data_obj = QNLIPrepData(data_path, random_seed)
+        case "MNLI":
+            data_obj = MNLIPrepData(data_path, random_seed)
+        case "SST2":
+            data_obj = SST2PrepData(data_path, random_seed)
+        case _:
+            raise Exception("Dataset not supported.")
+    return data_obj.preprocess()
+    
 def set_label_mapping(verbalizer_dict):
     return json.loads(verbalizer_dict)
 
@@ -41,6 +45,7 @@ def run(args):
     print(f"Parameter list: {chr(10)} \
     task name: {args.task_name}{chr(10)} \
     model name or path: {args.model_name_or_path}{chr(10)} \
+    dataset name: {args.dataset_name}{chr(10)} \
     data path: {args.data_path}{chr(10)} \
     do train: {args.do_train}{chr(10)} \
     do test: {args.do_test}{chr(10)} \
@@ -78,7 +83,7 @@ def run(args):
 
     # preprocess data
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
-    train_data, val_data, test_data = data_preprocess(args.data_path)
+    train_data, val_data, test_data = data_preprocess(args.dataset_name, args.data_path, args.random_seed)
 
     # model
     steps_per_epoch = len(train_data) // args.batch_size
@@ -186,7 +191,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task_name", type=str, required=True, help="Task name")
     parser.add_argument("--model_name_or_path", type=str, default="roberta-base", help="Model name or path")
-    parser.add_argument("--data_path", type=str, required=True, default="SetFit/qnli", help="Data path")
+    parser.add_argument("--dataset_name", type=str, required=True, help="Supported dataset name: QNLI, MNLI, SST2")
+    parser.add_argument("--data_path", type=str, default=None, help="Data path")
     parser.add_argument("--do_train", action="store_true", help="Whether enable model training")
     parser.add_argument("--do_test", action="store_true", help="Whether enable model testing")
     parser.add_argument("--ckpt_path", type=str, default=None, help="Required for testing with checkpoint path")

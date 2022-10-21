@@ -12,8 +12,8 @@ conda activate nlp-prompt-attack-env                          # activate target 
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
-    --task_name "test-qnli-roberta-base-manual-prompt-1" \
-    --model_name_or_path "roberta-base" \
+    --task_name "test-qnli-roberta-large-manual-prompt-1" \
+    --model_name_or_path "roberta-large" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/qnli" \
     --do_test \
     --with_prompt \

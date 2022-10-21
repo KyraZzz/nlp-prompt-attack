@@ -6,8 +6,8 @@ mkdir -p cl_job_output
 touch ./cl_job_output/log_${time}.out
 cd /local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt
 python3 run.py \
-    --task_name "dev-qnli-roberta-base-manual-prompt" \
-    --model_name_or_path "roberta-base" \
+    --task_name "dev-qnli-roberta-large-manual-prompt" \
+    --model_name_or_path "roberta-large" \
     --data_path "/local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt/datasets/qnli" \
     --do_test \
     --log_every_n_steps 200 \

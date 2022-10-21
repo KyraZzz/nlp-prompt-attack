@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import string
+from datetime import datetime
 import pytorch_lightning as pl
 from datasets import load_from_disk
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
@@ -64,9 +65,10 @@ def run(args):
     log_dir = os.path.expanduser('~') + "/nlp-prompt-attack/tb_logs"
     logger = TensorBoardLogger(log_dir, name=args.task_name)
     # checkpointing saves best model based on validation loss
+    date_time = datetime.now()
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints",
-        filename=f"{args.task_name}"+"-{epoch:02d}-{val_loss:.2f}",
+        filename=f"{args.task_name}-date={date_time.month}-{date_time.day}H{date_time.hour}M{date_time.minute}"+"-{epoch:02d}-{val_loss:.2f}",
         verbose=True,
         monitor="val_loss",
         mode="min"
@@ -127,7 +129,7 @@ def run(args):
             n_training_steps=total_training_steps
         )
 
-    # training
+    # training and(or) testing
     if args.is_dev_mode:
         trainer = pl.Trainer(
             # debugging method 1: runs n batch of training, validation, test and prediction data
@@ -153,12 +155,14 @@ def run(args):
             devices=args.num_gpu_devices,
             strategy="ddp",
         )
-    if args.do_train:
-        trainer.fit(model, data_module)
 
-    # testing
-    if args.do_test:
-        if args.ckpt_path is not None and args.with_prompt:
+    # do testing straight after training
+    if args.do_train and args.do_test:
+        trainer.fit(model, data_module)
+        # trainer in default using best checkpointed model for testing
+        trainer.test(dataloaders=data_module, verbose=True)   
+    elif args.do_test and (args.ckpt_path is not None):
+        if args.with_prompt:
             model = TextEntailClassifierPrompt.load_from_checkpoint(
                 model_name=args.model_name_or_path,
                 n_classes=1,
@@ -167,7 +171,7 @@ def run(args):
                 n_training_steps=total_training_steps,
                 checkpoint_path=args.ckpt_path
                 )
-        elif args.ckpt_path is not None and not args.with_prompt:
+        else:
             model = TextEntailClassifier.load_from_checkpoint(
                 model_name=args.model_name_or_path,
                 n_classes=1,

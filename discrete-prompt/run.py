@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 import os
 import string
 from datetime import datetime
@@ -10,22 +11,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from dataloaders import te_data_loader_hub
 from models import te_model_hub
-from prep_data import QNLIPrepData, MNLIPrepData, SST2PrepData
-
-def data_preprocess(dataset_name, data_path, random_seed):
-    match dataset_name:
-        case "QNLI":
-            data_obj = QNLIPrepData(data_path, random_seed)
-        case "MNLI":
-            data_obj = MNLIPrepData(data_path, random_seed)
-        case "SST2":
-            data_obj = SST2PrepData(data_path, random_seed)
-        case _:
-            raise Exception("Dataset not supported.")
-    return data_obj.preprocess()
-    
-def set_label_mapping(verbalizer_dict):
-    return json.loads(verbalizer_dict) if verbalizer_dict is not None else None
+from prep_data import data_preprocess
 
 def prep_template(template):
     if template is None: return None
@@ -35,9 +21,9 @@ def prep_template(template):
     for w in segments:
         if w != "<cls>" and need_cap and w not in list(string.punctuation):
             new_template.append("<cap>")
-        elif w in ["?", ".", "!"]:
+        elif re.match(r'.*[?.!].*', w) is not None:
             need_cap = True
-        elif w in [",", ":", ";"]:
+        elif re.match(r'.*[,:;].*', w) is not None:
             need_cap = False
         new_template.append(w)
     return " ".join(new_template)
@@ -86,7 +72,7 @@ def run(args):
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
     train_data, val_data, test_data = data_preprocess(args.dataset_name, args.data_path, args.random_seed)
     # preprocess verbalizer_dict
-    verbalizer_dict = set_label_mapping(args.verbalizer_dict)
+    verbalizer_dict = json.loads(args.verbalizer_dict) if args.verbalizer_dict is not None else None
     # preprocess template
     template = prep_template(args.template)
     # load data module

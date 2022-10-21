@@ -102,3 +102,15 @@ class SST2PrepData(QNLIPrepData):
         super().__init__(data_path, random_seed)
         if self.raw_dataset is None:
             self.raw_dataset = load_dataset("glue", "sst2")
+
+def data_preprocess(dataset_name, data_path, random_seed):
+    match dataset_name:
+        case "QNLI":
+            data_obj = QNLIPrepData(data_path, random_seed)
+        case "MNLI":
+            data_obj = MNLIPrepData(data_path, random_seed)
+        case "SST2":
+            data_obj = SST2PrepData(data_path, random_seed)
+        case _:
+            raise Exception("Dataset not supported.")
+    return data_obj.preprocess()

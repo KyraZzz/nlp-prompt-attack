@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=1:00:00
-#SBATCH --job-name=TE-roberta-no-prompt
+#SBATCH --job-name=no-prompt
 #SBATCH --gres=gpu:1
 
 # run the application
@@ -12,9 +12,9 @@ conda activate nlp-prompt-attack-env                          # activate target 
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
-    --task_name "qnli-roberta-base-no-prompt-test" \
+    --task_name "test-qnli-roberta-base-no-prompt" \
     --model_name_or_path "roberta-base" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/qnli" \
     --do_test \
-    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/qnli-roberta-base-no-prompt-epoch=08-val_loss=0.22.ckpt" \
+    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/qnli-roberta-base-no-prompt-epoch=10-val_loss=0.21.ckpt" \
     --num_gpu_devices 1

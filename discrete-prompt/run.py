@@ -176,7 +176,7 @@ def run(args):
                 n_training_steps=total_training_steps,
                 checkpoint_path=args.ckpt_path
                 )
-        trainer.test(model=model, dataloaders=data_module, verbose=True, ckpt_path="best")
+        trainer.test(model=model, dataloaders=data_module, verbose=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

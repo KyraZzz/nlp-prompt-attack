@@ -1,13 +1,13 @@
 from datasets import load_from_disk, load_dataset, concatenate_datasets
 class PrepData():
-    def __init__(datapath, random_seed):
-        self.raw_dataset = load_from_disk(datapath) if data_path is not None else None
+    def __init__(self, data_path, random_seed):
+        self.raw_dataset = load_from_disk(data_path) if data_path is not None else None
         self.train = None
         self.val = None
         self.test = None
         self.random_seed = random_seed
     
-    def preprocess():
+    def preprocess(self):
         return self.train, self.val, self.test
 
 class QNLIPrepData(PrepData):
@@ -28,12 +28,12 @@ class QNLIPrepData(PrepData):
         })
     })
     """
-    def __init__(datapath, random_seed):
-        super().__init__(datapath, random_seed)
+    def __init__(self, data_path, random_seed):
+        super().__init__(data_path, random_seed)
         if self.raw_dataset is None:
             self.raw_dataset = load_dataset("glue", "qnli")
     
-    def preprocess():
+    def preprocess(self):
         dataset = concatenate_datasets([self.raw_dataset["train"], self.raw_dataset["validation"]]).shuffle(seed=self.random_seed)
         res = dataset.train_test_split(test_size=0.2)
         self.train, val_test_dataset = res['train'], res['test']
@@ -67,12 +67,12 @@ class MNLIPrepData(PrepData):
         })
     })
     """
-    def __init__(datapath, random_seed):
-        super().__init__(datapath, random_seed)
+    def __init__(self, data_path, random_seed):
+        super().__init__(data_path, random_seed)
         if self.raw_dataset is None:
             self.raw_dataset = load_dataset("glue", "mnli")
     
-    def preprocess():
+    def preprocess(self):
         dataset = concatenate_datasets([self.raw_dataset["train"], self.raw_dataset["validation_matched"],self.raw_dataset['validation_mismatched']]).shuffle(seed=self.random_seed)
         res = dataset.train_test_split(test_size=0.2)
         self.train, val_test_dataset = res['train'], res['test']
@@ -98,7 +98,7 @@ class SST2PrepData(QNLIPrepData):
         })
     })
     """
-    def __init__(datapath, random_seed):
-        super().__init__(datapath, random_seed)
+    def __init__(self, data_path, random_seed):
+        super().__init__(data_path, random_seed)
         if self.raw_dataset is None:
             self.raw_dataset = load_dataset("glue", "sst2")

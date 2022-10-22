@@ -1,3 +1,14 @@
+## Pipeline to reproduce experiments
+1. Download and save datasets to a local directory
+```
+$ cd nlp-prompt-attack/discrete-prompt
+# after specify the target dataset name in `download_datasets.sh`, currently only [QNLI, MNLI, SST2] are supported
+$ ./download_datasets.sh
+```
+2. Generate k-shot datasets
+```
+
+```
 ## Example
 1. With no prompt:
 ```
@@ -29,3 +40,6 @@ python3 run.py \
 >>> tokenizer.unk_token
 '<unk>'
 ```
+
+# Random seed used in the experiments
+`seed = [13, 21, 42, 87, 100]`

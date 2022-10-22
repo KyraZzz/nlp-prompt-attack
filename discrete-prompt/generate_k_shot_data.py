@@ -23,9 +23,9 @@ def generate_k_shot_data(dataset_name, data_path, label_class_num, random_seed, 
     test = concatenate_datasets(test_list).shuffle(random_seed)
     
     # save datasets to disk
-    train.save_to_disk(k_shot_save_path + f"/{dataset_name}/seed={random_seed}/train")
-    val.save_to_disk(k_shot_save_path + f"/{dataset_name}/seed={random_seed}/validation")
-    test.save_to_disk(k_shot_save_path + f"/{dataset_name}/seed={random_seed}/test")
+    train.save_to_disk(k_shot_save_path + f"/k={k}/seed={random_seed}/{dataset_name}/train")
+    val.save_to_disk(k_shot_save_path + f"/k={k}/seed={random_seed}/{dataset_name}/validation")
+    test.save_to_disk(k_shot_save_path + f"/k={k}/seed={random_seed}/{dataset_name}/test")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -1,4 +1,6 @@
 from datasets import load_from_disk, load_dataset, concatenate_datasets
+import argparse
+
 class PrepData():
     def __init__(self, data_path, random_seed):
         self.raw_dataset = load_from_disk(data_path) if data_path is not None else None
@@ -114,3 +116,23 @@ def data_preprocess(dataset_name, data_path, random_seed):
         case _:
             raise Exception("Dataset not supported.")
     return data_obj.preprocess()
+
+def download_dataset(dataset_name, data_save_path):
+    match dataset_name:
+        case "QNLI":
+            dataset = load_dataset("glue", "qnli")
+        case "MNLI":
+            dataset = load_dataset("glue", "mnli")
+        case "SST2":
+            dataset = load_dataset("glue", "sst2")
+        case _:
+            raise Exception("Dataset not supported.")
+    dataset.save_to_disk(data_save_path)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset_name", type = str, required = True, help = "Supported dataset name: QNLI, MNLI, SST2")
+    parser.add_argument("--data_save_path", type = str, required = True, help = "Data path")
+    args = parser.parse_args()
+
+    download_dataset(args.dataset_name, args.data_save_path)

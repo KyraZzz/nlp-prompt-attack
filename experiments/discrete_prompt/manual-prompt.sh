@@ -1,16 +1,14 @@
 #!/bin/bash
-#SBATCH --nodes=1
-#SBATCH --time=10:00:00
-#SBATCH --job-name=manual1
-#SBATCH --gres=gpu:8
+declare -A mapping=( ["QNLI"]=2 ["MNLI"]=3 ["SST2"]=2)
+for name in ${!mapping[@]}; do
+    for k in 16; do
+        for seed in 13 21 42 87 100; do
+            bash k_shot_worker.sh $1 ${name} ${mapping[$name]} ${k} ${seed} \
+            1> ${tmpfile} 2>&1
+        done
+    done
+done
 
-# run the application
-. /etc/profile.d/modules.sh                                   # Leave this line (enables the module command)
-module purge                                                  # Removes all modules still loaded
-source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
-conda activate nlp-prompt-attack-env                          # activate target env
-
-cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
     --random_seed 13 \
     --task_name "qnli-roberta-large-manual-prompt-manual-1-k16-seed13" \

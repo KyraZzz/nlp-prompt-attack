@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from dataset import te_dataset_hub, te_dataset_prompt_hub
     
 class TextEntailDataModule(pl.LightningDataModule):
-    def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count):
+    def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, not_truncate_first):
         super().__init__()
         self.dataset_name = dataset_name
         self.train_data = train_data
@@ -13,25 +13,29 @@ class TextEntailDataModule(pl.LightningDataModule):
         self.tokenizer = tokenizer
         self.batch_size = batch_size
         self.max_token_count = max_token_count
+        self.not_truncate_first = not_truncate_first
     
     def setup(self, stage=None):
         self.train_dataset = te_dataset_hub(
-            self.dataset_name, 
-            self.train_data, 
-            self.tokenizer, 
-            self.max_token_count
+            dataset_name = self.dataset_name, 
+            data = self.train_data, 
+            tokenizer = self.tokenizer, 
+            max_token_count = self.max_token_count,
+            not_truncate_first = self.not_truncate_first
         )
         self.val_dataset = te_dataset_hub(
-            self.dataset_name, 
-            self.val_data, 
-            self.tokenizer, 
-            self.max_token_count
+            dataset_name = self.dataset_name, 
+            data = self.val_data, 
+            tokenizer = self.tokenizer, 
+            max_token_count = self.max_token_count,
+            not_truncate_first = self.not_truncate_first
         )
         self.test_dataset = te_dataset_hub(
-            self.dataset_name, 
-            self.test_data, 
-            self.tokenizer, 
-            self.max_token_count
+            dataset_name = self.dataset_name, 
+            data = self.test_data, 
+            tokenizer = self.tokenizer, 
+            max_token_count = self.max_token_count,
+            not_truncate_first = self.not_truncate_first
         )
     
     def train_dataloader(self):
@@ -57,62 +61,67 @@ class TextEntailDataModule(pl.LightningDataModule):
         )
 
 class TextEntailDataModulePrompt(TextEntailDataModule):
-    def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, template, verbalizer_dict):
-        super().__init__(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count)
+    def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, not_truncate_first, with_prompt, template, verbalizer_dict):
+        super().__init__(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, not_truncate_first)
         self.with_prompt = with_prompt
         self.template = template
         self.verbalizer_dict = verbalizer_dict
     
     def setup(self, stage=None):
         self.train_dataset = te_dataset_prompt_hub(
-            self.dataset_name, 
-            self.train_data, 
-            self.tokenizer, 
-            self.max_token_count, 
-            self.with_prompt, 
-            self.template, 
-            self.verbalizer_dict
+            dataset_name = self.dataset_name, 
+            data = self.train_data, 
+            tokenizer = self.tokenizer, 
+            max_token_count = self.max_token_count, 
+            with_prompt = self.with_prompt, 
+            template = self.template, 
+            verbalizer_dict = self.verbalizer_dict,
+            not_truncate_first = self.not_truncate_first
         )
         self.val_dataset = te_dataset_prompt_hub(
-            self.dataset_name, 
-            self.val_data, 
-            self.tokenizer, 
-            self.max_token_count, 
-            self.with_prompt, 
-            self.template, 
-            self.verbalizer_dict
+            dataset_name = self.dataset_name, 
+            data = self.val_data, 
+            tokenizer = self.tokenizer, 
+            max_token_count = self.max_token_count, 
+            with_prompt = self.with_prompt, 
+            template = self.template, 
+            verbalizer_dict = self.verbalizer_dict,
+            not_truncate_first = self.not_truncate_first
         )
         self.test_dataset = te_dataset_prompt_hub(
-            self.dataset_name, 
-            self.test_data, 
-            self.tokenizer, 
-            self.max_token_count, 
-            self.with_prompt, 
-            self.template, 
-            self.verbalizer_dict
+            dataset_name = self.dataset_name, 
+            data = self.test_data, 
+            tokenizer = self.tokenizer, 
+            max_token_count = self.max_token_count, 
+            with_prompt = self.with_prompt, 
+            template = self.template, 
+            verbalizer_dict = self.verbalizer_dict,
+            not_truncate_first = self.not_truncate_first
         )
 
-def te_data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, template, verbalizer_dict):
+def te_data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, not_truncate_first, with_prompt, template, verbalizer_dict):
     if with_prompt:
         return TextEntailDataModulePrompt(
-                dataset_name, 
-                train_data, 
-                val_data, 
-                test_data, 
-                tokenizer, 
-                batch_size, 
-                max_token_count, 
-                with_prompt, 
-                template, 
-                verbalizer_dict
+                dataset_name = dataset_name, 
+                train_data = train_data, 
+                val_data = val_data, 
+                test_data = test_data, 
+                tokenizer = tokenizer, 
+                batch_size = batch_size, 
+                max_token_count = max_token_count,
+                not_truncate_first = not_truncate_first, 
+                with_prompt = with_prompt, 
+                template = template, 
+                verbalizer_dict = verbalizer_dict
             )
     return TextEntailDataModule(
-                dataset_name, 
-                train_data, 
-                val_data, 
-                test_data, 
-                tokenizer, 
-                batch_size, 
-                max_token_count
+                dataset_name = dataset_name, 
+                train_data = train_data, 
+                val_data = val_data, 
+                test_data = test_data, 
+                tokenizer = tokenizer, 
+                batch_size = batch_size, 
+                max_token_count = max_token_count,
+                not_truncate_first = not_truncate_first
             )
         

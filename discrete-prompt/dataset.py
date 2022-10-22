@@ -4,10 +4,11 @@ from torch.utils.data import Dataset
 import pytorch_lightning as pl
 
 class TextEntailDataset(Dataset):
-    def __init__(self, data, tokenizer, max_token_count):
+    def __init__(self, data, tokenizer, max_token_count, not_truncate_first):
         self.tokenizer = tokenizer
         self.max_token_count = max_token_count
         self.data = data
+        self.not_truncate_first = not_truncate_first
         self.sent1_col_name = None
         self.sent2_col_name = None
         self.label_col_name = None
@@ -20,13 +21,14 @@ class TextEntailDataset(Dataset):
         question = data_row[self.sent1_col_name]
         answer = data_row[self.sent2_col_name]
         labels = data_row[self.label_col_name]
+        truncation_strat = "only_second" if self.not_truncate_first else "only_first"
         encoding = self.tokenizer.encode_plus(
             question,
             answer,
             add_special_tokens=True,
             max_length=self.max_token_count,
             padding="max_length",
-            truncation="only_second",
+            truncation=truncation_strat,
             return_attention_mask=True,
             return_tensors="pt"
         )
@@ -42,11 +44,17 @@ class TextEntailDataset(Dataset):
         )
 
 class TextEntailDatasetPrompt(TextEntailDataset):
-    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
-        super().__init__(data, tokenizer, max_token_count)
+    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict, not_truncate_first):
+        super().__init__(
+            data = data, 
+            tokenizer = tokenizer, 
+            max_token_count = max_token_count, 
+            not_truncate_first = not_truncate_first
+        )
         self.with_prompt = with_prompt
         self.template = template
         self.verbalizer_dict = verbalizer_dict
+        self.truncate_end_token = 0
     
     def template_to_encoding(self):
         special_token_dict = {
@@ -68,12 +76,16 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 if need_cap:
                     sentence = sentence[0].upper() + sentence[1:]
                 encoding_list += self.tokenizer.encode(sentence, add_special_tokens=False)
+                if not self.not_truncate_first:
+                    self.truncate_end_token = len(encoding_list) - 1
             elif segment == self.sent2_col_name:
                 sentence = re.match(r'^[a-zA-Z ]*', answer).group(0)
                 sentence = sentence.lower()
                 if need_cap:
                     sentence = sentence[0].upper() + sentence[1:]
                 encoding_list += self.tokenizer.encode(sentence, add_special_tokens=False)
+                if self.not_truncate_first:
+                    self.truncate_end_token = len(encoding_list) - 1
             else:
                 # remove additional <s> </s>
                 encoding_list += self.tokenizer.encode(segment)[1:-1]
@@ -91,11 +103,11 @@ class TextEntailDatasetPrompt(TextEntailDataset):
     
     def trunc_pad(self, list, pad_token):
         # truncation and padding
-        diff = self.max_token_count - len(list)
-        if diff > 0:
+        diff = len(list) - self.max_token_count
+        if diff < 0:
             list += [pad_token for _ in range(diff)]
         else:
-            list = list[:self.max_token_count]
+            list = list[:self.truncate_end_token - diff + 1] + list[self.truncate_end_token + 1:]
         return list
     
     def __getitem__(self, index: int):
@@ -125,61 +137,99 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         )
     
 class TextEntailDatasetQNLI(TextEntailDataset):
-    def __init__(self, data, tokenizer, max_token_count):
-        super().__init__(data, tokenizer, max_token_count)
+    def __init__(self, data, tokenizer, max_token_count, not_truncate_first):
+        super().__init__(
+            data = data, 
+            tokenizer = tokenizer, 
+            max_token_count = max_token_count, 
+            not_truncate_first = not_truncate_first
+        )
         self.sent1_col_name = "question"
         self.sent2_col_name = "sentence"
         self.label_col_name = "label"
 
 class TextEntailDatasetQNLIPrompt(TextEntailDatasetPrompt):
-    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
-        super().__init__(data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict)
+    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict, not_truncate_first):
+        super().__init__(
+            data = data, 
+            tokenizer = tokenizer, 
+            max_token_count = max_token_count, 
+            with_prompt = with_prompt, 
+            template = template, 
+            verbalizer_dict = verbalizer_dict, 
+            not_truncate_first = not_truncate_first
+        )
         self.sent1_col_name = "question"
         self.sent2_col_name = "sentence"
         self.label_col_name = "label"
 
 class TextEntailDatasetMNLI(TextEntailDataset):
-    def __init__(self, data, tokenizer, max_token_count):
-        super().__init__(data, tokenizer, max_token_count)
+    def __init__(self, data, tokenizer, max_token_count, not_truncate_first):
+        super().__init__(
+            data = data, 
+            tokenizer = tokenizer, 
+            max_token_count = max_token_count, 
+            not_truncate_first = not_truncate_first
+        )
         self.sent1_col_name = "premise"
         self.sent2_col_name = "hypothesis"
         self.label_col_name = "label"
 
 class TextEntailDatasetMNLIPrompt(TextEntailDatasetPrompt):
-    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
-        super().__init__(data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict)
+    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict, not_truncate_first):
+        super().__init__(
+            data = data, 
+            tokenizer = tokenizer, 
+            max_token_count = max_token_count, 
+            with_prompt = with_prompt, 
+            template = template, 
+            verbalizer_dict = verbalizer_dict, 
+            not_truncate_first = not_truncate_first
+        )
         self.sent1_col_name = "premise"
         self.sent2_col_name = "hypothesis"
         self.label_col_name = "label"
 
-def te_dataset_hub(dataset_name, data, tokenizer, max_token_count):
+def te_dataset_hub(dataset_name, data, tokenizer, max_token_count, not_truncate_first):
     match dataset_name:
         case "QNLI":
-            return TextEntailDatasetQNLI(data, tokenizer, max_token_count)
-        case "MNLI":
-            return TextEntailDatasetMNLI(data, tokenizer, max_token_count)
-        case _:
-            raise Exception("Dataset not supported.")
-
-def te_dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
-    match dataset_name:
-        case "QNLI":
-            return TextEntailDatasetQNLIPrompt(
-                    data, 
-                    tokenizer, 
-                    max_token_count, 
-                    with_prompt, 
-                    template, 
-                    verbalizer_dict
+            return TextEntailDatasetQNLI(
+                    data = data, 
+                    tokenizer = tokenizer, 
+                    max_token_count = max_token_count, 
+                    not_truncate_first = not_truncate_first
                 )
         case "MNLI":
             return TextEntailDatasetMNLI(
-                    data, 
-                    tokenizer, 
-                    max_token_count, 
-                    with_prompt, 
-                    template, 
-                    verbalizer_dict
+                    data = data, 
+                    tokenizer = tokenizer, 
+                    max_token_count = max_token_count, 
+                    not_truncate_first = not_truncate_first
+                )
+        case _:
+            raise Exception("Dataset not supported.")
+
+def te_dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict, not_truncate_first):
+    match dataset_name:
+        case "QNLI":
+            return TextEntailDatasetQNLIPrompt(
+                    data = data, 
+                    tokenizer = tokenizer, 
+                    max_token_count = max_token_count, 
+                    with_prompt = with_prompt, 
+                    template = template, 
+                    verbalizer_dict = verbalizer_dict,
+                    not_truncate_first = not_truncate_first
+                )
+        case "MNLI":
+            return TextEntailDatasetMNLI(
+                    data = data, 
+                    tokenizer = tokenizer, 
+                    max_token_count = max_token_count, 
+                    with_prompt = with_prompt, 
+                    template = template, 
+                    verbalizer_dict = verbalizer_dict,
+                    not_truncate_first = not_truncate_first
                 )
         case _:
             raise Exception("Dataset not supported.")

@@ -14,8 +14,9 @@ python3 run.py \
     --do_train \
     --do_test \
     --with_prompt \
-    --template "<cls> <question> ? <mask> , <answer> ." \
+    --template "<cls> <question> ? <answer> . <mask> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
+    --not_truncate_first \
     --batch_size 7 \
     --num_gpu_devices 1 \
     --is_dev_mode \

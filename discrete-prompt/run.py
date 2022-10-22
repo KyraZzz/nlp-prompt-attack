@@ -44,6 +44,7 @@ def run(args):
     with prompt: {args.with_prompt}{chr(10)} \
     template: {args.template}{chr(10)} \
     verbalizer: {args.verbalizer_dict}{chr(10)} \
+    truncate option: {args.not_truncate_first}{chr(10)} \
     warmup step percentage: {args.warmup_percent}{chr(10)} \
     is developing mode: {args.is_dev_mode}{chr(10)} \
     number of gpu devices: {args.num_gpu_devices}{chr(10)} \
@@ -59,11 +60,11 @@ def run(args):
     # checkpointing saves best model based on validation loss
     date_time = datetime.now()
     checkpoint_callback = ModelCheckpoint(
-        dirpath="checkpoints",
-        filename=f"{args.task_name}-date={date_time.month}-{date_time.day}H{date_time.hour}M{date_time.minute}"+"-{epoch:02d}-{val_loss:.2f}",
-        verbose=True,
-        monitor="val_loss",
-        mode="min"
+        dirpath = "checkpoints",
+        filename = f"{args.task_name}-date={date_time.month}-{date_time.day}H{date_time.hour}M{date_time.minute}"+"-{epoch:02d}-{val_loss:.2f}",
+        verbose = True,
+        monitor = "val_loss",
+        mode = "min"
     )
     # early stopping terminates training when the loss has not improved for the last n epochs
     early_stopping_callback = EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience)
@@ -77,16 +78,17 @@ def run(args):
     template = prep_template(args.template)
     # load data module
     data_module = te_data_loader_hub(
-        args.dataset_name,
-        train_data,
-        val_data,
-        test_data,
-        tokenizer,
-        args.batch_size,
-        args.max_token_count,
-        args.with_prompt,
-        template,
-        verbalizer_dict
+        dataset_name = args.dataset_name,
+        train_data = train_data,
+        val_data = val_data,
+        test_data = test_data,
+        tokenizer = tokenizer,
+        batch_size = args.batch_size,
+        max_token_count = args.max_token_count,
+        not_truncate_first = args.not_truncate_first,
+        with_prompt = args.with_prompt,
+        template = template,
+        verbalizer_dict = verbalizer_dict
     )
 
     # load model
@@ -94,88 +96,89 @@ def run(args):
     total_training_steps = steps_per_epoch * args.max_epoch
     warmup_steps = int(total_training_steps * args.warmup_percent / 100)
     model = te_model_hub(
-        model_name=args.model_name_or_path,
-        n_classes=1,
-        learning_rate=args.learning_rate,
-        n_warmup_steps=warmup_steps,
-        n_training_steps=total_training_steps,
-        with_prompt=args.with_prompt
+        model_name = args.model_name_or_path,
+        n_classes = 1,
+        learning_rate = args.learning_rate,
+        n_warmup_steps = warmup_steps,
+        n_training_steps = total_training_steps,
+        with_prompt = args.with_prompt
     )
 
     # training and(or) testing
     if args.is_dev_mode:
         trainer = pl.Trainer(
             # debugging method 1: runs n batch of training, validation, test and prediction data
-            fast_dev_run=5,
+            fast_dev_run = 5,
             # debugging method 2: shorten epoch length
-            # limit_train_batches=0.01,
-            # limit_val_batches=0.005,
+            # limit_train_batches = 0.01,
+            # limit_val_batches = 0.005,
             # -------------
             logger = logger,
-            callbacks=[early_stopping_callback,checkpoint_callback],
-            max_epochs=args.max_epoch,
-            log_every_n_steps=args.log_every_n_steps,
-            accelerator="gpu",
-            devices=[3],
+            callbacks = [early_stopping_callback,checkpoint_callback],
+            max_epochs = args.max_epoch,
+            log_every_n_steps = args.log_every_n_steps,
+            accelerator = "gpu",
+            devices = [3],
         )
     else:
         trainer = pl.Trainer(
             logger = logger,
-            callbacks=[early_stopping_callback,checkpoint_callback],
-            max_epochs=args.max_epoch,
-            log_every_n_steps=args.log_every_n_steps,
-            accelerator="gpu",
-            devices=args.num_gpu_devices,
-            strategy="ddp",
+            callbacks = [early_stopping_callback,checkpoint_callback],
+            max_epochs = args.max_epoch,
+            log_every_n_steps = args.log_every_n_steps,
+            accelerator = "gpu",
+            devices = args.num_gpu_devices,
+            strategy = "ddp",
         )
 
     # do testing straight after training
     if args.do_train and args.do_test:
         trainer.fit(model, data_module)
         # trainer in default using best checkpointed model for testing
-        trainer.test(dataloaders=data_module, verbose=True)   
+        trainer.test(dataloaders = data_module, verbose = True)   
     elif args.do_test and (args.ckpt_path is not None):
         if args.with_prompt:
             model = TextEntailClassifierPrompt.load_from_checkpoint(
-                model_name=args.model_name_or_path,
-                n_classes=1,
-                learning_rate=args.learning_rate,
-                n_warmup_steps=warmup_steps,
-                n_training_steps=total_training_steps,
-                checkpoint_path=args.ckpt_path
+                model_name = args.model_name_or_path,
+                n_classes = 1,
+                learning_rate = args.learning_rate,
+                n_warmup_steps = warmup_steps,
+                n_training_steps = total_training_steps,
+                checkpoint_path = args.ckpt_path
                 )
         else:
             model = TextEntailClassifier.load_from_checkpoint(
-                model_name=args.model_name_or_path,
-                n_classes=1,
-                learning_rate=args.learning_rate,
-                n_warmup_steps=warmup_steps,
-                n_training_steps=total_training_steps,
-                checkpoint_path=args.ckpt_path
+                model_name = args.model_name_or_path,
+                n_classes = 1,
+                learning_rate = args.learning_rate,
+                n_warmup_steps = warmup_steps,
+                n_training_steps = total_training_steps,
+                checkpoint_path = args.ckpt_path
                 )
-        trainer.test(model=model, dataloaders=data_module, verbose=True)
+        trainer.test(model = model, dataloaders = data_module, verbose = True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--task_name", type=str, required=True, help="Task name")
-    parser.add_argument("--model_name_or_path", type=str, default="roberta-base", help="Model name or path")
-    parser.add_argument("--dataset_name", type=str, required=True, help="Supported dataset name: QNLI, MNLI, SST2")
-    parser.add_argument("--data_path", type=str, default=None, help="Data path")
-    parser.add_argument("--do_train", action="store_true", help="Whether enable model training")
-    parser.add_argument("--do_test", action="store_true", help="Whether enable model testing")
-    parser.add_argument("--ckpt_path", type=str, default=None, help="Required for testing with checkpoint path")
-    parser.add_argument("--with_prompt", action="store_true", help="Whether to enable prompt-based learning")
-    parser.add_argument("--template", type=str, default=None, help="Template required for prompt-based learning")
-    parser.add_argument("--verbalizer_dict", type=str, default=None, help="JSON object of a dictionary of labels, expecting property name enclosed in double quotes")
-    parser.add_argument("--random_seed", type=int, default=42, help="Model seed")
-    parser.add_argument("--learning_rate", type=float, default=1e-5, help="Model learning rate")
-    parser.add_argument("--batch_size", type=int, default=16, help="Model training batch size")
-    parser.add_argument("--max_epoch", type=int, default=20, help="Model maximum epoch")
-    parser.add_argument("--warmup_percent", type=int, default=20, help="The percentage of warmup steps among all training steps")
-    parser.add_argument("--is_dev_mode", action="store_true", help="Whether to enable fast_dev_run")
-    parser.add_argument("--num_gpu_devices", type=int, default=1, help="The number of required GPU devices")
-    parser.add_argument("--log_every_n_steps", type=int, default=100, help="The logging frequency")
-    parser.add_argument("--max_token_count", type=int, default=512, help="The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
-    parser.add_argument("--early_stopping_patience", type=int, default=5, help="Early stopping terminates training when the loss has not improved for the last n epochs")
+    parser.add_argument("--task_name", type = str, required = True, help = "Task name")
+    parser.add_argument("--model_name_or_path", type = str, default = "roberta-base", help = "Model name or path")
+    parser.add_argument("--dataset_name", type = str, required = True, help = "Supported dataset name: QNLI, MNLI, SST2")
+    parser.add_argument("--data_path", type = str, default = None, help = "Data path")
+    parser.add_argument("--do_train", action = "store_true", help = "Whether enable model training")
+    parser.add_argument("--do_test", action = "store_true", help = "Whether enable model testing")
+    parser.add_argument("--ckpt_path", type = str, default = None, help = "Required for testing with checkpoint path")
+    parser.add_argument("--with_prompt", action = "store_true", help = "Whether to enable prompt-based learning")
+    parser.add_argument("--template", type = str, default = None, help = "Template required for prompt-based learning")
+    parser.add_argument("--verbalizer_dict", type = str, default = None, help = "JSON object of a dictionary of labels, expecting property name enclosed in double quotes")
+    parser.add_argument("--not_truncate_first", action = "store_false", help = "If specified, truncate from the tail of the second setence, otherwise truncate from the tail of the first sentence")
+    parser.add_argument("--random_seed", type = int, default = 42, help = "Model seed")
+    parser.add_argument("--learning_rate", type = float, default = 1e-5, help = "Model learning rate")
+    parser.add_argument("--batch_size", type = int, default = 16, help = "Model training batch size")
+    parser.add_argument("--max_epoch", type = int, default = 20, help = "Model maximum epoch")
+    parser.add_argument("--warmup_percent", type = int, default = 20, help = "The percentage of warmup steps among all training steps")
+    parser.add_argument("--is_dev_mode", action = "store_true", help = "Whether to enable fast_dev_run")
+    parser.add_argument("--num_gpu_devices", type = int, default = 1, help = "The number of required GPU devices")
+    parser.add_argument("--log_every_n_steps", type = int, default = 100, help = "The logging frequency")
+    parser.add_argument("--max_token_count", type = int, default = 512, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
+    parser.add_argument("--early_stopping_patience", type = int, default = 5, help = "Early stopping terminates training when the loss has not improved for the last n epochs")
     args = parser.parse_args()
     run(args)

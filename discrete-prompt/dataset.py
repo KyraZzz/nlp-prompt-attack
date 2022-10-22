@@ -222,7 +222,7 @@ def te_dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, with_p
                     not_truncate_first = not_truncate_first
                 )
         case "MNLI":
-            return TextEntailDatasetMNLI(
+            return TextEntailDatasetMNLIPrompt(
                     data = data, 
                     tokenizer = tokenizer, 
                     max_token_count = max_token_count, 

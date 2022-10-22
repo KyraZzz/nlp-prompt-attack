@@ -10,7 +10,9 @@ python3 run.py \
     --task_name "dev-qnli-roberta-base-manual-prompt" \
     --model_name_or_path "roberta-base" \
     --dataset_name "QNLI" \
-    --data_path "/local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt/datasets/qnli" \
+    --data_path "/local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k=16/seed=13/QNLI" \
+    --do_k_shot \
+    --k_samples_per_class 16 \
     --do_train \
     --do_test \
     --with_prompt \

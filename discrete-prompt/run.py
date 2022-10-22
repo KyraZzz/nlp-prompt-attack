@@ -35,6 +35,7 @@ def run(args):
     dataset name: {args.dataset_name}{chr(10)} \
     data path: {args.data_path}{chr(10)} \
     do k shot: {args.do_k_shot}{chr(10)} \
+    k samples per class: {args.k_samples_per_class}{chr(10)} \
     do train: {args.do_train}{chr(10)} \
     do test: {args.do_test}{chr(10)} \
     batch size: {args.batch_size}{chr(10)} \
@@ -70,13 +71,21 @@ def run(args):
     # early stopping terminates training when the loss has not improved for the last n epochs
     early_stopping_callback = EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience)
 
-    # preprocess data
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
-    train_data, val_data, test_data = data_preprocess(args.dataset_name, args.data_path, args.random_seed)
     # preprocess verbalizer_dict
     verbalizer_dict = json.loads(args.verbalizer_dict) if args.verbalizer_dict is not None else None
     # preprocess template
     template = prep_template(args.template)
+    # get tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+
+    # preprocess data, get train, val and test dataset
+    train_data, val_data, test_data = data_preprocess(
+        dataset_name = args.dataset_name, 
+        data_path = args.data_path, 
+        random_seed = args.random_seed, 
+        k = args.k_samples_per_class
+    )
+    
     # load data module
     data_module = te_data_loader_hub(
         dataset_name = args.dataset_name,
@@ -164,6 +173,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_name_or_path", type = str, default = "roberta-base", help = "Model name or path")
     parser.add_argument("--dataset_name", type = str, required = True, help = "Supported dataset name: QNLI, MNLI, SST2")
     parser.add_argument("--do_k_shot", action = "store_true", help = "Do K-shot training")
+    parser.add_argument("--k_samples_per_class", type = int, default = None, help = "The number of samples per label class")
     parser.add_argument("--data_path", type = str, default = None, help = "Data path")
     parser.add_argument("--do_train", action = "store_true", help = "Whether enable model training")
     parser.add_argument("--do_test", action = "store_true", help = "Whether enable model testing")

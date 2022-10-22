@@ -5,7 +5,7 @@ import argparse
 
 def generate_k_shot_data(dataset_name, data_path, label_class_num, random_seed, k, k_shot_save_path):
     assert label_class_num > 1
-    train, val, test = data_preprocess(dataset_name, data_path, random_seed)
+    train, val, test = data_preprocess(dataset_name, data_path, random_seed, k)
     all_samples = concatenate_datasets([train, val, test])
     train_list = [] 
     val_list = []

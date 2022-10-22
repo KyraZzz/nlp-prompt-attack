@@ -109,8 +109,8 @@ class SST2PrepData(QNLIPrepData):
         })
     })
     """
-    def __init__(self, data_path, random_seed):
-        super().__init__(data_path, random_seed)
+    def __init__(self, data_path, random_seed, k = None):
+        super().__init__(data_path, random_seed, k)
         if self.raw_dataset is None and k is None:
             self.raw_dataset = load_dataset("glue", "sst2")
 

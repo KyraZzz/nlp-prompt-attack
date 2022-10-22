@@ -34,6 +34,7 @@ def run(args):
     model name or path: {args.model_name_or_path}{chr(10)} \
     dataset name: {args.dataset_name}{chr(10)} \
     data path: {args.data_path}{chr(10)} \
+    do k shot: {args.do_k_shot}{chr(10)} \
     do train: {args.do_train}{chr(10)} \
     do test: {args.do_test}{chr(10)} \
     batch size: {args.batch_size}{chr(10)} \
@@ -162,6 +163,7 @@ if __name__ == "__main__":
     parser.add_argument("--task_name", type = str, required = True, help = "Task name")
     parser.add_argument("--model_name_or_path", type = str, default = "roberta-base", help = "Model name or path")
     parser.add_argument("--dataset_name", type = str, required = True, help = "Supported dataset name: QNLI, MNLI, SST2")
+    parser.add_argument("--do_k_shot", action = "store_true", help = "Do K-shot training")
     parser.add_argument("--data_path", type = str, default = None, help = "Data path")
     parser.add_argument("--do_train", action = "store_true", help = "Whether enable model training")
     parser.add_argument("--do_test", action = "store_true", help = "Whether enable model testing")

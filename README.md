@@ -20,7 +20,31 @@ $ ./download_datasets.sh
 ```
 $ ./generate_k_shot_data.sh <general-dataset-folder>
 ```
-
+Now the folder structure should look like the following:
+```
+├── datasets
+│   ├── k_shot
+│   │   └── k=16
+│   │       ├── seed=100
+│   │       │   ├── MNLI
+│   │       │   │   ├── test
+│   │       │   │   ├── train
+│   │       │   │   └── validation
+│   │       │   ├── QNLI
+│   │       │   │   └── ...
+│   │       │   └── SST2
+│   │       │       └── ...
+│   │       ├── seed=13
+│   │       │   ├── MNLI
+│   │       │   ├── QNLI
+│   │       │   └── SST2
+│   │       ├── seed=21
+│   │       │   └── ...
+│   │       ├── seed=42
+│   │       │   └── ...
+│   │       └── seed=87
+│   │           └── ...
+```
 ## Example
 1. With no prompt:
 ```

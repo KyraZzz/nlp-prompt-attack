@@ -128,7 +128,7 @@ def run(args):
             max_epochs = args.max_epoch,
             log_every_n_steps = args.log_every_n_steps,
             accelerator = "gpu",
-            devices = [3],
+            devices = args.num_gpu_devices,
         )
     else:
         trainer = pl.Trainer(

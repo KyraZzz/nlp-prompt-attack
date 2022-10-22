@@ -77,7 +77,7 @@ class MNLIPrepData(PrepData):
     })
     """
     def __init__(self, data_path, random_seed, k = None):
-        super().__init__(data_path, random_seed, k = None)
+        super().__init__(data_path, random_seed, k)
         if self.raw_dataset is None and k is None:
             self.raw_dataset = load_dataset("glue", "mnli")
     

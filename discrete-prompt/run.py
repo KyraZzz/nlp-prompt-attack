@@ -141,10 +141,11 @@ def run(args):
         )
 
     # do testing straight after training
-    if args.do_train and args.do_test:
+    if args.do_train:
         trainer.fit(model, data_module)
-        # trainer in default using best checkpointed model for testing
-        trainer.test(verbose = True, ckpt_path=checkpoint_callback.best_model_path, dataloaders = data_module)   
+        if args.do_test:
+            # trainer in default using best checkpointed model for testing
+            trainer.test(verbose = True, ckpt_path=checkpoint_callback.best_model_path, dataloaders = data_module)   
     elif args.do_test and (args.ckpt_path is not None):
         if args.with_prompt:
             model = TextEntailClassifierPrompt.load_from_checkpoint(

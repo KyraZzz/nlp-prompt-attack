@@ -77,7 +77,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 sentence = sentence.lower()
                 if need_cap:
                     sentence = sentence[0].upper() + sentence[1:]
-                encoding_list self.tokenizer.encode(sentence, add_special_tokens=False)
+                encoding_list = self.tokenizer.encode(sentence, add_special_tokens=False)
                 self.sent1_end_token = len(encoding_list) - 1
             elif segment == self.sent2_col_name:
                 self.sent2_start_token = len(encoding_list) - 1
@@ -106,7 +106,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         # padding
         diff = len(list) - self.max_token_count
         if diff < 0:
-            return list += [pad_token for _ in range(diff)]
+            return list + [pad_token for _ in range(diff)]
         # truncation
         sent1_token_len = self.sent1_end_token - self.sent1_start_token + 1
         sent2_token_len = self.sent2_end_token - self.sent2_start_token + 1

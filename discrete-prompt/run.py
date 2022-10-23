@@ -61,7 +61,7 @@ def run(args):
     # checkpointing saves best model based on validation loss
     date_time = datetime.now()
     checkpoint_callback = ModelCheckpoint(
-        dirpath = "checkpoints",
+        dirpath = f"checkpoints/{date_time.month}-{date_time.day}/{args.task_name}",
         filename = f"{args.task_name}-date={date_time.month}-{date_time.day}H{date_time.hour}M{date_time.minute}"+"-{epoch:02d}-{val_loss:.2f}",
         verbose = True,
         save_top_k = 1,

@@ -3,16 +3,12 @@ import argparse
 
 class PrepData():
     def __init__(self, data_path, random_seed, k = None):
-        self.raw_dataset = load_from_disk(data_path) if (data_path is not None and k is None) else None
+        self.raw_dataset = load_from_disk(data_path)
         self.train = None
         self.val = None
         self.test = None
         self.random_seed = random_seed
         self.k = k
-        if k is not None:
-            self.train = load_from_disk(f"{data_path}/train")
-            self.val = load_from_disk(f"{data_path}/validation")
-            self.test = load_from_disk(f"{data_path}/test")
     
     def preprocess(self):
         return self.train, self.val, self.test
@@ -114,7 +110,15 @@ class SST2PrepData(QNLIPrepData):
         if self.raw_dataset is None and k is None:
             self.raw_dataset = load_dataset("glue", "sst2")
 
-def data_preprocess(dataset_name, data_path, random_seed, k):
+def get_k_shot_data(data_path):
+    train_data = load_from_disk(f"{data_path}/train")
+    validation_data = load_from_disk(f"{data_path}/validation")
+    test_data = load_from_disk(f"{data_path}/test")
+    return train_data, validation_data, test_data 
+
+def data_preprocess(dataset_name, data_path, random_seed, k, do_k_shot=False):
+    if do_k_shot:
+        return get_k_shot_data(data_path)
     match dataset_name:
         case "QNLI":
             data_obj = QNLIPrepData(data_path, random_seed, k)

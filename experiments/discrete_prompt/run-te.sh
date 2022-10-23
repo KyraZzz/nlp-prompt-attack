@@ -11,16 +11,17 @@ python3 run.py \
     --task_name "qnli-roberta-base-manual-prompt-1" \
     --model_name_or_path "roberta-base" \
     --dataset_name "QNLI" \
-    --data_path "/local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k=16/seed=13/QNLI" \
+    --data_path "/local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k=1000/seed=13/QNLI" \
     --do_k_shot \
-    --k_samples_per_class 16 \
+    --k_samples_per_class 1000 \
     --do_train \
     --with_prompt \
     --template "<cls> <question> ? <mask> , <answer> ." \
     --verbalizer_dict '{"0":["ĠYes"], "1":["ĠNo"]}' \
-    --log_every_n_steps 20 \
+    --log_every_n_steps 100 \
     --batch_size 10 \
+    --learning_rate 1e-5 \
     --num_gpu_devices 4 \
-    --max_epoch 100 \
-    --early_stopping_patience 50 \
+    --max_epoch 20 \
+    --early_stopping_patience 10 \
     1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

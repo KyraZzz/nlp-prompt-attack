@@ -51,6 +51,7 @@ def run(args):
     number of gpu devices: {args.num_gpu_devices}{chr(10)} \
     log every n steps: {args.log_every_n_steps}{chr(10)} \
     early stopping patience value: {args.early_stopping_patience}{chr(10)} \
+    validate every n steps: {args.val_every_n_steps}{chr(10)} \
     ")
 
     # set a general random seed
@@ -83,7 +84,8 @@ def run(args):
         dataset_name = args.dataset_name, 
         data_path = args.data_path, 
         random_seed = args.random_seed, 
-        k = args.k_samples_per_class
+        k = args.k_samples_per_class,
+        do_k_shot = args.do_k_shot
     )
     
     # load data module
@@ -128,6 +130,7 @@ def run(args):
             log_every_n_steps = args.log_every_n_steps,
             accelerator = "gpu",
             devices = args.num_gpu_devices,
+            check_val_every_n_epoch=args.val_every_n_steps
         )
     else:
         trainer = pl.Trainer(
@@ -177,6 +180,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_path", type = str, default = None, help = "Data path")
     parser.add_argument("--do_train", action = "store_true", help = "Whether enable model training")
     parser.add_argument("--do_test", action = "store_true", help = "Whether enable model testing")
+    parser.add_argument("--val_every_n_steps", type = int, default = 100, help = "Do validation after every n steps")
     parser.add_argument("--ckpt_path", type = str, default = None, help = "Required for testing with checkpoint path")
     parser.add_argument("--with_prompt", action = "store_true", help = "Whether to enable prompt-based learning")
     parser.add_argument("--template", type = str, default = None, help = "Template required for prompt-based learning")

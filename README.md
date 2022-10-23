@@ -79,3 +79,9 @@ python3 run.py \
 
 # Random seed used in the experiments
 `seed = [13, 21, 42, 87, 100]`
+
+# Suitable learning rate and batch size
+lr = {1e-5, 2e-5, 5e-5}
+bz = {2, 4, 8}
+max_training_step = 1000
+validate_every_n_steps = 100

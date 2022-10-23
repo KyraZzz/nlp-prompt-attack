@@ -24,7 +24,6 @@ python3 run.py \
     --with_prompt \
     --template "<cls> <question> ? <mask> , <answer> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
-    --not_truncate_first \
-    --log_every_n_steps 100 \
-    --batch_size 16 \
+    --log_every_n_steps 20 \
+    --batch_size 2 \
     --num_gpu_devices 8

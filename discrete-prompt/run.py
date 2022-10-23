@@ -46,7 +46,6 @@ def run(args):
     with prompt: {args.with_prompt}{chr(10)} \
     template: {args.template}{chr(10)} \
     verbalizer: {args.verbalizer_dict}{chr(10)} \
-    truncate option: {args.not_truncate_first}{chr(10)} \
     warmup step percentage: {args.warmup_percent}{chr(10)} \
     is developing mode: {args.is_dev_mode}{chr(10)} \
     number of gpu devices: {args.num_gpu_devices}{chr(10)} \
@@ -65,6 +64,7 @@ def run(args):
         dirpath = "checkpoints",
         filename = f"{args.task_name}-date={date_time.month}-{date_time.day}H{date_time.hour}M{date_time.minute}"+"-{epoch:02d}-{val_loss:.2f}",
         verbose = True,
+        save_top_k = 1,
         monitor = "val_loss",
         mode = "min"
     )
@@ -95,7 +95,6 @@ def run(args):
         tokenizer = tokenizer,
         batch_size = args.batch_size,
         max_token_count = args.max_token_count,
-        not_truncate_first = args.not_truncate_first,
         with_prompt = args.with_prompt,
         template = template,
         verbalizer_dict = verbalizer_dict
@@ -145,7 +144,7 @@ def run(args):
     if args.do_train and args.do_test:
         trainer.fit(model, data_module)
         # trainer in default using best checkpointed model for testing
-        trainer.test(dataloaders = data_module, verbose = True)   
+        trainer.test(verbose = True, ckpt_path=checkpoint_callback.best_model_path, dataloaders = data_module)   
     elif args.do_test and (args.ckpt_path is not None):
         if args.with_prompt:
             model = TextEntailClassifierPrompt.load_from_checkpoint(
@@ -181,7 +180,6 @@ if __name__ == "__main__":
     parser.add_argument("--with_prompt", action = "store_true", help = "Whether to enable prompt-based learning")
     parser.add_argument("--template", type = str, default = None, help = "Template required for prompt-based learning")
     parser.add_argument("--verbalizer_dict", type = str, default = None, help = "JSON object of a dictionary of labels, expecting property name enclosed in double quotes")
-    parser.add_argument("--not_truncate_first", action = "store_false", help = "If specified, truncate from the tail of the second setence, otherwise truncate from the tail of the first sentence")
     parser.add_argument("--random_seed", type = int, default = 42, help = "Model seed")
     parser.add_argument("--learning_rate", type = float, default = 1e-5, help = "Model learning rate")
     parser.add_argument("--batch_size", type = int, default = 16, help = "Model training batch size")

@@ -129,6 +129,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 # order: <sent2> <sent1>
                 list = list[:self.sent1_end_token - sent1_truncate_len + 1] + list[self.sent1_end_token + 1:]
                 list = list[:self.sent2_end_token - sent2_truncate_len + 1] + list[self.sent2_end_token + 1:]
+        assert len(list) <= self.max_token_count
         return list
     
     def __getitem__(self, index: int):

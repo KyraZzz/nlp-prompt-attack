@@ -149,8 +149,8 @@ def run(args):
         if args.do_test:
             # trainer in default using best checkpointed model for testing
             trainer.test(verbose = True, ckpt_path=checkpoint_callback.best_model_path, dataloaders = data_module)   
-    elif args.do_test and (args.ckpt_path is not None):
-        if args.with_prompt:
+    elif args.do_test:
+        if args.with_prompt and args.ckpt_path is not None:
             model = TextEntailClassifierPrompt.load_from_checkpoint(
                 model_name = args.model_name_or_path,
                 n_classes = 1,
@@ -159,7 +159,7 @@ def run(args):
                 n_training_steps = total_training_steps,
                 checkpoint_path = args.ckpt_path
                 )
-        else:
+        elif args.ckpt_path is not None:
             model = TextEntailClassifier.load_from_checkpoint(
                 model_name = args.model_name_or_path,
                 n_classes = 1,
@@ -169,6 +169,7 @@ def run(args):
                 checkpoint_path = args.ckpt_path
                 )
         trainer.test(model = model, dataloaders = data_module, verbose = True)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

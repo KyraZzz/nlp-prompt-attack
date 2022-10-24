@@ -38,6 +38,7 @@ def run(args):
     k samples per class: {args.k_samples_per_class}{chr(10)} \
     do train: {args.do_train}{chr(10)} \
     do test: {args.do_test}{chr(10)} \
+    checkpoint path: {args.ckpt_path}{chr(10)} \
     batch size: {args.batch_size}{chr(10)} \
     learning rate: {args.learning_rate}{chr(10)} \
     maximum epochs: {args.max_epoch}{chr(10)} \

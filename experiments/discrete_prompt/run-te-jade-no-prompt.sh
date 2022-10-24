@@ -13,12 +13,12 @@ conda activate nlp-prompt-attack-env                          # activate target 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
     --random_seed 13 \
-    --task_name "qnli-roberta-base-manual-no-prompt-k16-seed13" \
+    --task_name "qnli-roberta-base-manual-no-prompt-k1000-seed13" \
     --model_name_or_path "roberta-base" \
     --dataset_name "QNLI" \
-    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k=16/seed=13/QNLI" \
+    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k=1000/seed=13/QNLI" \
     --do_k_shot \
-    --k_samples_per_class 16 \
+    --k_samples_per_class 1000 \
     --do_train \
     --do_test \
     --log_every_n_steps 20 \

@@ -102,11 +102,12 @@ class TextEntailClassifier(pl.LightningModule):
     
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=self.learning_rate)
+        # learning rate scheduler
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
             num_warmup_steps=self.n_warmup_steps, # very low learning rate
             num_training_steps=self.n_training_steps
-        ) # learning rate scheduler
+        )
         
         return dict(
             optimizer=optimizer,
@@ -130,7 +131,7 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         mask_token_pos = mask_token_pos.squeeze() # e.g., turn tensor([1]) into tensor(1)
         output = self.model(input_ids, attention_mask=attention_mask)
         last_hidden_state, pooler_output = output.last_hidden_state, output.pooler_output
-        mask_last_hidden_state = last_hidden_state[torch.arange(last_hidden_state.size(0)), mask_token_pos] 
+        mask_last_hidden_state = last_hidden_state[torch.arange(last_hidden_state.size(0)), mask_token_pos]
 
         # LMhead predicts the word to fill into mask token
         mask_word_pred = self.LM_with_head.lm_head(mask_last_hidden_state)

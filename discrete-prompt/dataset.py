@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import Dataset
 import pytorch_lightning as pl
 import math
+import string
 
 class TextEntailDataset(Dataset):
     def __init__(self, data, tokenizer, max_token_count):
@@ -57,7 +58,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         self.sent2_start_token = 0
         self.sent2_end_token = 0
     
-    def template_to_encoding(self):
+    def template_to_encoding(self, sent1, sent2):
         special_token_dict = {
             "<cls>": self.tokenizer.cls_token_id, "<mask>": self.tokenizer.mask_token_id
         }
@@ -70,23 +71,21 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 continue
             elif segment in special_token_dict.keys():
                 encoding_list.append(special_token_dict[segment])
-            elif segment == self.sent1_col_name:
+            elif segment == f"<{self.sent1_col_name}>":
                 self.sent1_start_token = len(encoding_list) - 1
                 # strip punctuations and handle capitalisation
-                sentence = re.match(r'^[a-zA-Z ]*', question).group(0)
-                sentence = sentence.lower()
-                if need_cap:
-                    sentence = sentence[0].upper() + sentence[1:]
-                encoding_list = self.tokenizer.encode(sentence, add_special_tokens=False)
-                self.sent1_end_token = len(encoding_list) - 1
-            elif segment == self.sent2_col_name:
-                self.sent2_start_token = len(encoding_list) - 1
-                sentence = re.match(r'^[a-zA-Z ]*', answer).group(0)
-                sentence = sentence.lower()
+                sentence = sent1.strip(string.punctuation)
                 if need_cap:
                     sentence = sentence[0].upper() + sentence[1:]
                 encoding_list += self.tokenizer.encode(sentence, add_special_tokens=False)
-                sent2_end_token = len(encoding_list) - 1
+                self.sent1_end_token = len(encoding_list) - 1
+            elif segment == f"<{self.sent2_col_name}>":
+                self.sent2_start_token = len(encoding_list) - 1
+                sentence = sent2.strip(string.punctuation)
+                if need_cap:
+                    sentence = sentence[0].upper() + sentence[1:]
+                encoding_list += self.tokenizer.encode(sentence, add_special_tokens=False)
+                self.sent2_end_token = len(encoding_list) - 1
             else:
                 # remove additional <s> </s>
                 encoding_list += self.tokenizer.encode(segment)[1:-1]
@@ -106,7 +105,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         # padding
         diff = len(list) - self.max_token_count
         if diff < 0:
-            return list + [pad_token for _ in range(diff)]
+            return list + [pad_token for _ in range(-diff)]
         # truncation
         sent1_token_len = self.sent1_end_token - self.sent1_start_token + 1
         sent2_token_len = self.sent2_end_token - self.sent2_start_token + 1
@@ -137,7 +136,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         question = data_row[self.sent1_col_name]
         answer = data_row[self.sent2_col_name]
         labels = data_row[self.label_col_name]
-        encoding_list = self.template_to_encoding()
+        encoding_list = self.template_to_encoding(question, answer)
         attention_mask = [1 for _ in encoding_list]
 
         # truncation or padding

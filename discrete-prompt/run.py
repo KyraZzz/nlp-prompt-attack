@@ -34,6 +34,7 @@ def run(args):
     model name or path: {args.model_name_or_path}{chr(10)} \
     dataset name: {args.dataset_name}{chr(10)} \
     data path: {args.data_path}{chr(10)} \
+    number of classes: {args.n_classes}{chr(10)} \
     do k shot: {args.do_k_shot}{chr(10)} \
     k samples per class: {args.k_samples_per_class}{chr(10)} \
     do train: {args.do_train}{chr(10)} \
@@ -109,7 +110,7 @@ def run(args):
     warmup_steps = int(total_training_steps * args.warmup_percent / 100)
     model = te_model_hub(
         model_name = args.model_name_or_path,
-        n_classes = 1,
+        n_classes = args.n_classes,
         learning_rate = args.learning_rate,
         n_warmup_steps = warmup_steps,
         n_training_steps = total_training_steps,
@@ -153,7 +154,7 @@ def run(args):
     elif args.do_test:
         model = te_model_hub(
             model_name = args.model_name_or_path,
-            n_classes = 1,
+            n_classes = args.n_classes,
             learning_rate = args.learning_rate,
             n_warmup_steps = warmup_steps,
             n_training_steps = total_training_steps,
@@ -168,6 +169,7 @@ if __name__ == "__main__":
     parser.add_argument("--task_name", type = str, required = True, help = "Task name")
     parser.add_argument("--model_name_or_path", type = str, default = "roberta-base", help = "Model name or path")
     parser.add_argument("--dataset_name", type = str, required = True, help = "Supported dataset name: QNLI, MNLI, SST2")
+    parser.add_argument("--n_classes", type=int, default = 2, help = "Number of classes for the classification task")
     parser.add_argument("--do_k_shot", action = "store_true", help = "Do K-shot training")
     parser.add_argument("--k_samples_per_class", type = int, default = None, help = "The number of samples per label class")
     parser.add_argument("--data_path", type = str, default = None, help = "Data path")

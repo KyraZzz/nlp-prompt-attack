@@ -15,9 +15,6 @@ python3 run.py \
     --do_k_shot \
     --k_samples_per_class 16 \
     --do_train \
-    --with_prompt \
-    --template "<cls> <question> ? <mask> , <sentence> ." \
-    --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --log_every_n_steps 100 \
     --batch_size 10 \
     --learning_rate 1e-5 \

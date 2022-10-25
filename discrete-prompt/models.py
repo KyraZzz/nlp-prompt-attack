@@ -10,10 +10,11 @@ class TextEntailClassifier(pl.LightningModule):
         super().__init__()
         self.model = AutoModel.from_pretrained(model_name, return_dict=True)
         self.classifier = nn.Linear(self.model.config.hidden_size, n_classes)
+        self.n_classes = n_classes
         self.learning_rate = learning_rate
         self.n_training_steps = n_training_steps
         self.n_warmup_steps = n_warmup_steps
-        self.criterion = nn.BCELoss() # binary cross-entropy loss
+        self.criterion = nn.CrossEntropyLoss() # binary cross-entropy loss
         self.accuracy = Accuracy()
         self.train_loss_arr = []
         self.train_acc_arr = []
@@ -33,7 +34,7 @@ class TextEntailClassifier(pl.LightningModule):
         output = torch.sigmoid(output)
         loss = 0
         if labels is not None:
-            loss = self.criterion(output, labels.type(torch.float32))
+            loss = self.criterion(output.view(-1, output.size(-1)), labels.view(-1))
         return loss, output
 
     def training_step(self, batch, batch_idx):
@@ -41,7 +42,7 @@ class TextEntailClassifier(pl.LightningModule):
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         loss, outputs = self.forward(input_ids, attention_mask, labels)
-        pred_ids = torch.where(outputs > 0.5, 1, 0)
+        _, pred_ids = torch.max(outputs, dim=1)
         acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
         self.train_loss_arr.append(loss)
         self.train_acc_arr.append(acc)
@@ -63,7 +64,7 @@ class TextEntailClassifier(pl.LightningModule):
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         loss, outputs = self.forward(input_ids, attention_mask, labels)
-        pred_ids = torch.where(outputs > 0.5, 1, 0)
+        _, pred_ids = torch.max(outputs, dim=1)
         acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
         self.val_loss_arr.append(loss)
         self.val_acc_arr.append(acc)
@@ -85,7 +86,7 @@ class TextEntailClassifier(pl.LightningModule):
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         loss, outputs = self.forward(input_ids, attention_mask, labels)
-        pred_ids = torch.where(outputs > 0.5, 1, 0)
+        _, pred_ids = torch.max(outputs, dim=1)
         acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
         self.test_loss_arr.append(loss)
         self.test_acc_arr.append(acc)
@@ -143,9 +144,10 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         labels: (batch_size, 1), each row [1_{not_entailment}]
         """
         output = torch.cat(mask_label_pred, -1) # concatenate the scores into a tensor
+        output = torch.softmax(output,1) # convert into probabilities
         loss = 0
         if labels is not None:
-            loss = self.criterion(torch.softmax(output,1)[:,1].unsqueeze(-1), labels.type(torch.float32))
+            loss = self.criterion(output.view(-1, output.size(-1)), labels.view(-1))
         return loss, output
     
     def training_step(self, batch, batch_idx):

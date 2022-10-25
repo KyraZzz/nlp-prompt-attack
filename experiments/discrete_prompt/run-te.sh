@@ -19,9 +19,9 @@ python3 run.py \
     --template "<cls> <question> ? <mask> , <sentence> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --log_every_n_steps 100 \
-    --batch_size 10 \
+    --batch_size 2 \
     --learning_rate 1e-5 \
     --num_gpu_devices 4 \
-    --max_epoch 20 \
-    --early_stopping_patience 10 \
+    --max_epoch 100 \
+    --early_stopping_patience 20 \
     1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

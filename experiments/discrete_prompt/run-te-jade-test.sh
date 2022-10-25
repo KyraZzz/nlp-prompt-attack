@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=10:00:00
-#SBATCH --job-name=t-m6-87
+#SBATCH --job-name=t-no-100
 #SBATCH --gres=gpu:4
 
 # run the application
@@ -10,24 +10,21 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=87
+seed_all=100
 k_all=16
-ckpt_path_all="/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-25/qnli-roberta-large-manual-prompt-1-k16-seed87/qnli-roberta-large-manual-prompt-1-k16-seed87-date=10-25H22M34-epoch=13-val_loss=0.59.ckpt"
-prompt_num=6
+ckpt_path_all="/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-26/qnli-roberta-large-manual-no-prompt-k16-seed100/qnli-roberta-large-manual-no-prompt-k16-seed100-date=10-26H0M2-epoch=24-val_loss=0.60.ckpt"
+prompt_num=0
 # don't forget to change the template !!!
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "qnli-roberta-large-manual-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
+    --task_name "test-qnli-roberta-large-no-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
     --dataset_name "QNLI" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/QNLI" \
     --do_k_shot \
     --k_samples_per_class ${k_all} \
     --do_test \
-    --with_prompt \
-    --template "<cls> <sentence> ? <mask> , <sentence>" \
-    --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --ckpt_path ${ckpt_path_all} \
     --log_every_n_steps 20 \
     --batch_size 4 \

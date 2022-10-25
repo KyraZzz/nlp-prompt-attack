@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=1:00:00
-#SBATCH --job-name=m1-k1000
-#SBATCH --gres=gpu:1
+#SBATCH --time=10:00:00
+#SBATCH --job-name=t-m1-21
+#SBATCH --gres=gpu:4
 
 # run the application
 . /etc/profile.d/modules.sh                                   # Leave this line (enables the module command)
@@ -10,20 +10,28 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
+seed_all=21
+k_all=16
+ckpt_path_all="/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-25/qnli-roberta-large-manual-prompt-1-k16-seed21/qnli-roberta-large-manual-prompt-1-k16-seed21-date=10-25H22M43-epoch=12-val_loss=0.60.ckpt"
+prompt_num=1
+# don't forget to change the template !!!
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
-    --random_seed 13 \
-    --task_name "qnli-roberta-base-manual-no-prompt-k1000-seed13" \
-    --model_name_or_path "roberta-base" \
+    --random_seed ${seed_all} \
+    --task_name "qnli-roberta-large-manual-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
+    --model_name_or_path "roberta-large" \
     --dataset_name "QNLI" \
-    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k=1000/seed=13/QNLI" \
+    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/QNLI" \
     --do_k_shot \
-    --k_samples_per_class 1000 \
+    --k_samples_per_class ${k_all} \
     --do_test \
-    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-24/qnli-roberta-base-manual-no-prompt-k1000-seed13/qnli-roberta-base-manual-no-prompt-k1000-seed13-date=10-24H21M41-epoch=04-val_loss=0.46.ckpt" \
+    --with_prompt \
+    --template "<cls> <question> ? <mask> , <sentence> ." \
+    --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
+    --ckpt_path ${ckpt_path_all} \
     --log_every_n_steps 20 \
     --batch_size 4 \
     --learning_rate 2e-5 \
-    --num_gpu_devices 1 \
+    --num_gpu_devices 4 \
     --max_epoch 250 \
     --early_stopping_patience 20

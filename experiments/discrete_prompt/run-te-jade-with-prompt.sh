@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=1:00:00
-#SBATCH --job-name=m6-k16
+#SBATCH --job-name=m1-s21
 #SBATCH --gres=gpu:1
 
 # run the application
@@ -10,19 +10,21 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
+seed_all=21
+k_all=16
+prompt_num=1
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
-    --random_seed 13 \
-    --task_name "qnli-roberta-large-manual-prompt-6-k16-seed13" \
+    --random_seed ${seed_all} \
+    --task_name "qnli-roberta-large-manual-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
     --dataset_name "QNLI" \
-    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k=16/seed=13/QNLI" \
+    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/QNLI" \
     --do_k_shot \
-    --k_samples_per_class 16 \
+    --k_samples_per_class ${k_all} \
     --do_train \
-    --do_test \
     --with_prompt \
-    --template "<cls> <sentence> ? <mask> , <question>" \
+    --template "<cls> <question> ? <mask> , <sentence> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --log_every_n_steps 20 \
     --batch_size 4 \

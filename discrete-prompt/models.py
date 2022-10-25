@@ -199,7 +199,7 @@ def te_model_hub(model_name, n_classes, learning_rate, n_warmup_steps, n_trainin
     elif with_prompt and checkpoint_path is not None:
         return TextEntailClassifierPrompt.load_from_checkpoint(
             model_name = model_name,
-            n_classes = 1,
+            n_classes = n_classes,
             learning_rate = learning_rate,
             n_warmup_steps = n_warmup_steps,
             n_training_steps = n_training_steps,
@@ -208,7 +208,7 @@ def te_model_hub(model_name, n_classes, learning_rate, n_warmup_steps, n_trainin
     elif with_prompt is None and checkpoint_path is not None:
         return TextEntailClassifier.load_from_checkpoint(
             model_name = model_name,
-            n_classes = 1,
+            n_classes = n_classes,
             learning_rate = learning_rate,
             n_warmup_steps = n_warmup_steps,
             n_training_steps = n_training_steps,

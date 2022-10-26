@@ -1,0 +1,2 @@
+Loading cached shuffled indices for dataset at /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/mnli-matched/train/cache-559090d92f6320b5.arrow
+  0%|          | 0/403 [00:00<?, ?ba/s]  2%|▏         | 7/403 [00:00<00:05, 67.03ba/s]  4%|▍         | 16/403 [00:00<00:05, 77.36ba/s]  6%|▌         | 25/403 [00:00<00:04, 80.64ba/s]  8%|▊         | 34/403 [00:00<00:04, 83.67ba/s] 11%|█         | 43/403 [00:00<00:04, 83.81ba/s] 13%|█▎        | 52/403 [00:00<00:04, 70.22ba/s]

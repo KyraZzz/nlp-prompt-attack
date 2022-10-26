@@ -2,8 +2,8 @@
 tmpfile=$(mktemp ./temp.XXXXXX)
 mkdir -p ./datasets
 python3 prep_data.py \
-    --dataset_name "SST2" \
-    --data_save_path "./datasets/sst2" \
+    --dataset_name "MNLI-MATCHED" \
+    --data_save_path "./datasets/mnli-matched" \
     1> ${tmpfile} 2>&1
 
 rm ${tmpfile}

@@ -6,18 +6,31 @@ import argparse
 def generate_k_shot_data(dataset_name, data_path, label_class_num, random_seed, k, k_shot_save_path):
     assert label_class_num > 1
     train, val, test = data_preprocess(dataset_name, data_path, random_seed, k)
-    all_samples = concatenate_datasets([train, val, test])
     train_list = [] 
     val_list = []
     test_list = []
-    for i in range(label_class_num):
-        all_i_samples = all_samples.filter(lambda x:x['label'] == i)
-        train_i = Dataset.from_dict(all_i_samples[:k])
-        val_i = Dataset.from_dict(all_i_samples[k:2*k])
-        test_i = Dataset.from_dict(all_i_samples[2*k:])
-        train_list.append(train_i)
-        val_list.append(val_i)
-        test_list.append(test_i)
+    if dataset_name == "MNLI-MISMATCHED":
+        for i in range(label_class_num):
+            train_samples = train.filter(lambda x:x['label'] == i)
+            val_samples = val.filter(lambda x:x['label'] == i)
+            test_samples = test.filter(lambda x:x['label'] == i)
+            train_i = Dataset.from_dict(train_samples[:k])
+            val_i = Dataset.from_dict(val_samples[:k])
+            test_i = Dataset.from_dict(test_samples)
+            train_list.append(train_i)
+            val_list.append(val_i)
+            test_list.append(test_i)
+    else:
+        all_samples = concatenate_datasets([train, val, test])
+        for i in range(label_class_num):
+            all_i_samples = all_samples.filter(lambda x:x['label'] == i)
+            train_i = Dataset.from_dict(all_i_samples[:k])
+            val_i = Dataset.from_dict(all_i_samples[k:2*k])
+            test_i = Dataset.from_dict(all_i_samples[2*k:])
+            train_list.append(train_i)
+            val_list.append(val_i)
+            test_list.append(test_i)
+    
     train = concatenate_datasets(train_list).shuffle(random_seed)
     val = concatenate_datasets(val_list).shuffle(random_seed)
     test = concatenate_datasets(test_list).shuffle(random_seed)

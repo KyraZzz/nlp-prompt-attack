@@ -18,7 +18,7 @@ prompt_num=6
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "test-qnli-roberta-large-no-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
+    --task_name "test-qnli-roberta-large-manual-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
     --dataset_name "QNLI" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/QNLI" \
@@ -27,7 +27,7 @@ python3 run.py \
     --do_test \
     --ckpt_path ${ckpt_path_all} \
     --with_prompt \
-    --template "<cls> <sentence> ? <mask> , <sentence>" \
+    --template "<cls> <sentence> ? <mask> , <question>" \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --log_every_n_steps 20 \
     --batch_size 4 \

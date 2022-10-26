@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=10:00:00
-#SBATCH --job-name=t-m2-100
+#SBATCH --job-name=t-m6-100
 #SBATCH --gres=gpu:4
 
 # run the application
@@ -12,8 +12,8 @@ conda activate nlp-prompt-attack-env                          # activate target 
 
 seed_all=100
 k_all=16
-ckpt_path_all="/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-26/mnli-roberta-large-manual-prompt-2-k16-seed100/mnli-roberta-large-manual-prompt-2-k16-seed100-date=10-26H9M8-epoch=14-val_loss=0.92.ckpt"
-prompt_num=2
+ckpt_path_all="/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-26/mnli-roberta-large-manual-prompt-6-k16-seed100/mnli-roberta-large-manual-prompt-6-k16-seed100-date=10-26H11M33-epoch=17-val_loss=1.02.ckpt"
+prompt_num=6
 # don't forget to change the template !!!
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
@@ -27,7 +27,7 @@ python3 run.py \
     --k_samples_per_class ${k_all} \
     --do_test \
     --with_prompt \
-    --template "<cls> <premise> . <mask> , <hypothesis> ." \
+    --template "<cls> <hypothesis> ? <mask> , <premise>" \
     --verbalizer_dict '{"0":["Yes"], "1":["Maybe"], "2":["No"]}' \
     --ckpt_path ${ckpt_path_all} \
     --log_every_n_steps 20 \

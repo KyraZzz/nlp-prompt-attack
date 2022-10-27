@@ -141,7 +141,7 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in label_token_ids[0]]
         """
         output: (batch_size, 2), each row [score_Yes, score_No]
-        labels: (batch_size, 1), each row [1_{not_entailment}]
+        labels: (batch_size, 1), each row [0, ..., num_classes-1]
         """
         output = torch.cat(mask_label_pred, -1) # concatenate the scores into a tensor
         output = torch.softmax(output,1) # convert into probabilities

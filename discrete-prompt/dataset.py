@@ -216,7 +216,7 @@ def te_dataset_hub(dataset_name, data, tokenizer, max_token_count):
                     tokenizer = tokenizer, 
                     max_token_count = max_token_count
                 )
-        case "MNLI":
+        case "MNLI" | "MNLI-MATCHED" | "MNLI-MISMATCHED":
             return TextEntailDatasetMNLI(
                     data = data, 
                     tokenizer = tokenizer, 
@@ -236,7 +236,7 @@ def te_dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, with_p
                     template = template, 
                     verbalizer_dict = verbalizer_dict
                 )
-        case "MNLI":
+        case "MNLI" | "MNLI-MATCHED" | "MNLI-MISMATCHED":
             return TextEntailDatasetMNLIPrompt(
                     data = data, 
                     tokenizer = tokenizer, 

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=1:00:00
-#SBATCH --job-name=no-13
+#SBATCH --job-name=no-mm-13
 #SBATCH --gres=gpu:1
 
 # run the application
@@ -14,10 +14,10 @@ seed_all=13
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "mnli-roberta-large-manual-no-prompt-k16-seed"${seed_all} \
+    --task_name "mnli-mismatched-roberta-large-manual-no-prompt-k16-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
-    --dataset_name "MNLI" \
-    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k=16/seed="${seed_all}"/MNLI" \
+    --dataset_name "MNLI-MISMATCHED" \
+    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k=16/seed="${seed_all}"/MNLI-MISMATCHED" \
     --n_classes 3 \
     --do_k_shot \
     --k_samples_per_class 16 \

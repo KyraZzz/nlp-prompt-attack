@@ -1,5 +1,0 @@
-learning_rate: 2.0e-05
-model_name: roberta-base
-n_classes: 1
-n_training_steps: 125000
-n_warmup_steps: 25000

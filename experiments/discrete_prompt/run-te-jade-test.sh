@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=1:00:00
-#SBATCH --job-name=tmm-0-100-1
+#SBATCH --job-name=tmm-1-21
 #SBATCH --gres=gpu:1
 
 # run the application
@@ -10,10 +10,10 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=100
-k_all=16
-ckpt_path_all="/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-26/mnli-mismatched-roberta-large-manual-no-prompt-k16-seed100/mnli-mismatched-roberta-large-manual-no-prompt-k16-seed100-date=10-26H21M7-epoch=18-val_loss=0.97.ckpt"
-prompt_num=0
+seed_all=21
+k_all=100
+ckpt_path_all="/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-27/mnli-mismatched-roberta-large-manual-prompt-1-k100-seed21/mnli-mismatched-roberta-large-manual-prompt-1-k100-seed21-date=10-27H12M13-epoch=50-val_loss=0.79.ckpt"
+prompt_num=1
 # don't forget to change the template !!!
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
@@ -26,6 +26,9 @@ python3 run.py \
     --do_k_shot \
     --k_samples_per_class ${k_all} \
     --do_test \
+    --with_prompt \
+    --template "<cls> <premise> ? <mask> , <hypothesis> ." \
+    --verbalizer_dict '{"0":["Yes"], "1":["Maybe"], "2":["No"]}' \
     --ckpt_path ${ckpt_path_all} \
     --log_every_n_steps 20 \
     --batch_size 4 \

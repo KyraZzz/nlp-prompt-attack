@@ -16,10 +16,12 @@ def generate_k_shot_data(dataset_name, data_path, label_class_num, random_seed, 
             test_samples = test.filter(lambda x:x['label'] == i)
             train_i = Dataset.from_dict(train_samples[:k])
             val_i = Dataset.from_dict(val_samples[:k])
-            test_i = Dataset.from_dict(test_samples[:])
+            test_i_1 = Dataset.from_dict(val_samples[k:])
+            test_i_2 = Dataset.from_dict(test_samples[:])
             train_list.append(train_i)
             val_list.append(val_i)
-            test_list.append(test_i)
+            test_list.append(test_i_1)
+            test_list.append(test_i_2)
     else:
         all_samples = concatenate_datasets([train, val, test])
         for i in range(label_class_num):

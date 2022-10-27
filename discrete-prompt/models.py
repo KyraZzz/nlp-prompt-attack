@@ -46,8 +46,8 @@ class TextEntailClassifier(pl.LightningModule):
         acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
         self.train_loss_arr.append(loss)
         self.train_acc_arr.append(acc)
-        self.log("train_loss", loss, prog_bar=True)
-        self.log("train_accuracy", acc, prog_bar=True)
+        self.log("train_loss", loss, prog_bar=True, sync_dist=True)
+        self.log("train_accuracy", acc, prog_bar=True, sync_dist=True)
         return {"loss": loss, "predictions": outputs, "labels": labels, "train_accuracy": acc}
     
     def on_train_epoch_end(self):
@@ -55,8 +55,8 @@ class TextEntailClassifier(pl.LightningModule):
         train_mean_acc = torch.mean(torch.tensor(self.train_acc_arr, dtype=torch.float32))
         self.train_loss_arr = []
         self.train_acc_arr = []
-        self.log("train_mean_loss_per_epoch", train_mean_loss, prog_bar=True, logger=True)
-        self.log("train_mean_acc_per_epoch", train_mean_acc, prog_bar=True, logger=True)
+        self.log("train_mean_loss_per_epoch", train_mean_loss, prog_bar=True, logger=True, sync_dist=True)
+        self.log("train_mean_acc_per_epoch", train_mean_acc, prog_bar=True, logger=True, sync_dist=True)
         return {"train_mean_loss": train_mean_loss, "train_mean_acc": train_mean_acc}
     
     def validation_step(self, batch, batch_idx):
@@ -68,8 +68,8 @@ class TextEntailClassifier(pl.LightningModule):
         acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
         self.val_loss_arr.append(loss)
         self.val_acc_arr.append(acc)
-        self.log("val_loss", loss, prog_bar=True)
-        self.log("val_accuracy", acc, prog_bar=True)
+        self.log("val_loss", loss, prog_bar=True, sync_dist=True)
+        self.log("val_accuracy", acc, prog_bar=True, sync_dist=True)
         return loss
     
     def on_validation_epoch_end(self):
@@ -77,8 +77,8 @@ class TextEntailClassifier(pl.LightningModule):
         mean_acc = torch.mean(torch.tensor(self.val_acc_arr, dtype=torch.float32))
         self.val_loss_arr = []
         self.val_acc_arr = []
-        self.log("val_mean_loss_per_epoch", mean_loss, prog_bar=True, logger=True)
-        self.log("val_mean_acc_per_epoch", mean_acc, prog_bar=True, logger=True)
+        self.log("val_mean_loss_per_epoch", mean_loss, prog_bar=True, logger=True, sync_dist=True)
+        self.log("val_mean_acc_per_epoch", mean_acc, prog_bar=True, logger=True, sync_dist=True)
         return {"val_mean_loss": mean_loss, "val_mean_acc": mean_acc}
 
     def test_step(self, batch, batch_idx):
@@ -97,8 +97,8 @@ class TextEntailClassifier(pl.LightningModule):
         mean_acc = torch.mean(torch.tensor(self.test_acc_arr, dtype=torch.float32))
         self.test_loss_arr = []
         self.test_acc_arr = []
-        self.log("test_mean_loss", mean_loss, prog_bar=True, logger=True)
-        self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True)
+        self.log("test_mean_loss", mean_loss, prog_bar=True, logger=True, sync_dist=True)
+        self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True, sync_dist=True)
         return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
     
     def configure_optimizers(self):
@@ -161,8 +161,8 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         acc = self.accuracy(pred_ids, labels.squeeze())
         self.train_loss_arr.append(loss)
         self.train_acc_arr.append(acc)
-        self.log("train_loss", loss, prog_bar=True, logger=True)
-        self.log("train_accuracy", acc, prog_bar=True, logger=True)
+        self.log("train_loss", loss, prog_bar=True, logger=True, sync_dist=True)
+        self.log("train_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
         return {"loss": loss, "predictions": outputs, "labels": labels, "accuracy": acc}
     
     def validation_step(self, batch, batch_idx):
@@ -176,8 +176,8 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         acc = self.accuracy(pred_ids, labels.squeeze())
         self.val_loss_arr.append(loss)
         self.val_acc_arr.append(acc)
-        self.log("val_loss", loss, prog_bar=True, logger=True)
-        self.log("val_accuracy", acc, prog_bar=True, logger=True)
+        self.log("val_loss", loss, prog_bar=True, logger=True, sync_dist=True)
+        self.log("val_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
         return loss
 
     def test_step(self, batch, batch_idx):

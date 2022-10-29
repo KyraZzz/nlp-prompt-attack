@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=10:00:00
-#SBATCH --job-name=t-m1b-13
+#SBATCH --job-name=t-m1k-13
 #SBATCH --gres=gpu:8
 
 # run the application
@@ -11,8 +11,8 @@ source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
 seed_all=13
-k_all=100
-ckpt_path_all="/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-27/mnli-matched-roberta-large-manual-no-prompt-k100-seed13/mnli-matched-roberta-large-manual-no-prompt-k100-seed13-date=10-27-epoch=18-val_loss=0.89.ckpt"
+k_all=1000
+ckpt_path_all="/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-28/mnli-matched-roberta-large-manual-no-prompt-k1000-seed13/mnli-matched-roberta-large-manual-no-prompt-k1000-seed13-date=10-28-epoch=78-val_loss=0.72.ckpt"
 prompt_num=0
 # don't forget to change the template !!!
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt

@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=10:00:00
-#SBATCH --job-name=q41k-100
-#SBATCH --gres=gpu:8
+#SBATCH --time=1:00:00
+#SBATCH --job-name=q41b-87
+#SBATCH --gres=gpu:1
 
 # run the application
 . /etc/profile.d/modules.sh                                   # Leave this line (enables the module command)
@@ -10,8 +10,8 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=100
-k_all=1000
+seed_all=87
+k_all=100
 prompt_num=4
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
 python3 run.py \
@@ -31,6 +31,6 @@ python3 run.py \
     --log_every_n_steps 20 \
     --batch_size 4 \
     --learning_rate 2e-5 \
-    --num_gpu_devices 8 \
-    --max_epoch 250 \
-    --early_stopping_patience 10
+    --num_gpu_devices 1 \
+    --max_epoch 100 \
+    --early_stopping_patience 5

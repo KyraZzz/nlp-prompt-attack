@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=1:00:00
-#SBATCH --job-name=q41b-87
+#SBATCH --job-name=q41b-13
 #SBATCH --gres=gpu:1
 
 # run the application
@@ -10,7 +10,7 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=87
+seed_all=13
 k_all=100
 prompt_num=4
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
@@ -24,6 +24,7 @@ python3 run.py \
     --do_k_shot \
     --k_samples_per_class ${k_all} \
     --do_train \
+    --do_test \
     --with_prompt \
     --template "<cls> <sentence> ? <mask> , <question> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \

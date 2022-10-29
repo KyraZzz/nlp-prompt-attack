@@ -15,7 +15,7 @@ class TextEntailClassifier(pl.LightningModule):
         self.n_training_steps = n_training_steps
         self.n_warmup_steps = n_warmup_steps
         self.criterion = nn.CrossEntropyLoss() # loss function for classification problem
-        self.accuracy = Accuracy()
+        self.accuracy = Accuracy(dist_sync_on_step=True)
         self.train_loss_arr = []
         self.train_acc_arr = []
         self.val_loss_arr = []

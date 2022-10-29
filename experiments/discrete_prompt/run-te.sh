@@ -8,23 +8,20 @@ touch ./cl_job_output/${month_day}/log_${time}.out
 cd /local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt
 
 seed_all=13
-k_all=0
-prompt_num=4
+k_all=1000
+prompt_num=0
 
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "qnli-roberta-large-manual-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
-    --model_name_or_path "roberta-large" \
-    --dataset_name "QNLI" \
-    --data_path "/local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt/datasets/qnli" \
-    --n_classes 2 \
+    --task_name "mnli-matched-base-large-manual-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
+    --model_name_or_path "roberta-base" \
+    --dataset_name "MNLI-MATCHED" \
+    --data_path "/local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/MNLI-MATCHED" \
+    --n_classes 3 \
     --do_k_shot \
     --k_samples_per_class ${k_all} \
     --do_train \
     --do_test \
-    --with_prompt \
-    --template "<cls> <sentence> ? <mask> , <question> ." \
-    --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --log_every_n_steps 20 \
     --batch_size 4 \
     --learning_rate 2e-5 \

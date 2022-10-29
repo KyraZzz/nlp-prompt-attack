@@ -24,7 +24,6 @@ python3 run.py \
     --do_k_shot \
     --k_samples_per_class ${k_all} \
     --do_train \
-    --do_test \
     --with_prompt \
     --template "<cls> <sentence> ? <mask> , <question> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \

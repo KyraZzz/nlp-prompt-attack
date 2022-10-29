@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=10:00:00
-#SBATCH --job-name=t-m1k-13
+#SBATCH --job-name=t-mn1k-100
 #SBATCH --gres=gpu:8
 
 # run the application
@@ -10,9 +10,9 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=13
+seed_all=100
 k_all=1000
-ckpt_path_all="/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-28/mnli-matched-roberta-large-manual-no-prompt-k1000-seed13/mnli-matched-roberta-large-manual-no-prompt-k1000-seed13-date=10-28-epoch=78-val_loss=0.72.ckpt"
+ckpt_path_all="/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt/checkpoints/10-29/mnli-matched-roberta-large-no-prompt-0-k1000-seed100/mnli-matched-roberta-large-no-prompt-0-k1000-seed100-date=10-29-epoch=04-val_loss=0.74.ckpt"
 prompt_num=0
 # don't forget to change the template !!!
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/discrete-prompt
@@ -31,5 +31,5 @@ python3 run.py \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices 8 \
-    --max_epoch 250 \
-    --early_stopping_patience 20
+    --max_epoch 100 \
+    --early_stopping_patience 5

@@ -33,8 +33,6 @@ class QNLIPrepData(PrepData):
     """
     def __init__(self, data_path, random_seed, k = None):
         super().__init__(data_path, random_seed, k)
-        if self.raw_dataset is None and k is None:
-            self.raw_dataset = load_dataset("glue", "qnli")
     
     def preprocess(self):
         if self.train is not None and self.val is not None and self.test is not None:
@@ -74,8 +72,6 @@ class MNLIPrepData(PrepData):
     """
     def __init__(self, data_path, random_seed, k = None):
         super().__init__(data_path, random_seed, k)
-        if self.raw_dataset is None and k is None:
-            self.raw_dataset = load_dataset("glue", "mnli")
     
     def preprocess(self):
         if self.train is not None and self.val is not None and self.test is not None:
@@ -133,8 +129,6 @@ class SST2PrepData(QNLIPrepData):
     """
     def __init__(self, data_path, random_seed, k = None):
         super().__init__(data_path, random_seed, k)
-        if self.raw_dataset is None and k is None:
-            self.raw_dataset = load_dataset("glue", "sst2")
 
 def get_k_shot_data(data_path):
     train_data = load_from_disk(f"{data_path}/train")
@@ -143,7 +137,7 @@ def get_k_shot_data(data_path):
     return train_data, validation_data, test_data 
 
 def data_preprocess(dataset_name, data_path, random_seed, k, do_k_shot=False):
-    if do_k_shot:
+    if do_k_shot and k != 0:
         return get_k_shot_data(data_path)
     match dataset_name:
         case "QNLI":

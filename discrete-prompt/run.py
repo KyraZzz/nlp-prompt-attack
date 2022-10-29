@@ -146,22 +146,24 @@ def run(args):
         )
 
     # do testing straight after training
-    if args.do_train:
+    if args.do_train and args.k_samples_per_class != 0:
         trainer.fit(model, data_module)
         if args.do_test:
             # trainer in default using best checkpointed model for testing
             trainer.test(verbose = True, ckpt_path=checkpoint_callback.best_model_path, dataloaders = data_module)   
     elif args.do_test:
-        model = te_model_hub(
-            model_name = args.model_name_or_path,
-            n_classes = args.n_classes,
-            learning_rate = args.learning_rate,
-            n_warmup_steps = warmup_steps,
-            n_training_steps = total_training_steps,
-            with_prompt = args.with_prompt,
-            checkpoint_path = args.ckpt_path
-        )
+        if args.ckpt_path is not None:
+            model = te_model_hub(
+                model_name = args.model_name_or_path,
+                n_classes = args.n_classes,
+                learning_rate = args.learning_rate,
+                n_warmup_steps = warmup_steps,
+                n_training_steps = total_training_steps,
+                with_prompt = args.with_prompt,
+                checkpoint_path = args.ckpt_path
+            )
         trainer.test(model = model, dataloaders = data_module, verbose = True)
+
 
 
 if __name__ == "__main__":

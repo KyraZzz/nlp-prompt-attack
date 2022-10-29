@@ -9,7 +9,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from transformers import AutoTokenizer
 from pytorch_lightning.loggers import TensorBoardLogger
 
-from dataloaders import te_data_loader_hub
+from dataloaders import data_loader_hub
 from models import te_model_hub
 from prep_data import data_preprocess
 
@@ -91,7 +91,7 @@ def run(args):
     )
     
     # load data module
-    data_module = te_data_loader_hub(
+    data_module = data_loader_hub(
         dataset_name = args.dataset_name,
         train_data = train_data,
         val_data = val_data,

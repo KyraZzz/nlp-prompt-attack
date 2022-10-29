@@ -1,9 +1,9 @@
 import torch
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
-from dataset import te_dataset_hub, te_dataset_prompt_hub
+from dataset import dataset_hub, dataset_prompt_hub
     
-class TextEntailDataModule(pl.LightningDataModule):
+class GeneralDataModule(pl.LightningDataModule):
     def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count):
         super().__init__()
         self.dataset_name = dataset_name
@@ -15,19 +15,19 @@ class TextEntailDataModule(pl.LightningDataModule):
         self.max_token_count = max_token_count
     
     def setup(self, stage=None):
-        self.train_dataset = te_dataset_hub(
+        self.train_dataset = dataset_hub(
             dataset_name = self.dataset_name, 
             data = self.train_data, 
             tokenizer = self.tokenizer, 
             max_token_count = self.max_token_count
         )
-        self.val_dataset = te_dataset_hub(
+        self.val_dataset = dataset_hub(
             dataset_name = self.dataset_name, 
             data = self.val_data, 
             tokenizer = self.tokenizer, 
             max_token_count = self.max_token_count
         )
-        self.test_dataset = te_dataset_hub(
+        self.test_dataset = dataset_hub(
             dataset_name = self.dataset_name, 
             data = self.test_data, 
             tokenizer = self.tokenizer, 
@@ -56,7 +56,7 @@ class TextEntailDataModule(pl.LightningDataModule):
             num_workers=2
         )
 
-class TextEntailDataModulePrompt(TextEntailDataModule):
+class GeneralDataModulePrompt(GeneralDataModule):
     def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, template, verbalizer_dict):
         super().__init__(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count)
         self.with_prompt = with_prompt
@@ -64,7 +64,7 @@ class TextEntailDataModulePrompt(TextEntailDataModule):
         self.verbalizer_dict = verbalizer_dict
     
     def setup(self, stage=None):
-        self.train_dataset = te_dataset_prompt_hub(
+        self.train_dataset = dataset_prompt_hub(
             dataset_name = self.dataset_name, 
             data = self.train_data, 
             tokenizer = self.tokenizer, 
@@ -73,7 +73,7 @@ class TextEntailDataModulePrompt(TextEntailDataModule):
             template = self.template, 
             verbalizer_dict = self.verbalizer_dict
         )
-        self.val_dataset = te_dataset_prompt_hub(
+        self.val_dataset = dataset_prompt_hub(
             dataset_name = self.dataset_name, 
             data = self.val_data, 
             tokenizer = self.tokenizer, 
@@ -82,7 +82,7 @@ class TextEntailDataModulePrompt(TextEntailDataModule):
             template = self.template, 
             verbalizer_dict = self.verbalizer_dict
         )
-        self.test_dataset = te_dataset_prompt_hub(
+        self.test_dataset = dataset_prompt_hub(
             dataset_name = self.dataset_name, 
             data = self.test_data, 
             tokenizer = self.tokenizer, 
@@ -92,9 +92,9 @@ class TextEntailDataModulePrompt(TextEntailDataModule):
             verbalizer_dict = self.verbalizer_dict
         )
 
-def te_data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, template, verbalizer_dict):
+def data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, template, verbalizer_dict):
     if with_prompt:
-        return TextEntailDataModulePrompt(
+        return GeneralDataModulePrompt(
                 dataset_name = dataset_name, 
                 train_data = train_data, 
                 val_data = val_data, 
@@ -106,7 +106,7 @@ def te_data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer,
                 template = template, 
                 verbalizer_dict = verbalizer_dict
             )
-    return TextEntailDataModule(
+    return GeneralDataModule(
                 dataset_name = dataset_name, 
                 train_data = train_data, 
                 val_data = val_data, 

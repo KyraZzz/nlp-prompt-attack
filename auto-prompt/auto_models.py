@@ -5,6 +5,8 @@ from transformers import get_linear_schedule_with_warmup, AutoModel, AutoModelFo
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
 
+import ipdb
+
 class TextEntailClassifierPrompt(pl.LightningModule):
     def __init__(self, model_name, n_classes, learning_rate, n_training_steps=None, n_warmup_steps=None):
         super().__init__()
@@ -57,6 +59,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         labels = batch["labels"]
         mask_token_pos = batch["mask_token_pos"]
         label_token_ids = batch["label_token_ids"]
+        ipdb.set_trace()
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
         _, pred_ids = torch.max(outputs, dim=1)
         acc = self.accuracy(pred_ids, labels.squeeze())

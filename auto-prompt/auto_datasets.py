@@ -32,6 +32,19 @@ class TextEntailDatasetPrompt(Dataset):
         self.tokenizer.trigger_token = "<T>"
         self.tokenizer.trigger_token_id = self.tokenizer.convert_tokens_to_ids("<T>")
     
+    def get_filtered_vocab(self, label_token_ids):
+        filter_vocab = torch.ones(tokenizer.vocab_size, dtype=torch.float32)
+        for word, idx in tokenizer.get_vocab().items():
+            if len(word) == 1 or idx >= tokenizer.vocab_size:
+                continue
+            # filter label words and special tokens
+            if idx in label_token_ids or idx in tokenizer.all_special_ids:
+                filter_vocab[idx] = 0
+            # filter capitalized words.
+            elif tokenizer.decode([idx])[0].isupper():
+                filter_vocab[idx] = 0
+        return filter_vocab
+    
     def template_to_encoding(self, sent1, sent2):
         special_token_dict = {
             "<cls>": self.tokenizer.cls_token_id, "<mask>": self.tokenizer.mask_token_id, "<T>": self.tokenizer.trigger_token_id
@@ -137,6 +150,9 @@ class TextEntailDatasetPrompt(Dataset):
         # initialise trigger tokens as mask tokens
         encoding_list = self.init_triggers(encoding_list, trigger_token_pos, initial_trigger_token = self.tokenizer.mask_token_id)
 
+        # filter vocabulary
+        filter_vocab = self.get_filtered_vocab(label_token_ids)
+
         return dict(
             question=question,
             answer=answer,
@@ -145,7 +161,8 @@ class TextEntailDatasetPrompt(Dataset):
             labels=torch.tensor([labels]),
             mask_token_pos=mask_token_pos,
             label_token_ids=label_token_ids,
-            trigger_token_pos=trigger_token_pos
+            trigger_token_pos=trigger_token_pos,
+            filter_vocab=filter_vocab
         )
 
 class TextEntailDatasetQNLIPrompt(TextEntailDatasetPrompt):

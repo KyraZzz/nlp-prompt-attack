@@ -150,13 +150,4 @@ def te_model_hub(model_name, n_classes, learning_rate, n_warmup_steps, n_trainin
             n_training_steps = n_training_steps,
             checkpoint_path = checkpoint_path
         )
-    elif with_prompt is None and checkpoint_path is not None:
-        return TextEntailClassifier.load_from_checkpoint(
-            model_name = model_name,
-            n_classes = n_classes,
-            learning_rate = learning_rate,
-            n_warmup_steps = n_warmup_steps,
-            n_training_steps = n_training_steps,
-            checkpoint_path = checkpoint_path
-        )
-    return TextEntailClassifier(model_name, n_classes, learning_rate, n_training_steps, n_warmup_steps)
+    return None

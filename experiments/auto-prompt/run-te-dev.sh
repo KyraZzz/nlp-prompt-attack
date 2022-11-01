@@ -10,7 +10,7 @@ cd /local/scratch-3/yz709/nlp-prompt-attack/auto-prompt
 seed_all=13
 k_all=16
 prompt_num=1
-python3 run.py \
+python3 auto-run.py \
     --random_seed ${seed_all} \
     --task_name "qnli-roberta-base-auto-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-base" \

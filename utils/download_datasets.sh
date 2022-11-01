@@ -1,9 +1,9 @@
 #!/bin/bash
 tmpfile=$(mktemp ./temp.XXXXXX)
-mkdir -p ./datasets
+mkdir -p ../datasets
 python3 prep_data.py \
-    --dataset_name "MNLI-MISMATCHED" \
-    --data_save_path "~/nlp-prompt-attack/datasets/mnli-mismatched" \
+    --dataset_name "QNLI" \
+    --data_save_path "../datasets/qnli" \
     1> ${tmpfile} 2>&1
 
 rm ${tmpfile}

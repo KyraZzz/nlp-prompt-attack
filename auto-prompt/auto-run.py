@@ -11,7 +11,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from auto_dataloaders import data_loader_hub
 from auto_models import te_model_hub
-from ../utils/prep_data import data_preprocess
+from prep_data import data_preprocess
 
 def prep_template(template):
     if template is None: return None

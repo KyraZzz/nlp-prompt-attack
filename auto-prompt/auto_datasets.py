@@ -24,6 +24,9 @@ class TextEntailDatasetPrompt(Dataset):
         self.sent2_start_token = 0
         self.sent2_end_token = 0
     
+    def __len__(self):
+        return len(self.data)
+    
     def add_extra_special_tokens(self):
         self.tokenizer.add_special_tokens({'additional_special_tokens': ["<T>"]})
         self.tokenizer.trigger_token = "<T>"
@@ -75,7 +78,7 @@ class TextEntailDatasetPrompt(Dataset):
         assert max(trigger_token_pos) < self.max_token_count and min(trigger_token_pos) >= 0
         return trigger_token_pos
         
-    def init_triggers(self, encoding_list, trigger_token_pos, initial_trigger_token = self.tokenizer.mask_token_id):
+    def init_triggers(self, encoding_list, trigger_token_pos, initial_trigger_token):
         for idx in trigger_token_pos:
             encoding_list[idx] = initial_trigger_token
         return encoding_list

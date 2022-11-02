@@ -33,15 +33,15 @@ class TextEntailDatasetPrompt(Dataset):
         self.tokenizer.trigger_token_id = self.tokenizer.convert_tokens_to_ids("<T>")
     
     def get_filtered_vocab(self, label_token_ids):
-        filter_vocab = torch.ones(tokenizer.vocab_size, dtype=torch.float32)
-        for word, idx in tokenizer.get_vocab().items():
-            if len(word) == 1 or idx >= tokenizer.vocab_size:
+        filter_vocab = torch.ones(self.tokenizer.vocab_size, dtype=torch.float32)
+        for word, idx in self.tokenizer.get_vocab().items():
+            if len(word) == 1 or idx >= self.tokenizer.vocab_size:
                 continue
             # filter label words and special tokens
-            if idx in label_token_ids or idx in tokenizer.all_special_ids:
+            if idx in label_token_ids or idx in self.tokenizer.all_special_ids:
                 filter_vocab[idx] = 0
             # filter capitalized words.
-            elif tokenizer.decode([idx])[0].isupper():
+            elif self.tokenizer.decode([idx])[0].isupper():
                 filter_vocab[idx] = 0
         return filter_vocab
     

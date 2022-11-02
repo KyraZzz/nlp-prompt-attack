@@ -1,16 +1,39 @@
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
-from transformers import get_linear_schedule_with_warmup, AutoModel, AutoModelForMaskedLM
+from transformers import get_linear_schedule_with_warmup, AutoModel, AutoModelForMaskedLM, AutoConfig
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
 
 import ipdb
 
+class GradientStorage:
+    """
+    This object stores the intermediate gradients of the output a the given PyTorch module, which
+    otherwise might not be retained.
+    """
+    def __init__(self, module):
+        self._stored_gradient = None
+        module.register_backward_hook(self.hook)
+
+    def hook(self, module, grad_in, grad_out):
+        self._stored_gradient = grad_out[0]
+
+    def get(self):
+        return self._stored_gradient
+
+def get_embeddings(model, config):
+    """Returns the wordpiece embedding module."""
+    base_model = getattr(model, config.model_type)
+    embeddings = base_model.embeddings.word_embeddings
+    return embeddings
+
 class TextEntailClassifierPrompt(pl.LightningModule):
     def __init__(self, model_name, n_classes, learning_rate, n_training_steps=None, n_warmup_steps=None):
         super().__init__()
         self.model = AutoModel.from_pretrained(model_name, return_dict=True)
+        self.config = AutoConfig.from_pretrained(model_name)
+    
         self.classifier = nn.Linear(self.model.config.hidden_size, n_classes)
         self.n_classes = n_classes
         self.learning_rate = learning_rate
@@ -25,6 +48,8 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         self.test_loss_arr = []
         self.test_acc_arr = []
         self.LM_with_head = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
+        self.embeddings = get_embeddings(self.LM_with_head, self.config) # equivalent to model.roberta.embeddings.word_embeddings
+        self.embedding_gradient = GradientStorage(self.embeddings)
         self.save_hyperparameters()
     
     def forward(self, input_ids, attention_mask, mask_token_pos, label_token_ids, labels=None):
@@ -48,6 +73,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         """
         output = torch.cat(mask_label_pred, -1) # concatenate the scores into a tensor
         output = torch.softmax(output,1) # convert into probabilities
+        ipdb.set_trace()
         loss = 0
         if labels is not None:
             loss = self.criterion(output.view(-1, output.size(-1)), labels.view(-1))
@@ -101,28 +127,6 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         self.log("val_mean_loss_per_epoch", mean_loss, prog_bar=True, logger=True, sync_dist=True)
         self.log("val_mean_acc_per_epoch", mean_acc, prog_bar=True, logger=True, sync_dist=True)
         return {"val_mean_loss": mean_loss, "val_mean_acc": mean_acc}
-
-    def test_step(self, batch, batch_idx):
-        input_ids = batch["input_ids"]
-        attention_mask = batch["attention_mask"]
-        labels = batch["labels"]
-        mask_token_pos = batch["mask_token_pos"]
-        label_token_ids = batch["label_token_ids"]
-        loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
-        _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids, labels.squeeze())
-        self.test_loss_arr.append(loss)
-        self.test_acc_arr.append(acc)
-        return loss
-
-    def on_test_epoch_end(self):
-        mean_loss = torch.mean(torch.tensor(self.test_loss_arr, dtype=torch.float32))
-        mean_acc = torch.mean(torch.tensor(self.test_acc_arr, dtype=torch.float32))
-        self.test_loss_arr = []
-        self.test_acc_arr = []
-        self.log("test_mean_loss", mean_loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
     
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=self.learning_rate)

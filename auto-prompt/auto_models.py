@@ -39,24 +39,44 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         self.learning_rate = learning_rate
         self.n_training_steps = n_training_steps
         self.n_warmup_steps = n_warmup_steps
-        self.criterion = nn.CrossEntropyLoss() # loss function for classification problem
+        self.criterion = nn.NLLLoss() # negative log likelihood loss
         self.accuracy = Accuracy(dist_sync_on_step=True)
-        self.train_loss_arr = []
-        self.train_acc_arr = []
-        self.val_loss_arr = []
-        self.val_acc_arr = []
-        self.test_loss_arr = []
-        self.test_acc_arr = []
+
+        self.val_cum_list = []
+
         self.LM_with_head = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
         self.embeddings = get_embeddings(self.LM_with_head, self.config) # equivalent to model.roberta.embeddings.word_embeddings
         self.embedding_gradient = GradientStorage(self.embeddings)
         self.save_hyperparameters()
     
     def forward(self, input_ids, attention_mask, mask_token_pos, label_token_ids, labels=None):
-        """
-        output.last_hidden_state (batch_size, token_num, hidden_size): hidden representation for each token in each sequence of the batch. 
-        output.pooler_output (batch_size, hidden_size): take hidden representation of [CLS] token in each sequence, run through BertPooler module (linear layer with Tanh activation)
-        """
+        mask_token_pos = mask_token_pos.squeeze()
+        output = self.model(input_ids, attention_mask=attention_mask)
+        last_hidden_state, pooler_output = output.last_hidden_state, output.pooler_output
+        mask_last_hidden_state = last_hidden_state[torch.arange(last_hidden_state.size(0)), mask_token_pos]
+
+        # LMhead predicts the word to fill into mask token
+        mask_word_pred = self.LM_with_head.lm_head(mask_last_hidden_state)
+        
+        # get the scores for the labels specified by the verbalizer
+        mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in label_token_ids[0]]
+        output = torch.cat(mask_label_pred, -1) # concatenate the scores into a tensor
+        
+        m = nn.LogSoftmax(dim=1)
+        output = m(output)
+        # output = torch.softmax(output,1) # convert into probabilities
+        # output = -torch.log(output) # convert into negative log likelihood
+        loss = 0 # actually cum negative log likelihood, minimise loss
+        if labels is not None:
+            # loglik = output.gather(dim = 1, index = labels)
+            # loss = torch.sum(loglik)
+            loss = self.criterion(output, labels.view(-1))
+        return loss, output
+    
+    def training_step(self, batch, batch_idx):
+        pass
+
+    def forward_acc(self, input_ids, attention_mask, mask_token_pos, label_token_ids, labels=None):
         mask_token_pos = mask_token_pos.squeeze() # e.g., turn tensor([1]) into tensor(1)
         output = self.model(input_ids, attention_mask=attention_mask)
         last_hidden_state, pooler_output = output.last_hidden_state, output.pooler_output
@@ -67,42 +87,14 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         
         # get the scores for the labels specified by the verbalizer
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in label_token_ids[0]]
-        """
-        output: (batch_size, 2), each row [score_Yes, score_No]
-        labels: (batch_size, 1), each row [0, ..., num_classes-1]
-        """
+
         output = torch.cat(mask_label_pred, -1) # concatenate the scores into a tensor
         output = torch.softmax(output,1) # convert into probabilities
-        ipdb.set_trace()
-        loss = 0
+        _, pred_ids = torch.max(output, dim=1)
+        acc = 0
         if labels is not None:
-            loss = self.criterion(output.view(-1, output.size(-1)), labels.view(-1))
-        return loss, output
-    
-    def training_step(self, batch, batch_idx):
-        input_ids = batch["input_ids"]
-        attention_mask = batch["attention_mask"]
-        labels = batch["labels"]
-        mask_token_pos = batch["mask_token_pos"]
-        label_token_ids = batch["label_token_ids"]
-        ipdb.set_trace()
-        loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
-        _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids, labels.squeeze())
-        self.train_loss_arr.append(loss)
-        self.train_acc_arr.append(acc)
-        self.log("train_loss", loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("train_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"loss": loss, "predictions": outputs, "labels": labels, "accuracy": acc}
-    
-    def on_train_epoch_end(self):
-        train_mean_loss = torch.mean(torch.tensor(self.train_loss_arr, dtype=torch.float32))
-        train_mean_acc = torch.mean(torch.tensor(self.train_acc_arr, dtype=torch.float32))
-        self.train_loss_arr = []
-        self.train_acc_arr = []
-        self.log("train_mean_loss_per_epoch", train_mean_loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("train_mean_acc_per_epoch", train_mean_acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"train_mean_loss": train_mean_loss, "train_mean_acc": train_mean_acc}
+            acc = self.accuracy(pred_ids, labels.squeeze())
+        return acc, output
     
     def validation_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
@@ -110,39 +102,19 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         labels = batch["labels"]
         mask_token_pos = batch["mask_token_pos"]
         label_token_ids = batch["label_token_ids"]
-        loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
-        _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids, labels.squeeze())
-        self.val_loss_arr.append(loss)
-        self.val_acc_arr.append(acc)
-        self.log("val_loss", loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("val_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
-        return loss
+        acc, outputs = self.forward_acc(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+        self.val_cum_list.append(acc)
+        print(f"val_accuracy: {acc}")
     
     def on_validation_epoch_end(self):
-        mean_loss = torch.mean(torch.tensor(self.val_loss_arr, dtype=torch.float32))
-        mean_acc = torch.mean(torch.tensor(self.val_acc_arr, dtype=torch.float32))
-        self.val_loss_arr = []
-        self.val_acc_arr = []
-        self.log("val_mean_loss_per_epoch", mean_loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("val_mean_acc_per_epoch", mean_acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"val_mean_loss": mean_loss, "val_mean_acc": mean_acc}
+        mean_acc = sum(self.val_cum_list) / len(self.val_cum_list)
+        print(f"mean_accuracy: {mean_acc}")
     
     def configure_optimizers(self):
-        optimizer = AdamW(self.parameters(), lr=self.learning_rate)
-        # learning rate scheduler
-        scheduler = get_linear_schedule_with_warmup(
-            optimizer,
-            num_warmup_steps=self.n_warmup_steps, # very low learning rate
-            num_training_steps=self.n_training_steps
-        )
+        optimizer = AdamW(self.parameters())
         
         return dict(
-            optimizer=optimizer,
-            lr_scheduler=dict(
-                scheduler=scheduler,
-                interval='step'
-            )
+            optimizer=optimizer
         )
     
 def te_model_hub(model_name, n_classes, learning_rate, n_warmup_steps, n_training_steps, with_prompt, checkpoint_path=None):

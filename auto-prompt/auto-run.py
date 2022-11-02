@@ -61,18 +61,6 @@ def run(args):
     # log the progress in TensorBoard
     log_dir = os.path.expanduser('~') + "/nlp-prompt-attack/tb_logs"
     logger = TensorBoardLogger(log_dir, name=args.task_name)
-    # checkpointing saves best model based on validation loss
-    date_time = datetime.now()
-    checkpoint_callback = ModelCheckpoint(
-        dirpath = f"checkpoints/{date_time.month}-{date_time.day}/{args.task_name}",
-        filename = f"{args.task_name}-date={date_time.month}-{date_time.day}"+"-{epoch:02d}-{val_loss:.2f}",
-        verbose = True,
-        save_top_k = 1,
-        monitor = "val_loss",
-        mode = "min"
-    )
-    # early stopping terminates training when the loss has not improved for the last n epochs
-    early_stopping_callback = EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience)
 
     # preprocess verbalizer_dict
     verbalizer_dict = json.loads(args.verbalizer_dict) if args.verbalizer_dict is not None else None
@@ -117,52 +105,15 @@ def run(args):
         with_prompt = args.with_prompt
     )
 
-    # training and(or) testing
-    if args.is_dev_mode:
-        trainer = pl.Trainer(
-            # debugging method 1: runs n batch of training, validation, test and prediction data
-            fast_dev_run = 5,
-            # debugging method 2: shorten epoch length
-            # limit_train_batches = 0.01,
-            # limit_val_batches = 0.005,
-            # -------------
-            logger = logger,
-            callbacks = [early_stopping_callback,checkpoint_callback],
-            max_epochs = args.max_epoch,
-            log_every_n_steps = args.log_every_n_steps,
-            accelerator = "gpu",
-            devices = args.num_gpu_devices,
-            check_val_every_n_epoch=args.val_every_n_steps
-        )
-    else:
-        trainer = pl.Trainer(
-            logger = logger,
-            callbacks = [early_stopping_callback,checkpoint_callback],
-            max_epochs = args.max_epoch,
-            log_every_n_steps = args.log_every_n_steps,
-            accelerator = "gpu",
-            devices = args.num_gpu_devices,
-            strategy = "ddp",
-        )
-
-    # do testing straight after training
-    if args.do_train and args.k_samples_per_class != 0:
-        trainer.fit(model, data_module)
-        if args.do_test:
-            # trainer in default using best checkpointed model for testing
-            trainer.test(verbose = True, ckpt_path=checkpoint_callback.best_model_path, dataloaders = data_module)   
-    elif args.do_test:
-        if args.ckpt_path is not None:
-            model = te_model_hub(
-                model_name = args.model_name_or_path,
-                n_classes = args.n_classes,
-                learning_rate = args.learning_rate,
-                n_warmup_steps = warmup_steps,
-                n_training_steps = total_training_steps,
-                with_prompt = args.with_prompt,
-                checkpoint_path = args.ckpt_path
-            )
-        trainer.test(model = model, dataloaders = data_module, verbose = True)
+    trainer = pl.Trainer(
+        logger = logger,
+        max_epochs = args.max_epoch,
+        log_every_n_steps = args.log_every_n_steps,
+        accelerator = "gpu",
+        devices = args.num_gpu_devices
+    )
+    
+    trainer.validate(model, data_module)
 
 
 

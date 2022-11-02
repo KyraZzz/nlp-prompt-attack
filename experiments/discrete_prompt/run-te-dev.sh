@@ -5,7 +5,7 @@ time=$(date +%s)
 echo "run job "$time
 mkdir -p cl_job_output/${month_day}
 touch ./cl_job_output/${month_day}/log_${time}.out
-cd /local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt
+cd /local/scratch-3/yz709/nlp-prompt-attack/src
 
 seed_all=13
 k_all=16
@@ -15,7 +15,7 @@ python3 run.py \
     --task_name "sst2-roberta-base-manual-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-base" \
     --dataset_name "SST2" \
-    --data_path "/local/scratch-3/yz709/nlp-prompt-attack/discrete-prompt/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
+    --data_path "/local/scratch-3/yz709/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
     --n_classes 2 \
     --do_k_shot \
     --k_samples_per_class ${k_all} \

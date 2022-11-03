@@ -22,36 +22,22 @@ class GradientStorage:
     def get(self):
         return self._stored_gradient
 
-def get_embeddings(model, config):
-    """Returns the wordpiece embedding module."""
-    base_model = getattr(model, config.model_type)
-    embeddings = base_model.embeddings.word_embeddings
-    return embeddings
-
-def find_topk_candidates(embedding, grad, k = 10):
-    embedding_grad_dot_prod = torch.matmul(embedding, grad)
-    topk_val, topk_idx = embedding_grad_dot_prod.topk(k)
-    return topk_idx
-
 class TextEntailClassifierPrompt(pl.LightningModule):
     def __init__(self, model_name, n_classes, learning_rate, n_training_steps=None, n_warmup_steps=None):
         super().__init__()
-        # self.model = AutoModel.from_pretrained(model_name, return_dict=True)
         self.config = AutoConfig.from_pretrained(model_name)
-    
-        # self.classifier = nn.Linear(self.model.config.hidden_size, n_classes)
         self.n_classes = n_classes
         self.learning_rate = learning_rate
         self.n_training_steps = n_training_steps
         self.n_warmup_steps = n_warmup_steps
-        self.criterion = nn.NLLLoss() # negative log likelihood loss
+        self.criterion = nn.NLLLoss() # TODO: negative log likelihood loss
         self.accuracy = Accuracy(dist_sync_on_step=True)
 
         self.val_cum_list = []
 
         self.LM_with_head = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
-
-        self.embeddings = get_embeddings(self.LM_with_head, self.config) # equivalent to model.roberta.embeddings.word_embeddings
+        model_attr = getattr(self.LM_with_head, self.config.model_type)
+        self.embeddings = model_attr.embeddings.word_embeddings # equivalent to model.roberta.embeddings.word_embeddings
         self.embedding_gradient = GradientStorage(self.embeddings)
 
         self.mask_token_pos = None
@@ -62,8 +48,16 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         self.curr_score = 0
         self.num_trigger_tokens = 3
         self.trigger_token_pos = None
+        self.num_candidates = 10
+        self.candidate_scores = []
 
         self.save_hyperparameters()
+
+    def init_triggers(self, input_tensors, replace_token_idx, candidate_token):
+            idx = torch.where(self.trigger_token_pos).view(self.trigger_token_pos.size(0), self.num_trigger_tokens)
+            idx_target_token = idx[:, replace_token_idx]
+            input_tensors[idx_target_token] = candidate_token
+            return input_tensors
     
     def forward(self, input_ids, attention_mask, mask_token_pos, label_token_ids, labels=None):
         mask_token_pos = mask_token_pos.squeeze()
@@ -115,8 +109,6 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             return loss
         else:
             assert self.topk_candidates is not None and self.replace_token_idx is not None
-            print(f"topk_candidates: {self.topk_candidates}")
-
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
@@ -128,25 +120,35 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             self.curr_score += acc
             print(f"curr_score_train_loop: {self.curr_score}")
             for idx in self.topk_candidates:
-                ipdb.set_trace()
+                # replacing input_ids with new trigger tokens
+                new_input_ids = self.init_triggers(input_ids, self.replace_token_idx, idx)
+                new_acc, new_outputs = self.forward_acc(new_input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+                self.candidate_scores[idx] += new_acc
 
 
     def on_train_epoch_end(self):
         if self.current_epoch % 2 == 0:
             # find topk candidate tokens and evaluate
             self.replace_token_idx = random.choice(range(self.num_trigger_tokens))
-            self.topk_candidates = find_topk_candidates(self.embeddings.weight, self.average_grad[self.replace_token_idx])
+            embedding_grad_dot_prod = torch.matmul(self.embeddings.weight, self.average_grad[self.replace_token_idx])
+            _, self.topk_candidates = embedding_grad_dot_prod.topk(self.num_candidates)
             self.curr_score = 0
+            self.candidate_scores = []
+        else:
+            # find better trigger token
+            if (self.candidate_scores > self.curr_score).any():
+                print("Better trigger token detected.")
+                best_candidate_score = candidate_scores.max()
+                best_candidate_idx = candidate_scores.argmax()
+                logger.info(f'Train metric: {best_candidate_score * 4: 0.4f}')
 
     def forward_acc(self, input_ids, attention_mask, mask_token_pos, label_token_ids, labels=None):
         mask_token_pos = mask_token_pos.squeeze()
         logits = self.LM_with_head(input_ids, attention_mask)["logits"]
         # LMhead predicts the word to fill into mask token
         mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos]
-        
         # get the scores for the labels specified by the verbalizer
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in label_token_ids[0]]
-
         output = torch.cat(mask_label_pred, -1) # concatenate the scores into a tensor
         output = torch.softmax(output,1) # convert into probabilities
         _, pred_ids = torch.max(output, dim=1)

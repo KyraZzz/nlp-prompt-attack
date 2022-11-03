@@ -22,6 +22,6 @@ python3 auto-run.py \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices 1 \
-    --max_epoch 2 \
+    --max_epoch 6 \
     --early_stopping_patience 5 \
     --is_dev_mode

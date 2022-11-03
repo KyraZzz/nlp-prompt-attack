@@ -114,6 +114,7 @@ def run(args):
     )
     
     trainer.validate(model, data_module)
+    trainer.fit(model, data_module)
 
 
 

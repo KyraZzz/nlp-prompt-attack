@@ -17,6 +17,7 @@ class GradientStorage:
         module.register_backward_hook(self.hook)
 
     def hook(self, module, grad_in, grad_out):
+        print(f"grad_in: {grad_in}, grad_out: {grad_out}")
         self._stored_gradient = grad_out[0]
 
     def get(self):
@@ -27,6 +28,11 @@ def get_embeddings(model, config):
     base_model = getattr(model, config.model_type)
     embeddings = base_model.embeddings.word_embeddings
     return embeddings
+
+
+def printhook(module, grad_in, grad_out):
+    print(f"hook triggered on: {module}")
+    print(f"grad_in: {grad_in}, grad_out: {grad_out}")
 
 class TextEntailClassifierPrompt(pl.LightningModule):
     def __init__(self, model_name, n_classes, learning_rate, n_training_steps=None, n_warmup_steps=None):
@@ -45,18 +51,17 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         self.val_cum_list = []
 
         self.LM_with_head = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
+
         self.embeddings = get_embeddings(self.LM_with_head, self.config) # equivalent to model.roberta.embeddings.word_embeddings
         self.embedding_gradient = GradientStorage(self.embeddings)
+
         self.save_hyperparameters()
     
     def forward(self, input_ids, attention_mask, mask_token_pos, label_token_ids, labels=None):
         mask_token_pos = mask_token_pos.squeeze()
-        output = self.model(input_ids, attention_mask=attention_mask)
-        last_hidden_state, pooler_output = output.last_hidden_state, output.pooler_output
-        mask_last_hidden_state = last_hidden_state[torch.arange(last_hidden_state.size(0)), mask_token_pos]
-
+        logits = self.LM_with_head(input_ids, attention_mask)["logits"]
         # LMhead predicts the word to fill into mask token
-        mask_word_pred = self.LM_with_head.lm_head(mask_last_hidden_state)
+        mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos]
         
         # get the scores for the labels specified by the verbalizer
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in label_token_ids[0]]
@@ -73,8 +78,20 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             loss = self.criterion(output, labels.view(-1))
         return loss, output
     
+    def backward(self, loss, optimizer, optimizer_idx):
+        loss.backward()
+        grad = self.embedding_gradient.get()
+        print(f"grad: {grad}")
+    
     def training_step(self, batch, batch_idx):
-        pass
+        input_ids = batch["input_ids"]
+        attention_mask = batch["attention_mask"]
+        labels = batch["labels"]
+        mask_token_pos = batch["mask_token_pos"]
+        label_token_ids = batch["label_token_ids"]
+        loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+        print(f"train_loss: {loss}")
+        return loss
 
     def forward_acc(self, input_ids, attention_mask, mask_token_pos, label_token_ids, labels=None):
         mask_token_pos = mask_token_pos.squeeze() # e.g., turn tensor([1]) into tensor(1)

@@ -14,7 +14,7 @@ class GradientStorage:
     """
     def __init__(self, module):
         self._stored_gradient = None
-        module.register_backward_hook(self.hook)
+        module.register_full_backward_hook(self.hook)
 
     def hook(self, module, grad_in, grad_out):
         self._stored_gradient = grad_out[0]
@@ -92,12 +92,11 @@ class TextEntailClassifierPrompt(pl.LightningModule):
     
     def on_after_backward(self):
         if self.current_epoch % 2 == 0:
-            grad = self.embedding_gradient.get()
-            print(f"grad size: {grad.size()}")
-            print(f"trigger_token_pos size: {self.trigger_token_pos.size()}")
-            grad_mask = torch.masked_select(grad, self.trigger_token_pos)
+            grad = self.embedding_gradient.get() # size torch.Size([4, 512, 768])
+            # self.trigger_token_pos.size() torch.Size([4, 512])
+            grad_mask = torch.masked_select(grad, self.trigger_token_pos.unsqueeze(-1))
             print(f"grad_mask size: {grad_mask.size()}")
-            grad_mask = grad_mask.view(grad.size())
+            grad_mask = grad_mask.view(grad.size(0), self.num_trigger_tokens, grad.size(2))
             self.average_grad += grad_mask.sum(dim = 0) / self.num_steps_per_epoch
             print(f"average_grad size: {self.average_grad.size()}")
 
@@ -116,6 +115,8 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             return loss
         else:
             assert self.topk_candidates is not None and self.replace_token_idx is not None
+            print(f"topk_candidates: {self.topk_candidates}")
+
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
@@ -123,9 +124,11 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             label_token_ids = batch["label_token_ids"]
             trigger_token_pos = batch["trigger_token_pos"]
             acc, outputs = self.forward_acc(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+            print(f"acc_train_loop: {acc}")
             self.curr_score += acc
+            print(f"curr_score_train_loop: {self.curr_score}")
             for idx in self.topk_candidates:
-                continue
+                ipdb.set_trace()
 
 
     def on_train_epoch_end(self):

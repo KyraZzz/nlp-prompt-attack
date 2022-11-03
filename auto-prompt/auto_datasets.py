@@ -90,7 +90,11 @@ class TextEntailDatasetPrompt(Dataset):
         return trigger_token_pos
         
     def init_triggers(self, input_tensors, trigger_token_pos, initial_trigger_token):
-        input_tensors = torch.where(trigger_token_pos, input_tensors, initial_trigger_token)
+        _, idx = torch.where(trigger_token_pos)
+        # torch.where(trigger_token_pos) (tensor([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3], device='cuda:0'), tensor([13, 14, 15, 19, 20, 21, 12, 13, 14, 14, 15, 16], device='cuda:0'))
+        # TODO
+        idx = idx.view(trigger_token_pos.size(0),-1)
+        input_tensors[idx] = initial_trigger_token
         return input_tensors
 
     def verbaliser_mapping(self):
@@ -144,11 +148,9 @@ class TextEntailDatasetPrompt(Dataset):
         label_token_ids = self.verbaliser_mapping()
         # get trigger token positions
         trigger_token_pos = self.get_trigger_token_pos(encoding_list)
-        print(f"trigger_token_pos size: {trigger_token_pos.size()}")
         
-        input_ids = torch.tensor(encoding_list)
         # initialise trigger tokens as mask tokens
-        input_ids = self.init_triggers(input_ids, trigger_token_pos, initial_trigger_token = self.tokenizer.mask_token_id)
+        input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_pos, initial_trigger_token = self.tokenizer.mask_token_id)
 
         # filter vocabulary
         filter_vocab = self.get_filtered_vocab(label_token_ids)

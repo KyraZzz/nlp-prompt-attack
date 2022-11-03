@@ -4,7 +4,7 @@ from torch.optim import AdamW
 from transformers import get_linear_schedule_with_warmup, AutoModel, AutoModelForMaskedLM, AutoConfig
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
-
+import random
 import ipdb
 
 class GradientStorage:
@@ -17,7 +17,6 @@ class GradientStorage:
         module.register_backward_hook(self.hook)
 
     def hook(self, module, grad_in, grad_out):
-        print(f"grad_in: {grad_in}, grad_out: {grad_out}")
         self._stored_gradient = grad_out[0]
 
     def get(self):
@@ -29,18 +28,18 @@ def get_embeddings(model, config):
     embeddings = base_model.embeddings.word_embeddings
     return embeddings
 
-
-def printhook(module, grad_in, grad_out):
-    print(f"hook triggered on: {module}")
-    print(f"grad_in: {grad_in}, grad_out: {grad_out}")
+def find_topk_candidates(embedding, grad, k = 10):
+    embedding_grad_dot_prod = torch.matmul(embedding, grad)
+    topk_val, topk_idx = embedding_grad_dot_prod.topk(k)
+    return topk_idx
 
 class TextEntailClassifierPrompt(pl.LightningModule):
     def __init__(self, model_name, n_classes, learning_rate, n_training_steps=None, n_warmup_steps=None):
         super().__init__()
-        self.model = AutoModel.from_pretrained(model_name, return_dict=True)
+        # self.model = AutoModel.from_pretrained(model_name, return_dict=True)
         self.config = AutoConfig.from_pretrained(model_name)
     
-        self.classifier = nn.Linear(self.model.config.hidden_size, n_classes)
+        # self.classifier = nn.Linear(self.model.config.hidden_size, n_classes)
         self.n_classes = n_classes
         self.learning_rate = learning_rate
         self.n_training_steps = n_training_steps
@@ -54,6 +53,15 @@ class TextEntailClassifierPrompt(pl.LightningModule):
 
         self.embeddings = get_embeddings(self.LM_with_head, self.config) # equivalent to model.roberta.embeddings.word_embeddings
         self.embedding_gradient = GradientStorage(self.embeddings)
+
+        self.mask_token_pos = None
+        self.average_grad = 0
+        self.num_steps_per_epoch = 8
+        self.replace_token_idx = None
+        self.topk_candidates = None
+        self.curr_score = 0
+        self.num_trigger_tokens = 3
+        self.trigger_token_pos = None
 
         self.save_hyperparameters()
     
@@ -79,28 +87,59 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         return loss, output
     
     def backward(self, loss, optimizer, optimizer_idx):
-        loss.backward()
-        grad = self.embedding_gradient.get()
-        print(f"grad: {grad}")
+        if self.current_epoch % 2 == 0:
+            loss.backward()
     
+    def on_after_backward(self):
+        if self.current_epoch % 2 == 0:
+            grad = self.embedding_gradient.get()
+            print(f"grad size: {grad.size()}")
+            print(f"trigger_token_pos size: {self.trigger_token_pos.size()}")
+            grad_mask = torch.masked_select(grad, self.trigger_token_pos)
+            print(f"grad_mask size: {grad_mask.size()}")
+            grad_mask = grad_mask.view(grad.size())
+            self.average_grad += grad_mask.sum(dim = 0) / self.num_steps_per_epoch
+            print(f"average_grad size: {self.average_grad.size()}")
+
     def training_step(self, batch, batch_idx):
-        input_ids = batch["input_ids"]
-        attention_mask = batch["attention_mask"]
-        labels = batch["labels"]
-        mask_token_pos = batch["mask_token_pos"]
-        label_token_ids = batch["label_token_ids"]
-        loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
-        print(f"train_loss: {loss}")
-        return loss
+        if self.current_epoch % 2 == 0:
+            # accumulate gradients
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"]
+            mask_token_pos = batch["mask_token_pos"]
+            self.mask_token_pos = mask_token_pos.squeeze()
+            label_token_ids = batch["label_token_ids"]
+            self.trigger_token_pos = batch["trigger_token_pos"]
+            loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+            print(f"train_loss: {loss}")
+            return loss
+        else:
+            assert self.topk_candidates is not None and self.replace_token_idx is not None
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"]
+            mask_token_pos = batch["mask_token_pos"]
+            label_token_ids = batch["label_token_ids"]
+            trigger_token_pos = batch["trigger_token_pos"]
+            acc, outputs = self.forward_acc(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+            self.curr_score += acc
+            for idx in self.topk_candidates:
+                continue
+
+
+    def on_train_epoch_end(self):
+        if self.current_epoch % 2 == 0:
+            # find topk candidate tokens and evaluate
+            self.replace_token_idx = random.choice(range(self.num_trigger_tokens))
+            self.topk_candidates = find_topk_candidates(self.embeddings.weight, self.average_grad[self.replace_token_idx])
+            self.curr_score = 0
 
     def forward_acc(self, input_ids, attention_mask, mask_token_pos, label_token_ids, labels=None):
-        mask_token_pos = mask_token_pos.squeeze() # e.g., turn tensor([1]) into tensor(1)
-        output = self.model(input_ids, attention_mask=attention_mask)
-        last_hidden_state, pooler_output = output.last_hidden_state, output.pooler_output
-        mask_last_hidden_state = last_hidden_state[torch.arange(last_hidden_state.size(0)), mask_token_pos]
-
+        mask_token_pos = mask_token_pos.squeeze()
+        logits = self.LM_with_head(input_ids, attention_mask)["logits"]
         # LMhead predicts the word to fill into mask token
-        mask_word_pred = self.LM_with_head.lm_head(mask_last_hidden_state)
+        mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos]
         
         # get the scores for the labels specified by the verbalizer
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in label_token_ids[0]]

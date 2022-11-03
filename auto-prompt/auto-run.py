@@ -4,6 +4,7 @@ import re
 import os
 import string
 from datetime import datetime
+import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from transformers import AutoTokenizer
@@ -54,6 +55,8 @@ def run(args):
     log every n steps: {args.log_every_n_steps}{chr(10)} \
     early stopping patience value: {args.early_stopping_patience}{chr(10)} \
     validate every n steps: {args.val_every_n_steps}{chr(10)} \
+    number of trigger tokens: {args.num_trigger_tokens}{chr(10)} \
+    number of candidate tokens: {args.num_candidates}{chr(10)} \
     ")
 
     # set a general random seed
@@ -68,6 +71,8 @@ def run(args):
     template = prep_template(args.template)
     # get tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+    # construct trigger token set
+    trigger_token_set = torch.tensor([tokenizer.mask_token_id] * args.num_trigger_tokens)
 
     # preprocess data, get train, val and test dataset
     train_data, val_data, test_data = data_preprocess(
@@ -101,8 +106,11 @@ def run(args):
         n_classes = args.n_classes,
         learning_rate = args.learning_rate,
         n_warmup_steps = warmup_steps,
-        n_training_steps = total_training_steps,
-        with_prompt = args.with_prompt
+        n_training_steps_per_epoch = steps_per_epoch,
+        with_prompt = args.with_prompt,
+        num_trigger_tokens = args.num_trigger_tokens,
+        num_candidates = args.num_candidates,
+        trigger_token_set = trigger_token_set
     )
 
     trainer = pl.Trainer(
@@ -112,8 +120,7 @@ def run(args):
         accelerator = "gpu",
         devices = args.num_gpu_devices
     )
-    
-    trainer.validate(model, data_module)
+
     trainer.fit(model, data_module)
 
 
@@ -144,5 +151,7 @@ if __name__ == "__main__":
     parser.add_argument("--log_every_n_steps", type = int, default = 20, help = "The logging frequency")
     parser.add_argument("--max_token_count", type = int, default = 512, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
     parser.add_argument("--early_stopping_patience", type = int, default = 20, help = "Early stopping terminates training when the loss has not improved for the last n epochs")
+    parser.add_argument("--num_trigger_tokens", type = int, default = 3, help = "The number of trigger tokens in the template")
+    parser.add_argument("--num_candidates", type = int, default = 10, help = "The top k candidates selected for trigger token updates")
     args = parser.parse_args()
     run(args)

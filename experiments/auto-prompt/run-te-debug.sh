@@ -1,4 +1,11 @@
 #!/bin/bash
+dir=$PWD
+month_day=$(date +"%b_%d")
+time=$(date +%s)
+echo "run job "$time
+mkdir -p cl_job_output/${month_day}
+touch ./cl_job_output/${month_day}/log_${time}.out
+
 cd /local/scratch-3/yz709/nlp-prompt-attack/auto-prompt
 
 seed_all=13
@@ -22,6 +29,7 @@ python3 auto-run.py \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices 1 \
-    --max_epoch 8 \
+    --max_epoch 5 \
     --early_stopping_patience 5 \
-    --is_dev_mode
+    --is_dev_mode \
+    1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

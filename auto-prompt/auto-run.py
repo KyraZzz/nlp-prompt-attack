@@ -62,7 +62,8 @@ def run(args):
     # set a general random seed
     pl.seed_everything(args.random_seed)
     # log the progress in TensorBoard
-    log_dir = os.path.expanduser('~') + "/nlp-prompt-attack/tb_logs"
+    # log_dir = os.path.expanduser('~') + "/nlp-prompt-attack/tb_logs"
+    log_dir = "/local/scratch-3/yz709/nlp-prompt-attack/tb_log"
     logger = TensorBoardLogger(log_dir, name=args.task_name)
 
     # preprocess verbalizer_dict

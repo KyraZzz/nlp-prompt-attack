@@ -37,7 +37,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
 
         self.LM_with_head = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
         model_attr = getattr(self.LM_with_head, self.config.model_type)
-        self.embeddings = model_attr.embeddings.word_embeddings # equivalent to model.roberta.embeddings.word_embeddings
+        self.embeddings = model_attr.embeddings.word_embeddings
         self.embedding_gradient = GradientStorage(self.embeddings)
 
         self.average_grad = 0
@@ -82,7 +82,9 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         return input_tensors
     
     def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
+        print(f"labels: {labels}")
         logits = self.LM_with_head(input_ids, attention_mask)["logits"]
+        print(f"logits: {logits[0][:8]}")
         # LMhead predicts the word to fill into mask token
         mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos.squeeze()]
         # get the scores for the labels specified by the verbalizer
@@ -115,7 +117,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             grad_mask = torch.masked_select(grad, self.trigger_token_mask.unsqueeze(-1))
             grad_mask = grad_mask.view(grad.size(0), self.num_trigger_tokens, grad.size(2))
             self.average_grad += (grad_mask.sum(dim = 0) / self.n_training_steps_per_epoch)
-
+    
     def training_step(self, batch, batch_idx):
         if self.current_epoch % 2 == 0:
             # accumulate gradients
@@ -142,14 +144,16 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             self.log("train_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
             self.curr_score += acc
             print(f"curr_score_train_loop: {self.curr_score}")
+            temp_input_ids = torch.empty_like(input_ids).copy_(input_ids)
             for idx, val in enumerate(self.topk_candidates):
                 # replacing input_ids with new trigger tokens
-                new_input_ids = self.update_input_triggers(input_ids, trigger_token_pos, self.replace_token_idx, val)
+                new_input_ids = self.update_input_triggers(temp_input_ids, trigger_token_pos, self.replace_token_idx, val)
                 loss, new_outputs = self.forward(new_input_ids, attention_mask, mask_token_pos, labels)
                 new_acc = self.forward_acc(new_outputs, labels)
                 self.candidate_scores[idx].append(new_acc)
+            return {"loss": loss, "accuracy": acc}
 
-
+    
     def on_train_epoch_end(self):
         if self.current_epoch % 2 == 0:
             # HotFlip: find topk candidate tokens and evaluate
@@ -158,11 +162,12 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             min_val = min(embedding_grad_dot_prod)
             if self.filtered_vocab is None:
                 self.filtered_vocab = self.get_filtered_vocab(embedding_grad_dot_prod)
-            res = torch.where(self.filtered_vocab, embedding_grad_dot_prod, min_val)
+            res = torch.where(self.filtered_vocab, min_val, embedding_grad_dot_prod)
             # get the indices of top k candidates
             _, self.topk_candidates = res.topk(self.num_candidates)
             self.curr_score = 0
             self.candidate_scores = [[] for _ in range(self.num_candidates)]
+    
     
     def on_validation_epoch_start(self):
         if self.current_epoch % 2 != 0:
@@ -174,13 +179,17 @@ class TextEntailClassifierPrompt(pl.LightningModule):
                 best_candidate_idx = torch.argmax(score_per_candidate)
                 self.trigger_token_set[self.replace_token_idx] = best_candidate_idx
                 print(f'best_candidate_score: {best_candidate_score: 0.4f}')
-            print(f'Current trigger token set: {self.trigger_token_set}')
+            print(f'Current trigger token set: {self.tokenizer.convert_ids_to_tokens(self.trigger_token_set)}')
+    
     
     def validation_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
         trigger_token_pos = batch["trigger_token_pos"]
-        if self.trigger_token_set is not None:
-            input_ids = self.update_input_triggers(input_ids, trigger_token_pos)
+        print(f"validation step before input_ids: {input_ids[:, :15]}")
+        print(f"trigger_token_pos: {trigger_token_pos}")
+        # if self.trigger_token_set is not None:
+            # input_ids = self.update_input_triggers(input_ids, trigger_token_pos)
+        print(f"validation step after input_ids: {input_ids[:, :15]}")
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         mask_token_pos = batch["mask_token_pos"]

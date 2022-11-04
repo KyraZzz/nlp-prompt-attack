@@ -17,11 +17,11 @@ python3 auto-run.py \
     --with_prompt \
     --template "<cls> <question> <mask> <T> <T> <T> <sentence>" \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
-    --log_every_n_steps 20 \
+    --log_every_n_steps 8 \
     --val_every_n_steps 4 \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices 1 \
-    --max_epoch 2 \
+    --max_epoch 8 \
     --early_stopping_patience 5 \
     --is_dev_mode

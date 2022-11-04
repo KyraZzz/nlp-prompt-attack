@@ -23,9 +23,10 @@ class GradientStorage:
         return self.gradient
 
 class TextEntailClassifierPrompt(pl.LightningModule):
-    def __init__(self, model_name, n_classes, learning_rate, num_trigger_tokens, num_candidates, trigger_token_set, label_token_ids, filter_vocab, n_training_steps_per_epoch=None, n_warmup_steps=None):
+    def __init__(self, model_name, tokenizer, n_classes, learning_rate, num_trigger_tokens, num_candidates, verbalizer_dict, n_training_steps_per_epoch=None, n_warmup_steps=None):
         super().__init__()
         self.config = AutoConfig.from_pretrained(model_name)
+        self.tokenizer = tokenizer
         self.n_classes = n_classes
         self.learning_rate = learning_rate
         self.n_training_steps_per_epoch = n_training_steps_per_epoch
@@ -48,11 +49,26 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         self.candidate_scores = [[] for _ in range(self.num_candidates)]
 
         self.trigger_token_mask = None
-        self.trigger_token_set = trigger_token_set
-        self.label_token_ids = label_token_ids
-        self.filter_vocab = filter_vocab
+        self.trigger_token_set = torch.tensor([self.tokenizer.mask_token_id] * self.num_trigger_tokens)
+        self.verbalizer_dict = verbalizer_dict
+        self.label_token_ids = torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
+        self.filtered_vocab = None
 
         self.save_hyperparameters()
+    
+    def get_filtered_vocab(self, embedding_grad_dot_prod):
+        assert embedding_grad_dot_prod.size()[0] == self.tokenizer.vocab_size
+        filter_vocab = torch.empty_like(embedding_grad_dot_prod, dtype=torch.bool)
+        for word, idx in self.tokenizer.get_vocab().items():
+            if len(word) == 1 or idx >= self.tokenizer.vocab_size:
+                continue
+            # filter label words and special tokens
+            if idx in self.label_token_ids or idx in self.tokenizer.all_special_ids:
+                filter_vocab[idx] = 1
+            # filter capitalized words.
+            elif self.tokenizer.decode([idx])[0].isupper():
+                filter_vocab[idx] = 1
+        return filter_vocab
 
     def update_input_triggers(self, input_tensors, trigger_token_pos, replace_token_idx = None, candidate_token = None):
         if replace_token_idx is None:
@@ -139,7 +155,12 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             # HotFlip: find topk candidate tokens and evaluate
             self.replace_token_idx = random.choice(range(self.num_trigger_tokens))
             embedding_grad_dot_prod = torch.matmul(self.embeddings.weight, self.average_grad[self.replace_token_idx])
-            _, self.topk_candidates = embedding_grad_dot_prod.topk(self.num_candidates)
+            min_val = min(embedding_grad_dot_prod)
+            if self.filtered_vocab is None:
+                self.filtered_vocab = self.get_filtered_vocab(embedding_grad_dot_prod)
+            res = torch.where(self.filtered_vocab, embedding_grad_dot_prod, min_val)
+            # get the indices of top k candidates
+            _, self.topk_candidates = res.topk(self.num_candidates)
             self.curr_score = 0
             self.candidate_scores = [[] for _ in range(self.num_candidates)]
     
@@ -147,7 +168,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         if self.current_epoch % 2 != 0:
             # find better trigger token
             score_per_candidate = torch.tensor(self.candidate_scores).sum(dim = 1)
-            if torch.max(score_per_candidate) > torch.tensor(self.curr_score):
+            if torch.max(score_per_candidate) > self.curr_score.detach().clone():
                 print("Better trigger token detected.")
                 best_candidate_score = torch.max(score_per_candidate)
                 best_candidate_idx = torch.argmax(score_per_candidate)
@@ -180,27 +201,17 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             optimizer=optimizer
         )
     
-def te_model_hub(model_name, n_classes, learning_rate, n_warmup_steps, n_training_steps_per_epoch, with_prompt, num_trigger_tokens, num_candidates, trigger_token_set, label_token_ids, filter_vocab, checkpoint_path=None):
+def te_model_hub(model_name, tokenizer, n_classes, learning_rate, n_warmup_steps, n_training_steps_per_epoch, with_prompt, num_trigger_tokens, num_candidates, verbalizer_dict, checkpoint_path=None):
     if with_prompt and checkpoint_path is None:
         return TextEntailClassifierPrompt(
             model_name = model_name, 
+            tokenizer = tokenizer,
             n_classes = n_classes, 
             learning_rate = learning_rate, 
             n_training_steps_per_epoch = n_training_steps_per_epoch, 
             n_warmup_steps = n_warmup_steps,
             num_trigger_tokens = num_trigger_tokens,
             num_candidates = num_candidates,
-            trigger_token_set = trigger_token_set,
-            label_token_ids = label_token_ids,
-            filter_vocab = filter_vocab
-        )
-    elif with_prompt and checkpoint_path is not None:
-        return TextEntailClassifierPrompt.load_from_checkpoint(
-            model_name = model_name,
-            n_classes = n_classes,
-            learning_rate = learning_rate,
-            n_training_steps_per_epoch = n_training_steps_per_epoch,
-            n_warmup_steps = n_warmup_steps,
-            checkpoint_path = checkpoint_path
+            verbalizer_dict = verbalizer_dict
         )
     return None

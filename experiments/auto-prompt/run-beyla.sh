@@ -7,7 +7,7 @@ mkdir -p cl_job_output/${month_day}
 touch ./cl_job_output/${month_day}/log_${time}.out
 cd /local/scratch-3/yz709/nlp-prompt-attack/auto-prompt
 
-seed_all=87
+seed_all=13
 k_all=16
 prompt_num=1
 
@@ -29,7 +29,7 @@ python3 auto-run.py \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices 1 \
-    --max_epoch 20 \
+    --max_epoch 5 \
     --early_stopping_patience 5 \
     --num_trigger_tokens 3 \
     --num_candidates 10 \

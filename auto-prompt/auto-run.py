@@ -29,6 +29,19 @@ def prep_template(template):
         new_template.append(w)
     return " ".join(new_template)
 
+def get_filtered_vocab(tokenizer, label_token_ids):
+    filter_vocab = torch.ones(tokenizer.vocab_size, dtype=torch.float32)
+    for word, idx in tokenizer.get_vocab().items():
+        if len(word) == 1 or idx >= tokenizer.vocab_size:
+            continue
+        # filter label words and special tokens
+        if idx in label_token_ids or idx in tokenizer.all_special_ids:
+            filter_vocab[idx] = 0
+        # filter capitalized words.
+        elif tokenizer.decode([idx])[0].isupper():
+            filter_vocab[idx] = 0
+    return filter_vocab
+
 def run(args):
     print(f"Parameter list: {chr(10)} \
     task name: {args.task_name}{chr(10)} \
@@ -73,6 +86,10 @@ def run(args):
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
     # construct trigger token set
     trigger_token_set = torch.tensor([tokenizer.mask_token_id] * args.num_trigger_tokens)
+    # verbaliser mapping
+    label_token_ids = torch.tensor([tokenizer.convert_tokens_to_ids("".join(w)) for _, w in verbalizer_dict.items()])
+    # filter vocabulary
+    filter_vocab = get_filtered_vocab(tokenizer, label_token_ids)
 
     # preprocess data, get train, val and test dataset
     train_data, val_data, test_data = data_preprocess(
@@ -110,7 +127,9 @@ def run(args):
         with_prompt = args.with_prompt,
         num_trigger_tokens = args.num_trigger_tokens,
         num_candidates = args.num_candidates,
-        trigger_token_set = trigger_token_set
+        trigger_token_set = trigger_token_set,
+        label_token_ids = label_token_ids,
+        filter_vocab = filter_vocab,
     )
 
     trainer = pl.Trainer(

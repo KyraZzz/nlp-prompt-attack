@@ -94,9 +94,6 @@ class TextEntailDatasetPrompt(Dataset):
         idx = torch.where(trigger_token_pos)
         input_tensors[idx] = initial_trigger_token
         return input_tensors
-
-    def verbaliser_mapping(self):
-        return torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
     
     def trunc_pad(self, list, pad_token):
         # padding
@@ -142,16 +139,10 @@ class TextEntailDatasetPrompt(Dataset):
         attention_mask = self.trunc_pad(attention_mask, 0)
         # get the mask token position
         mask_token_pos = self.get_mask_token_pos(encoding_list)
-        # verbaliser
-        label_token_ids = self.verbaliser_mapping()
         # get trigger token positions
         trigger_token_pos, trigger_token_mask = self.get_trigger_token_pos(encoding_list)
-        
         # initialise trigger tokens as mask tokens
         input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_mask, initial_trigger_token = self.tokenizer.mask_token_id)
-
-        # filter vocabulary
-        filter_vocab = self.get_filtered_vocab(label_token_ids)
 
         return dict(
             question=question,
@@ -160,7 +151,6 @@ class TextEntailDatasetPrompt(Dataset):
             attention_mask=torch.tensor(attention_mask),
             labels=torch.tensor([labels]),
             mask_token_pos=mask_token_pos,
-            label_token_ids=label_token_ids,
             trigger_token_pos=trigger_token_pos,
             trigger_token_mask=trigger_token_mask
         )

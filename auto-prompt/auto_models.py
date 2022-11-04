@@ -23,7 +23,7 @@ class GradientStorage:
         return self.gradient
 
 class TextEntailClassifierPrompt(pl.LightningModule):
-    def __init__(self, model_name, n_classes, learning_rate, num_trigger_tokens, num_candidates, trigger_token_set, n_training_steps_per_epoch=None, n_warmup_steps=None):
+    def __init__(self, model_name, n_classes, learning_rate, num_trigger_tokens, num_candidates, trigger_token_set, label_token_ids, filter_vocab, n_training_steps_per_epoch=None, n_warmup_steps=None):
         super().__init__()
         self.config = AutoConfig.from_pretrained(model_name)
         self.n_classes = n_classes
@@ -49,6 +49,8 @@ class TextEntailClassifierPrompt(pl.LightningModule):
 
         self.trigger_token_mask = None
         self.trigger_token_set = trigger_token_set
+        self.label_token_ids = label_token_ids
+        self.filter_vocab = filter_vocab
 
         self.save_hyperparameters()
 
@@ -63,12 +65,12 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             input_tensors[torch.arange(trigger_token_pos.size(0)), idx_target_token] = candidate_token
         return input_tensors
     
-    def forward(self, input_ids, attention_mask, mask_token_pos, label_token_ids, labels=None):
+    def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
         logits = self.LM_with_head(input_ids, attention_mask)["logits"]
         # LMhead predicts the word to fill into mask token
         mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos.squeeze()]
         # get the scores for the labels specified by the verbalizer
-        mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in label_token_ids[0]]
+        mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in self.label_token_ids]
         # concatenate the scores
         output = torch.cat(mask_label_pred, -1)
         # compute log likelihood for each batch and each label
@@ -105,9 +107,8 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
             mask_token_pos = batch["mask_token_pos"]
-            label_token_ids = batch["label_token_ids"]
             self.trigger_token_mask = batch["trigger_token_mask"]
-            loss, output = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+            loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
             acc = self.forward_acc(output, labels)
             self.log("train_loss", loss, prog_bar=True, logger=True, sync_dist=True)
             self.log("train_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
@@ -118,9 +119,8 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
             mask_token_pos = batch["mask_token_pos"]
-            label_token_ids = batch["label_token_ids"]
             trigger_token_pos = batch["trigger_token_pos"]
-            loss, output = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+            loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
             acc = self.forward_acc(output, labels)
             self.log("train_loss", loss, prog_bar=True, logger=True, sync_dist=True)
             self.log("train_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
@@ -129,14 +129,14 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             for idx, val in enumerate(self.topk_candidates):
                 # replacing input_ids with new trigger tokens
                 new_input_ids = self.update_input_triggers(input_ids, trigger_token_pos, self.replace_token_idx, val)
-                loss, new_outputs = self.forward(new_input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+                loss, new_outputs = self.forward(new_input_ids, attention_mask, mask_token_pos, labels)
                 new_acc = self.forward_acc(new_outputs, labels)
                 self.candidate_scores[idx].append(new_acc)
 
 
     def on_train_epoch_end(self):
         if self.current_epoch % 2 == 0:
-            # find topk candidate tokens and evaluate
+            # HotFlip: find topk candidate tokens and evaluate
             self.replace_token_idx = random.choice(range(self.num_trigger_tokens))
             embedding_grad_dot_prod = torch.matmul(self.embeddings.weight, self.average_grad[self.replace_token_idx])
             _, self.topk_candidates = embedding_grad_dot_prod.topk(self.num_candidates)
@@ -163,8 +163,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         mask_token_pos = batch["mask_token_pos"]
-        label_token_ids = batch["label_token_ids"]
-        loss, output = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
+        loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
         acc = self.forward_acc(output, labels)
         self.val_cum_list.append(acc)
         self.log("val_loss", loss, prog_bar=True, logger=True, sync_dist=True)
@@ -181,7 +180,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             optimizer=optimizer
         )
     
-def te_model_hub(model_name, n_classes, learning_rate, n_warmup_steps, n_training_steps_per_epoch, with_prompt, num_trigger_tokens, num_candidates, trigger_token_set, checkpoint_path=None):
+def te_model_hub(model_name, n_classes, learning_rate, n_warmup_steps, n_training_steps_per_epoch, with_prompt, num_trigger_tokens, num_candidates, trigger_token_set, label_token_ids, filter_vocab, checkpoint_path=None):
     if with_prompt and checkpoint_path is None:
         return TextEntailClassifierPrompt(
             model_name = model_name, 
@@ -191,7 +190,9 @@ def te_model_hub(model_name, n_classes, learning_rate, n_warmup_steps, n_trainin
             n_warmup_steps = n_warmup_steps,
             num_trigger_tokens = num_trigger_tokens,
             num_candidates = num_candidates,
-            trigger_token_set = trigger_token_set
+            trigger_token_set = trigger_token_set,
+            label_token_ids = label_token_ids,
+            filter_vocab = filter_vocab
         )
     elif with_prompt and checkpoint_path is not None:
         return TextEntailClassifierPrompt.load_from_checkpoint(

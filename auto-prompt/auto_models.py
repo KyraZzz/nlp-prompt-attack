@@ -82,9 +82,8 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         return input_tensors
     
     def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
-        print(f"labels: {labels}")
         logits = self.LM_with_head(input_ids, attention_mask)["logits"]
-        print(f"logits: {logits[0][:8]}")
+        # print(f"logits: {logits[0][:8]}")
         # LMhead predicts the word to fill into mask token
         mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos.squeeze()]
         # get the scores for the labels specified by the verbalizer
@@ -105,91 +104,72 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         _, pred_ids = torch.max(output, dim=1)
         return self.accuracy(pred_ids, labels.squeeze())
     
-    def backward(self, loss, optimizer, optimizer_idx):
-        if self.current_epoch % 2 == 0:
-            loss.backward()
-    
     def on_after_backward(self):
-        if self.current_epoch % 2 == 0:
-            # intermediate gradients of input embedding layer size: (bz, max_token_len, model_output_layer) 
-            grad = self.embedding_gradient.get()
-            # select grad of trigger tokens size: (bz, num_trigger_tokens, model_output_layer)
-            grad_mask = torch.masked_select(grad, self.trigger_token_mask.unsqueeze(-1))
-            grad_mask = grad_mask.view(grad.size(0), self.num_trigger_tokens, grad.size(2))
-            self.average_grad += (grad_mask.sum(dim = 0) / self.n_training_steps_per_epoch)
+        # intermediate gradients of input embedding layer size: (bz, max_token_len, model_output_layer) 
+        grad = self.embedding_gradient.get()
+        # select grad of trigger tokens size: (bz, num_trigger_tokens, model_output_layer)
+        grad_mask = torch.masked_select(grad, self.trigger_token_mask.unsqueeze(-1))
+        grad_mask = grad_mask.view(grad.size(0), self.num_trigger_tokens, grad.size(2))
+        self.average_grad += (grad_mask.sum(dim = 0) / self.n_training_steps_per_epoch)
     
     def training_step(self, batch, batch_idx):
-        if self.current_epoch % 2 == 0:
-            # accumulate gradients
-            input_ids = batch["input_ids"]
-            attention_mask = batch["attention_mask"]
-            labels = batch["labels"]
-            mask_token_pos = batch["mask_token_pos"]
-            self.trigger_token_mask = batch["trigger_token_mask"]
-            loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
-            acc = self.forward_acc(output, labels)
-            self.log("train_loss", loss, prog_bar=True, logger=True, sync_dist=True)
-            self.log("train_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
-            return {"loss": loss, "accuracy": acc}
-        else:
-            assert self.topk_candidates is not None and self.replace_token_idx is not None
-            input_ids = batch["input_ids"]
-            attention_mask = batch["attention_mask"]
-            labels = batch["labels"]
-            mask_token_pos = batch["mask_token_pos"]
-            trigger_token_pos = batch["trigger_token_pos"]
-            loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
-            acc = self.forward_acc(output, labels)
-            self.log("train_loss", loss, prog_bar=True, logger=True, sync_dist=True)
-            self.log("train_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
-            self.curr_score += acc
-            print(f"curr_score_train_loop: {self.curr_score}")
-            temp_input_ids = torch.empty_like(input_ids).copy_(input_ids)
-            for idx, val in enumerate(self.topk_candidates):
-                # replacing input_ids with new trigger tokens
-                new_input_ids = self.update_input_triggers(temp_input_ids, trigger_token_pos, self.replace_token_idx, val)
-                loss, new_outputs = self.forward(new_input_ids, attention_mask, mask_token_pos, labels)
-                new_acc = self.forward_acc(new_outputs, labels)
-                self.candidate_scores[idx].append(new_acc)
-            return {"loss": loss, "accuracy": acc}
+        # accumulate gradients
+        input_ids = batch["input_ids"].to(device = self.device)
+        attention_mask = batch["attention_mask"].to(device = self.device)
+        labels = batch["labels"].to(device = self.device)
+        mask_token_pos = batch["mask_token_pos"].to(device = self.device)
+        self.trigger_token_mask = batch["trigger_token_mask"].to(device = self.device)
+        loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
+        acc = self.forward_acc(output, labels)
+        self.log("train_loss", loss, prog_bar=True, logger=True, sync_dist=True)
+        self.log("train_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
+        return {"loss": loss, "accuracy": acc}
 
     
     def on_train_epoch_end(self):
-        if self.current_epoch % 2 == 0:
-            # HotFlip: find topk candidate tokens and evaluate
-            self.replace_token_idx = random.choice(range(self.num_trigger_tokens))
-            embedding_grad_dot_prod = torch.matmul(self.embeddings.weight, self.average_grad[self.replace_token_idx])
-            min_val = min(embedding_grad_dot_prod)
-            if self.filtered_vocab is None:
-                self.filtered_vocab = self.get_filtered_vocab(embedding_grad_dot_prod)
-            res = torch.where(self.filtered_vocab, min_val, embedding_grad_dot_prod)
-            # get the indices of top k candidates
-            _, self.topk_candidates = res.topk(self.num_candidates)
-            self.curr_score = 0
-            self.candidate_scores = [[] for _ in range(self.num_candidates)]
-    
-    
-    def on_validation_epoch_start(self):
-        if self.current_epoch % 2 != 0:
-            # find better trigger token
-            score_per_candidate = torch.tensor(self.candidate_scores).sum(dim = 1)
-            if torch.max(score_per_candidate) > self.curr_score.detach().clone():
-                print("Better trigger token detected.")
-                best_candidate_score = torch.max(score_per_candidate)
-                best_candidate_idx = torch.argmax(score_per_candidate)
-                self.trigger_token_set[self.replace_token_idx] = best_candidate_idx
-                print(f'best_candidate_score: {best_candidate_score: 0.4f}')
-            print(f'Current trigger token set: {self.tokenizer.convert_ids_to_tokens(self.trigger_token_set)}')
-    
+        # HotFlip: find topk candidate tokens and evaluate
+        self.replace_token_idx = random.choice(range(self.num_trigger_tokens))
+        embedding_grad_dot_prod = torch.matmul(self.embeddings.weight, self.average_grad[self.replace_token_idx])
+        min_val = min(embedding_grad_dot_prod)
+        if self.filtered_vocab is None:
+            self.filtered_vocab = self.get_filtered_vocab(embedding_grad_dot_prod)
+        res = torch.where(self.filtered_vocab, min_val, embedding_grad_dot_prod)
+        # get the indices of top k candidates
+        _, self.topk_candidates = res.topk(self.num_candidates)
+        self.curr_score = 0
+        self.candidate_scores = [[] for _ in range(self.num_candidates)]
+        for batch_idx, batch in enumerate(self.trainer.train_dataloader):
+            input_ids = batch["input_ids"].to(device = self.device)
+            attention_mask = batch["attention_mask"].to(device = self.device)
+            labels = batch["labels"].to(device = self.device)
+            mask_token_pos = batch["mask_token_pos"].to(device = self.device)
+            trigger_token_pos = batch["trigger_token_pos"].to(device = self.device)
+            self.trigger_token_mask = batch["trigger_token_mask"].to(device = self.device)
+            loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
+            acc = self.forward_acc(output, labels)
+            self.curr_score += acc
+            print(f"curr_score_train_loop: {self.curr_score}")
+            for idx, val in enumerate(self.topk_candidates):
+                # replacing input_ids with new trigger tokens
+                new_input_ids = self.update_input_triggers(input_ids, trigger_token_pos, self.replace_token_idx, val)
+                loss, new_outputs = self.forward(new_input_ids, attention_mask, mask_token_pos, labels)
+                new_acc = self.forward_acc(new_outputs, labels)
+                self.candidate_scores[idx].append(new_acc)
+        # find better trigger token
+        score_per_candidate = torch.tensor(self.candidate_scores).sum(dim = 1)
+        if torch.max(score_per_candidate) > self.curr_score:
+            print("Better trigger token detected.")
+            best_candidate_score = torch.max(score_per_candidate)
+            best_candidate_idx = torch.argmax(score_per_candidate)
+            self.trigger_token_set[self.replace_token_idx] = best_candidate_idx
+            print(f'best_candidate_score: {best_candidate_score: 0.4f}')
+        print(f'Current trigger token set: {self.tokenizer.convert_ids_to_tokens(self.trigger_token_set)}')
     
     def validation_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
         trigger_token_pos = batch["trigger_token_pos"]
-        print(f"validation step before input_ids: {input_ids[:, :15]}")
-        print(f"trigger_token_pos: {trigger_token_pos}")
-        # if self.trigger_token_set is not None:
-            # input_ids = self.update_input_triggers(input_ids, trigger_token_pos)
-        print(f"validation step after input_ids: {input_ids[:, :15]}")
+        if self.trigger_token_set is not None:
+            input_ids = self.update_input_triggers(input_ids, trigger_token_pos)
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         mask_token_pos = batch["mask_token_pos"]

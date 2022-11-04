@@ -1,5 +1,5 @@
 **/.ipynb_checkpoints/*
-tb_logs/*
+**/tb_logs/*
 saved_logs/*
 MNIST/*
 experiments/**/[slurm]*.out

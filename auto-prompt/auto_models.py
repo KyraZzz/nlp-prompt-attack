@@ -82,24 +82,10 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         return input_tensors
     
     def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
-        """
-        Method 1
-        """
         logits = self.LM_with_head(input_ids, attention_mask)["logits"]
-        print(f"logits: {logits[0][:2]}")
+        # print(f"logits: {logits[0][:2]}")
         # LMhead predicts the word to fill into mask token
         mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos.squeeze()]
-        """
-        Method 2
-        
-        output = self.model(input_ids, attention_mask=attention_mask)
-        last_hidden_state, pooler_output = output.last_hidden_state, output.pooler_output
-        mask_last_hidden_state = last_hidden_state[torch.arange(last_hidden_state.size(0)), mask_token_pos.squeeze()]
-        
-        # LMhead predicts the word to fill into mask token
-        mask_word_pred = self.LM_with_head.lm_head(mask_last_hidden_state)
-        print(f"mask_word_pred in Method 2: {mask_word_pred}")
-        """
 
         # get the scores for the labels specified by the verbalizer
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in self.label_token_ids]
@@ -145,7 +131,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         return {"loss": loss, "accuracy": acc}
 
     
-    def on_start_epoch_end(self):
+    def on_train_epoch_end(self):
         # HotFlip: find topk candidate tokens and evaluate
         self.replace_token_idx = random.choice(range(self.num_trigger_tokens))
         embedding_grad_dot_prod = torch.matmul(self.embeddings.weight, self.average_grad[self.replace_token_idx])
@@ -177,12 +163,11 @@ class TextEntailClassifierPrompt(pl.LightningModule):
                 with torch.no_grad():
                     loss, new_outputs = self.forward(new_input_ids, attention_mask, mask_token_pos, labels)
                     new_acc = self.forward_acc(new_outputs, labels)
-                self.candidate_scores[idx].append(new_acc)
-                print(f"candidate_scores: {self.candidate_scores}")
+                self.candidate_scores[idx].append(new_acc) 
         # find better trigger token
         score_per_candidate = torch.tensor(self.candidate_scores).sum(dim = 1)
         print(f"score_per_candidate: {score_per_candidate}")
-        if torch.max(score_per_candidate) > self.curr_score:
+        if torch.max(score_per_candidate) >= self.curr_score:
             print("Better trigger token detected.")
             best_candidate_score = torch.max(score_per_candidate)
             best_candidate_idx = torch.argmax(score_per_candidate)

@@ -32,5 +32,5 @@ python3 auto-run.py \
     --max_epoch 5 \
     --early_stopping_patience 5 \
     --num_trigger_tokens 3 \
-    --num_candidates 10 \
+    --num_candidates 100 \
     1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

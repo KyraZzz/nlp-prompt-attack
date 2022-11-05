@@ -9,7 +9,7 @@ touch ./cl_job_output/${month_day}/log_${time}.out
 cd /local/scratch-3/yz709/nlp-prompt-attack/auto-prompt
 
 seed_all=13
-k_all=16
+k_all=100
 prompt_num=1
 python3 auto-run.py \
     --random_seed ${seed_all} \
@@ -29,7 +29,8 @@ python3 auto-run.py \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices 1 \
-    --max_epoch 2 \
+    --max_epoch 20 \
+    --num_candidates 
     --early_stopping_patience 5 \
     --is_dev_mode \
     1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

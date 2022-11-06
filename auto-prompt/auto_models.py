@@ -23,13 +23,14 @@ class GradientStorage:
         return self.gradient
 
 class TextEntailClassifierPrompt(pl.LightningModule):
-    def __init__(self, model_name, tokenizer, n_classes, learning_rate, num_trigger_tokens, num_candidates, verbalizer_dict, n_training_steps_per_epoch=None, n_warmup_steps=None):
+    def __init__(self, model_name, tokenizer, n_classes, learning_rate, num_trigger_tokens, num_candidates, verbalizer_dict, n_training_steps_per_epoch=None, n_warmup_steps=None, total_training_steps=None):
         super().__init__()
         self.config = AutoConfig.from_pretrained(model_name)
         self.tokenizer = tokenizer
         self.n_classes = n_classes
         self.learning_rate = learning_rate
         self.n_training_steps_per_epoch = n_training_steps_per_epoch
+        self.total_training_steps = total_training_steps
         self.n_warmup_steps = n_warmup_steps
         self.accuracy = Accuracy(dist_sync_on_step=True)
 
@@ -192,20 +193,31 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         self.log("val_accuracy", mean_acc, prog_bar=True, logger=True, sync_dist=True)
     
     def configure_optimizers(self):
-        optimizer = AdamW(self.parameters())
+        optimizer = AdamW(self.parameters(), lr=self.learning_rate)
+        # learning rate scheduler
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer,
+            num_warmup_steps=self.n_warmup_steps, # very low learning rate
+            num_training_steps=self.total_training_steps
+        )
         
         return dict(
-            optimizer=optimizer
+            optimizer=optimizer,
+            lr_scheduler=dict(
+                scheduler=scheduler,
+                interval='step'
+            )
         )
     
-def te_model_hub(model_name, tokenizer, n_classes, learning_rate, n_warmup_steps, n_training_steps_per_epoch, with_prompt, num_trigger_tokens, num_candidates, verbalizer_dict, checkpoint_path=None):
+def te_model_hub(model_name, tokenizer, n_classes, learning_rate, n_warmup_steps, n_training_steps_per_epoch, total_training_steps, with_prompt, num_trigger_tokens, num_candidates, verbalizer_dict, checkpoint_path=None):
     if with_prompt and checkpoint_path is None:
         return TextEntailClassifierPrompt(
             model_name = model_name, 
             tokenizer = tokenizer,
             n_classes = n_classes, 
             learning_rate = learning_rate, 
-            n_training_steps_per_epoch = n_training_steps_per_epoch, 
+            n_training_steps_per_epoch = n_training_steps_per_epoch,
+            total_training_steps = total_training_steps, 
             n_warmup_steps = n_warmup_steps,
             num_trigger_tokens = num_trigger_tokens,
             num_candidates = num_candidates,

@@ -107,6 +107,7 @@ def run(args):
         learning_rate = args.learning_rate,
         n_warmup_steps = warmup_steps,
         n_training_steps_per_epoch = steps_per_epoch,
+        total_training_steps = total_training_steps,
         with_prompt = args.with_prompt,
         num_trigger_tokens = args.num_trigger_tokens,
         num_candidates = args.num_candidates,
@@ -121,6 +122,7 @@ def run(args):
         devices = args.num_gpu_devices
     )
 
+    # trainer.test(model = model, dataloaders = data_module, verbose = True)
     trainer.fit(model, data_module)
 
 

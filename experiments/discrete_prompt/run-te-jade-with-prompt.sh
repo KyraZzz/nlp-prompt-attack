@@ -32,5 +32,5 @@ python3 run.py \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices 1 \
-    --max_epoch 10 \
+    --max_epoch 1 \
     --early_stopping_patience 5

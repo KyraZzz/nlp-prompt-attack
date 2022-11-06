@@ -157,7 +157,8 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         label_token_ids = batch["label_token_ids"]
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
         _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids, labels.squeeze())
+        labels = labels[0] if len(labels) == 1 else labels.squeeze()
+        acc = self.accuracy(pred_ids, labels)
         self.train_loss_arr.append(loss)
         self.train_acc_arr.append(acc)
         self.log("train_loss", loss, prog_bar=True, logger=True, sync_dist=True)
@@ -172,7 +173,8 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         label_token_ids = batch["label_token_ids"]
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
         _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids, labels.squeeze())
+        labels = labels[0] if len(labels) == 1 else labels.squeeze()
+        acc = self.accuracy(pred_ids, labels)
         self.val_loss_arr.append(loss)
         self.val_acc_arr.append(acc)
         self.log("val_loss", loss, prog_bar=True, logger=True, sync_dist=True)
@@ -187,8 +189,9 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         label_token_ids = batch["label_token_ids"]
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
         _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids, labels.squeeze())
         print(f"pred_ids: {pred_ids}, labels: {labels}, loss: {loss}")
+        labels = labels[0] if len(labels) == 1 else labels.squeeze() 
+        acc = self.accuracy(pred_ids, labels)
         self.test_loss_arr.append(loss)
         self.test_acc_arr.append(acc)
         return loss

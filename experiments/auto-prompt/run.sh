@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=1:00:00
+#SBATCH --time=10:00:00
 #SBATCH --job-name=dev-q1bp4
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:8
 
 # run the application
 . /etc/profile.d/modules.sh                                   # Leave this line (enables the module command)
@@ -27,13 +27,13 @@ python3 auto-run.py \
     --do_train \
     --do_test \
     --with_prompt \
-    --template "<cls> <question> ? <mask> <T> <T> <T> . <sentence> ." \
+    --template "<cls> <question> <mask> <T> <T> <T> <sentence>" \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --log_every_n_steps 4 \
     --batch_size 4 \
     --learning_rate 2e-5 \
-    --num_gpu_devices 1 \
+    --num_gpu_devices 8 \
     --max_epoch 100 \
-    --early_stopping_patience 30 \
+    --early_stopping_patience 20 \
     --num_trigger_tokens 3 \
-    --num_candidates 100
+    --num_candidates 10

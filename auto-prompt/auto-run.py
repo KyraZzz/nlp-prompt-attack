@@ -111,7 +111,8 @@ def run(args):
         with_prompt = args.with_prompt,
         num_trigger_tokens = args.num_trigger_tokens,
         num_candidates = args.num_candidates,
-        verbalizer_dict = verbalizer_dict
+        verbalizer_dict = verbalizer_dict,
+        random_seed = args.random_seed
     )
 
     trainer = pl.Trainer(
@@ -119,7 +120,8 @@ def run(args):
         max_epochs = args.max_epoch,
         log_every_n_steps = args.log_every_n_steps,
         accelerator = "gpu",
-        devices = args.num_gpu_devices
+        devices = args.num_gpu_devices,
+        strategy = "ddp",
     )
 
     trainer.fit(model, data_module)

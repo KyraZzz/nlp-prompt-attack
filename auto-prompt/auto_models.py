@@ -24,7 +24,7 @@ class GradientStorage:
         return self.gradient
 
 class TextEntailClassifierPrompt(pl.LightningModule):
-    def __init__(self, model_name, tokenizer, n_classes, learning_rate, num_trigger_tokens, num_candidates, verbalizer_dict, n_training_steps_per_epoch=None, n_warmup_steps=None, total_training_steps=None):
+    def __init__(self, model_name, tokenizer, n_classes, learning_rate, num_trigger_tokens, num_candidates, verbalizer_dict, random_seed, n_training_steps_per_epoch=None, n_warmup_steps=None, total_training_steps=None):
         super().__init__()
         self.config = AutoConfig.from_pretrained(model_name)
         self.LM_with_head = AutoModelWithLMHead.from_pretrained(model_name)
@@ -35,6 +35,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         self.n_training_steps_per_epoch = n_training_steps_per_epoch
         self.total_training_steps = total_training_steps
         self.n_warmup_steps = n_warmup_steps
+        random.seed(random_seed)
         
         self.accuracy = Accuracy(dist_sync_on_step=True)
         self.train_loss_arr = []
@@ -86,7 +87,8 @@ class TextEntailClassifierPrompt(pl.LightningModule):
     def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
         logits = self.LM_with_head(input_ids, attention_mask)["logits"]
         # LMhead predicts the word to fill into mask token
-        mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos.squeeze()]
+        mask_token_pos = mask_token_pos.squeeze()
+        mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos]
         # get the scores for the labels specified by the verbalizer
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in self.label_token_ids]
         # concatenate the scores
@@ -104,7 +106,8 @@ class TextEntailClassifierPrompt(pl.LightningModule):
     def forward_acc(self, output, labels):
         output = torch.softmax(output,1) # convert into probabilities
         _, pred_ids = torch.max(output, dim=1)
-        return self.accuracy(pred_ids, labels.squeeze())
+        labels = labels[0] if len(labels) == 1 else labels.squeeze()
+        return self.accuracy(pred_ids, labels)
     
     def on_after_backward(self):
         # intermediate gradients of input embedding layer size: (bz, max_token_len, model_output_layer) 
@@ -134,6 +137,9 @@ class TextEntailClassifierPrompt(pl.LightningModule):
 
     
     def on_train_epoch_end(self):
+        average_grad_list = self.all_gather(self.average_grad)
+        average_grad_cum = torch.sum(average_grad_list, dim = 0)
+        self.average_grad = None
         # record mean loss and accuracy
         train_mean_loss = torch.mean(torch.tensor(self.train_loss_arr, dtype=torch.float32))
         train_mean_acc = torch.mean(torch.tensor(self.train_acc_arr, dtype=torch.float32))
@@ -144,16 +150,19 @@ class TextEntailClassifierPrompt(pl.LightningModule):
 
         # HotFlip: find topk candidate tokens and evaluate
         replace_token_idx = random.choice(range(self.num_trigger_tokens))
-        embedding_grad_dot_prod = torch.matmul(self.embeddings.weight, self.average_grad[replace_token_idx])
-        self.average_grad = None
-        min_val = math.floor(min(embedding_grad_dot_prod))
+        embedding_grad_dot_prod = torch.matmul(self.embeddings.weight, average_grad_cum[replace_token_idx])
+        min_val = -1e32
         filtered_vocab = self.get_filtered_vocab(embedding_grad_dot_prod)
+        print(f"filtered_vocab: {filtered_vocab[:15]}")
         res = torch.where(filtered_vocab, min_val, embedding_grad_dot_prod)
         # get the indices of top k candidates
         _, topk_candidates = res.topk(self.num_candidates)
+        print(f"topk candidates: {topk_candidates}")
+        print(f"candidate tokens: {self.tokenizer.decode(topk_candidates)}")
         curr_acc = 0
         candidate_scores = [[] for _ in range(self.num_candidates)]
         for batch_idx, batch in enumerate(self.trainer.train_dataloader):
+            print(f"batch_idx: {batch_idx}, device: {self.device}")
             input_ids = batch["input_ids"].to(device = self.device)
             attention_mask = batch["attention_mask"].to(device = self.device)
             labels = batch["labels"].to(device = self.device)
@@ -245,7 +254,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             )
         )
     
-def te_model_hub(model_name, tokenizer, n_classes, learning_rate, n_warmup_steps, n_training_steps_per_epoch, total_training_steps, with_prompt, num_trigger_tokens, num_candidates, verbalizer_dict, checkpoint_path=None):
+def te_model_hub(model_name, tokenizer, n_classes, learning_rate, n_warmup_steps, n_training_steps_per_epoch, total_training_steps, with_prompt, num_trigger_tokens, num_candidates, verbalizer_dict, random_seed, checkpoint_path=None):
     if with_prompt and checkpoint_path is None:
         return TextEntailClassifierPrompt(
             model_name = model_name, 
@@ -257,6 +266,7 @@ def te_model_hub(model_name, tokenizer, n_classes, learning_rate, n_warmup_steps
             n_warmup_steps = n_warmup_steps,
             num_trigger_tokens = num_trigger_tokens,
             num_candidates = num_candidates,
-            verbalizer_dict = verbalizer_dict
+            verbalizer_dict = verbalizer_dict,
+            random_seed = random_seed
         )
     return None

@@ -43,7 +43,11 @@ class TextEntailClassifier(pl.LightningModule):
         labels = batch["labels"]
         loss, outputs = self.forward(input_ids, attention_mask, labels)
         _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
+        if len(pred_ids) > 1:
+            assert len(labels) > 1
+            pred_ids = pred_ids.squeeze()
+            labels = labels.squeeze()
+        acc = self.accuracy(pred_ids, labels)
         self.train_loss_arr.append(loss)
         self.train_acc_arr.append(acc)
         self.log("train_loss", loss, prog_bar=True, sync_dist=True)
@@ -65,7 +69,11 @@ class TextEntailClassifier(pl.LightningModule):
         labels = batch["labels"]
         loss, outputs = self.forward(input_ids, attention_mask, labels)
         _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
+        if len(pred_ids) > 1:
+            assert len(labels) > 1
+            pred_ids = pred_ids.squeeze()
+            labels = labels.squeeze()
+        acc = self.accuracy(pred_ids, labels)
         self.val_loss_arr.append(loss)
         self.val_acc_arr.append(acc)
         self.log("val_loss", loss, prog_bar=True, sync_dist=True)
@@ -87,7 +95,11 @@ class TextEntailClassifier(pl.LightningModule):
         labels = batch["labels"]
         loss, outputs = self.forward(input_ids, attention_mask, labels)
         _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids.squeeze(), labels.squeeze())
+        if len(pred_ids) > 1:
+            assert len(labels) > 1
+            pred_ids = pred_ids.squeeze()
+            labels = labels.squeeze()
+        acc = self.accuracy(pred_ids, labels)
         self.test_loss_arr.append(loss)
         self.test_acc_arr.append(acc)
         return loss
@@ -136,7 +148,6 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
 
         # LMhead predicts the word to fill into mask token
         mask_word_pred = self.LM_with_head.lm_head(mask_last_hidden_state)
-        print(f"mask_word_pred: {mask_word_pred[:, :10]}")
         # get the scores for the labels specified by the verbalizer
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in label_token_ids[0]]
         """
@@ -158,7 +169,9 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         label_token_ids = batch["label_token_ids"]
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
         _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids, labels.squeeze())
+        if len(labels) > 1:
+            labels = labels.squeeze()
+        acc = self.accuracy(pred_ids, labels)
         self.train_loss_arr.append(loss)
         self.train_acc_arr.append(acc)
         self.log("train_loss", loss, prog_bar=True, logger=True, sync_dist=True)
@@ -173,7 +186,9 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         label_token_ids = batch["label_token_ids"]
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
         _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids, labels.squeeze())
+        if len(labels) > 1:
+            labels = labels.squeeze()
+        acc = self.accuracy(pred_ids, labels)
         self.val_loss_arr.append(loss)
         self.val_acc_arr.append(acc)
         self.log("val_loss", loss, prog_bar=True, logger=True, sync_dist=True)
@@ -188,7 +203,10 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
         label_token_ids = batch["label_token_ids"]
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, label_token_ids, labels)
         _, pred_ids = torch.max(outputs, dim=1)
-        acc = self.accuracy(pred_ids, labels.squeeze())
+        if len(labels) > 1:
+            labels = labels.squeeze()
+        acc = self.accuracy(pred_ids, labels)
+        print(f"pred_ids: {pred_ids}, labels: {labels}, loss: {loss}")
         self.test_loss_arr.append(loss)
         self.test_acc_arr.append(acc)
         return loss

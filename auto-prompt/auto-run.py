@@ -122,8 +122,8 @@ def run(args):
         devices = args.num_gpu_devices
     )
 
-    # trainer.test(model = model, dataloaders = data_module, verbose = True)
     trainer.fit(model, data_module)
+    trainer.test(model = model, dataloaders = data_module, verbose = True)
 
 
 

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
-from transformers import get_linear_schedule_with_warmup, AutoModel, AutoModelForMaskedLM, AutoConfig
+from transformers import get_linear_schedule_with_warmup, AutoModel, AutoModelForMaskedLM, AutoConfig, AutoModelWithLMHead
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
 import random
@@ -35,7 +35,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
 
         self.val_cum_list = []
 
-        self.LM_with_head = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
+        self.LM_with_head = AutoModelWithLMHead.from_pretrained(model_name)
         model_attr = getattr(self.LM_with_head, self.config.model_type)
         self.embeddings = model_attr.embeddings.word_embeddings
         self.embedding_gradient = GradientStorage(self.embeddings)
@@ -43,7 +43,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         self.average_grad = None
         self.replace_token_idx = None
         self.topk_candidates = None
-        self.curr_score = 0
+        self.curr_loss = 0
         self.num_trigger_tokens = num_trigger_tokens
         self.num_candidates = num_candidates
         self.candidate_scores = [[] for _ in range(self.num_candidates)]
@@ -82,15 +82,16 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         return input_tensors
     
     def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
+        print(f"input_ids: {input_ids[:, :10]}")
         logits = self.LM_with_head(input_ids, attention_mask)["logits"]
-        # print(f"logits: {logits[0][:2]}")
         # LMhead predicts the word to fill into mask token
         mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos.squeeze()]
-
+        print(f"mask_word_pred: {mask_word_pred[:, :10]}")
         # get the scores for the labels specified by the verbalizer
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in self.label_token_ids]
         # concatenate the scores
         output = torch.cat(mask_label_pred, -1)
+        
         # compute log likelihood for each batch and each label
         m = nn.LogSoftmax(dim=1)
         # output size: (bz, C), label size: bz * 1
@@ -99,7 +100,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         F = nn.NLLLoss()
         loss = F(log_output, labels.view(-1))
         return loss, output
-    
+        
     def forward_acc(self, output, labels):
         output = torch.softmax(output,1) # convert into probabilities
         print(f"probability: {output}, labels: {labels.squeeze()}")
@@ -142,7 +143,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         res = torch.where(self.filtered_vocab, min_val, embedding_grad_dot_prod)
         # get the indices of top k candidates
         _, self.topk_candidates = res.topk(self.num_candidates)
-        self.curr_score = 0
+        self.curr_loss = 0
         self.candidate_scores = [[] for _ in range(self.num_candidates)]
         for batch_idx, batch in enumerate(self.trainer.train_dataloader):
             input_ids = batch["input_ids"].to(device = self.device)
@@ -153,36 +154,33 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             self.trigger_token_mask = batch["trigger_token_mask"].to(device = self.device)
             with torch.no_grad():
                 loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
-                acc = self.forward_acc(output, labels)
-            self.curr_score += acc
-            print(f"curr_score_train_loop: {self.curr_score}")
+            self.curr_loss += loss
+            print(f"curr_loss_train_loop: {self.curr_loss}")
             for idx, val in enumerate(self.topk_candidates):
                 # replacing input_ids with new trigger tokens
                 temp_input_ids = torch.empty_like(input_ids).copy_(input_ids)
                 new_input_ids = self.update_input_triggers(temp_input_ids, trigger_token_pos, self.replace_token_idx, val)
                 with torch.no_grad():
                     loss, new_outputs = self.forward(new_input_ids, attention_mask, mask_token_pos, labels)
-                    new_acc = self.forward_acc(new_outputs, labels)
-                self.candidate_scores[idx].append(new_acc) 
+                self.candidate_scores[idx].append(loss) 
         # find better trigger token
         score_per_candidate = torch.tensor(self.candidate_scores).sum(dim = 1)
         print(f"score_per_candidate: {score_per_candidate}")
-        if torch.max(score_per_candidate) >= self.curr_score:
+        if torch.min(score_per_candidate) < self.curr_loss:
             print("Better trigger token detected.")
-            best_candidate_score = torch.max(score_per_candidate)
-            best_candidate_idx = torch.argmax(score_per_candidate)
+            best_candidate_score = torch.min(score_per_candidate)
+            best_candidate_idx = torch.argmin(score_per_candidate)
             self.trigger_token_set[self.replace_token_idx] = best_candidate_idx
             print(f'best_candidate_score: {best_candidate_score: 0.4f}')
         print(f'Current trigger token set: {self.tokenizer.convert_ids_to_tokens(self.trigger_token_set)}')
     
     def validation_step(self, batch, batch_idx):
-        print("validation_step")
-        input_ids = batch["input_ids"]
-        trigger_token_pos = batch["trigger_token_pos"]
+        input_ids = batch["input_ids"].to(device = self.device)
+        trigger_token_pos = batch["trigger_token_pos"].to(device = self.device)
         input_ids = self.update_input_triggers(input_ids, trigger_token_pos)
-        attention_mask = batch["attention_mask"]
-        labels = batch["labels"]
-        mask_token_pos = batch["mask_token_pos"]
+        attention_mask = batch["attention_mask"].to(device = self.device)
+        labels = batch["labels"].to(device = self.device)
+        mask_token_pos = batch["mask_token_pos"].to(device = self.device)
         loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
         acc = self.forward_acc(output, labels)
         self.val_cum_list.append(acc)

@@ -136,7 +136,7 @@ class TextEntailClassifierPrompt(TextEntailClassifier):
 
         # LMhead predicts the word to fill into mask token
         mask_word_pred = self.LM_with_head.lm_head(mask_last_hidden_state)
-        
+        print(f"mask_word_pred: {mask_word_pred[:, :10]}")
         # get the scores for the labels specified by the verbalizer
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in label_token_ids[0]]
         """

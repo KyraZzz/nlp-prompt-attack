@@ -27,9 +27,9 @@ python3 auto-run.py \
     --do_train \
     --do_test \
     --with_prompt \
-    --template "<cls> <question> <mask> <T> <T> <T> <sentence>" \
+    --template "<cls> <question> ? <mask> <T> <T> <T> . <sentence> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
-    --log_every_n_steps 20 \
+    --log_every_n_steps 4 \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices 1 \

@@ -8,22 +8,22 @@ import random
 import ipdb
 import math
 
-class GradientOnBackwardHook:
+class OutputOnForwardHook:
     """
     TODO: add reference
     stores the intermediate gradients of the output a the given PyTorch module
     """
     def __init__(self, module):
-        self.gradient = None
-        module.register_full_backward_hook(self.hook)
+        self.output = None
+        module.register_forward_hook(self.hook)
 
-    def hook(self, module, grad_in, grad_out):
-        self.gradient = grad_out[0]
+    def hook(self, module, input, output):
+        self.output = output
 
     def get(self):
-        return self.gradient
+        return self.output
 
-class TextEntailClassifierPrompt(pl.LightningModule):
+class AutoLabelSearch(pl.LightningModule):
     def __init__(self, model_name, tokenizer, n_classes, learning_rate, num_trigger_tokens, num_candidates, verbalizer_dict, random_seed, n_training_steps_per_epoch=None, n_warmup_steps=None, total_training_steps=None):
         super().__init__()
         self.config = AutoConfig.from_pretrained(model_name)
@@ -47,7 +47,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
 
         model_attr = getattr(self.LM_with_head, self.config.model_type)
         self.embeddings = model_attr.embeddings.word_embeddings
-        self.embedding_gradient = GradientOnBackwardHook(self.embeddings)
+        self.embedding_gradient = OutputOnForwardHook(self.embeddings)
         self.average_grad = None
         self.num_trigger_tokens = num_trigger_tokens
         self.num_candidates = num_candidates
@@ -249,9 +249,9 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             )
         )
     
-def te_model_hub(model_name, tokenizer, n_classes, learning_rate, n_warmup_steps, n_training_steps_per_epoch, total_training_steps, with_prompt, num_trigger_tokens, num_candidates, verbalizer_dict, random_seed, checkpoint_path=None):
+def label_search_model(model_name, tokenizer, n_classes, learning_rate, n_warmup_steps, n_training_steps_per_epoch, total_training_steps, with_prompt, num_trigger_tokens, num_candidates, verbalizer_dict, random_seed, checkpoint_path=None):
     if with_prompt and checkpoint_path is None:
-        return TextEntailClassifierPrompt(
+        return AutoLabelSearch(
             model_name = model_name, 
             tokenizer = tokenizer,
             n_classes = n_classes, 

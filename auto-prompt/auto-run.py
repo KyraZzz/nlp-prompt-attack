@@ -65,6 +65,18 @@ def run(args):
     log_dir = os.path.expanduser('~') + "/nlp-prompt-attack/tb_logs"
     # log_dir = "/local/scratch-3/yz709/nlp-prompt-attack/tb_logs"
     logger = TensorBoardLogger(log_dir, name=args.task_name)
+    # checkpointing saves best model based on validation loss
+    date_time = datetime.now()
+    checkpoint_callback = ModelCheckpoint(
+        dirpath = f"checkpoints/{date_time.month}-{date_time.day}/{args.task_name}",
+        filename = f"{args.task_name}-date={date_time.month}-{date_time.day}"+"-{epoch:02d}-{val_loss:.2f}",
+        verbose = True,
+        save_top_k = 1,
+        monitor = "val_loss",
+        mode = "min"
+    )
+    # early stopping terminates training when the loss has not improved for the last n epochs
+    early_stopping_callback = EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience)
 
     # preprocess verbalizer_dict
     verbalizer_dict = json.loads(args.verbalizer_dict) if args.verbalizer_dict is not None else None
@@ -118,6 +130,7 @@ def run(args):
     trainer = pl.Trainer(
         logger = logger,
         max_epochs = args.max_epoch,
+        callbacks = [early_stopping_callback,checkpoint_callback],
         log_every_n_steps = args.log_every_n_steps,
         accelerator = "gpu",
         devices = args.num_gpu_devices,
@@ -125,7 +138,7 @@ def run(args):
     )
 
     trainer.fit(model, data_module)
-    trainer.test(model = model, dataloaders = data_module, verbose = True)
+    trainer.test(model = model, dataloaders = data_module, verbose = True, ckpt_path=checkpoint_callback.best_model_path)
 
 
 

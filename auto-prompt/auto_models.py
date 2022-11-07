@@ -57,11 +57,11 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         self.verbalizer_dict = verbalizer_dict
         self.label_token_ids = torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
 
+        self.filtered_vocab = self.get_filtered_vocab()
         self.save_hyperparameters()
     
-    def get_filtered_vocab(self, embedding_grad_dot_prod):
-        assert embedding_grad_dot_prod.size()[0] == self.tokenizer.vocab_size
-        filter_vocab = torch.empty_like(embedding_grad_dot_prod, dtype=torch.bool)
+    def get_filtered_vocab(self):
+        filter_vocab = torch.zeros(self.tokenizer.vocab_size, dtype=torch.bool)
         for word, idx in self.tokenizer.get_vocab().items():
             if len(word) == 1 or idx >= self.tokenizer.vocab_size:
                 continue
@@ -152,17 +152,12 @@ class TextEntailClassifierPrompt(pl.LightningModule):
         replace_token_idx = random.choice(range(self.num_trigger_tokens))
         embedding_grad_dot_prod = torch.matmul(self.embeddings.weight, average_grad_cum[replace_token_idx])
         min_val = -1e32
-        filtered_vocab = self.get_filtered_vocab(embedding_grad_dot_prod)
-        print(f"filtered_vocab: {filtered_vocab[:15]}")
-        res = torch.where(filtered_vocab, min_val, embedding_grad_dot_prod)
+        embedding_grad_dot_prod[self.filtered_vocab.to(device = self.device)] = min_val
         # get the indices of top k candidates
-        _, topk_candidates = res.topk(self.num_candidates)
-        print(f"topk candidates: {topk_candidates}")
-        print(f"candidate tokens: {self.tokenizer.decode(topk_candidates)}")
+        _, topk_candidates = embedding_grad_dot_prod.topk(self.num_candidates)
         curr_acc = 0
         candidate_scores = [[] for _ in range(self.num_candidates)]
         for batch_idx, batch in enumerate(self.trainer.train_dataloader):
-            print(f"batch_idx: {batch_idx}, device: {self.device}")
             input_ids = batch["input_ids"].to(device = self.device)
             attention_mask = batch["attention_mask"].to(device = self.device)
             labels = batch["labels"].to(device = self.device)
@@ -187,7 +182,7 @@ class TextEntailClassifierPrompt(pl.LightningModule):
             print("Better trigger token detected.")
             best_candidate_score = torch.max(score_per_candidate)
             best_candidate_idx = torch.argmax(score_per_candidate)
-            self.trigger_token_set[replace_token_idx] = best_candidate_idx
+            self.trigger_token_set[replace_token_idx] = topk_candidates[best_candidate_idx]
             print(f'best_candidate_score: {best_candidate_score: 0.4f}')
         print(f'Current trigger token set: {self.tokenizer.convert_ids_to_tokens(self.trigger_token_set)}')
         return {"train_mean_loss": train_mean_loss, "train_mean_acc": train_mean_acc} 

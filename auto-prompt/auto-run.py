@@ -12,6 +12,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from auto_dataloaders import data_loader_hub
 from auto_models import te_model_hub
+from auto_labelsearch import label_search_model
 from prep_data import data_preprocess
 
 def prep_template(template):
@@ -57,6 +58,7 @@ def run(args):
     validate every n steps: {args.val_every_n_steps}{chr(10)} \
     number of trigger tokens: {args.num_trigger_tokens}{chr(10)} \
     number of candidate tokens: {args.num_candidates}{chr(10)} \
+    label search mode: {args.label_search}{chr(10)} \
     ")
 
     # set a general random seed
@@ -112,25 +114,41 @@ def run(args):
     steps_per_epoch = len(train_data) // args.batch_size
     total_training_steps = steps_per_epoch * args.max_epoch
     warmup_steps = int(total_training_steps * args.warmup_percent / 100)
-    model = te_model_hub(
-        model_name = args.model_name_or_path,
-        tokenizer = tokenizer,
-        n_classes = args.n_classes,
-        learning_rate = args.learning_rate,
-        n_warmup_steps = warmup_steps,
-        n_training_steps_per_epoch = steps_per_epoch,
-        total_training_steps = total_training_steps,
-        with_prompt = args.with_prompt,
-        num_trigger_tokens = args.num_trigger_tokens,
-        num_candidates = args.num_candidates,
-        verbalizer_dict = verbalizer_dict,
-        random_seed = args.random_seed
-    )
+    if args.label_search:
+        model = label_search_model(
+            model_name = args.model_name_or_path,
+            tokenizer = tokenizer,
+            n_classes = args.n_classes,
+            learning_rate = args.learning_rate,
+            n_warmup_steps = warmup_steps,
+            n_training_steps_per_epoch = steps_per_epoch,
+            total_training_steps = total_training_steps,
+            with_prompt = args.with_prompt,
+            num_trigger_tokens = args.num_trigger_tokens,
+            num_candidates = args.num_candidates,
+            verbalizer_dict = verbalizer_dict,
+            random_seed = args.random_seed,
+        )
+    else:
+        model = te_model_hub(
+            model_name = args.model_name_or_path,
+            tokenizer = tokenizer,
+            n_classes = args.n_classes,
+            learning_rate = args.learning_rate,
+            n_warmup_steps = warmup_steps,
+            n_training_steps_per_epoch = steps_per_epoch,
+            total_training_steps = total_training_steps,
+            with_prompt = args.with_prompt,
+            num_trigger_tokens = args.num_trigger_tokens,
+            num_candidates = args.num_candidates,
+            verbalizer_dict = verbalizer_dict,
+            random_seed = args.random_seed,
+        )
 
     trainer = pl.Trainer(
         logger = logger,
         max_epochs = args.max_epoch,
-        callbacks = [early_stopping_callback,checkpoint_callback],
+        # callbacks = [early_stopping_callback,checkpoint_callback],
         log_every_n_steps = args.log_every_n_steps,
         accelerator = "gpu",
         devices = args.num_gpu_devices,
@@ -138,7 +156,7 @@ def run(args):
     )
 
     trainer.fit(model, data_module)
-    trainer.test(model = model, dataloaders = data_module, verbose = True, ckpt_path=checkpoint_callback.best_model_path)
+    # trainer.test(model = model, dataloaders = data_module, verbose = True, ckpt_path=checkpoint_callback.best_model_path)
 
 
 
@@ -170,5 +188,6 @@ if __name__ == "__main__":
     parser.add_argument("--early_stopping_patience", type = int, default = 20, help = "Early stopping terminates training when the loss has not improved for the last n epochs")
     parser.add_argument("--num_trigger_tokens", type = int, default = 3, help = "The number of trigger tokens in the template")
     parser.add_argument("--num_candidates", type = int, default = 10, help = "The top k candidates selected for trigger token updates")
+    parser.add_argument("--label_search", action = "store_true", help = "Enable label search mode")
     args = parser.parse_args()
     run(args)

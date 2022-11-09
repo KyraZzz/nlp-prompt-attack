@@ -106,8 +106,9 @@ class AutoLabelSearch(pl.LightningModule):
         probs = torch.softmax(scores, 1)
         _, topk_candidates = probs.topk(self.num_candidates, dim=1)
         for i in range(len(self.verbalizer_dict)):
-            print(f"Label {i} top {self.num_candidates} tokens: {self.tokenizer.decode(topk_candidates[i])}, token_ids: {topk_candidates[i]}")
-           
+            # , tokens: {[self.tokenizer.convert_ids_to_tokens(w) for w in topk_candidates[i]]}
+            print(f"Label {i} top {self.num_candidates} token_ids: {topk_candidates[i]}, tokens: {[self.tokenizer.convert_ids_to_tokens(w) for w in topk_candidates[i].unsqueeze(dim=0)][0]}")
+            
     def configure_optimizers(self):
         optimizer = AdamW(self.final_linear_layer.parameters(), lr=self.learning_rate)
         # learning rate scheduler

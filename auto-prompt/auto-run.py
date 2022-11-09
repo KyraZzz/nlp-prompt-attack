@@ -129,6 +129,15 @@ def run(args):
             verbalizer_dict = verbalizer_dict,
             random_seed = args.random_seed,
         )
+
+        trainer = pl.Trainer(
+        logger = logger,
+        max_epochs = args.max_epoch,
+        log_every_n_steps = args.log_every_n_steps,
+        accelerator = "gpu",
+        devices = args.num_gpu_devices,
+        strategy = "ddp",
+    )
     else:
         model = te_model_hub(
             model_name = args.model_name_or_path,
@@ -145,19 +154,34 @@ def run(args):
             random_seed = args.random_seed,
         )
 
-    trainer = pl.Trainer(
+        trainer = pl.Trainer(
         logger = logger,
         max_epochs = args.max_epoch,
-        # callbacks = [early_stopping_callback,checkpoint_callback],
+        callbacks = [early_stopping_callback,checkpoint_callback],
         log_every_n_steps = args.log_every_n_steps,
         accelerator = "gpu",
         devices = args.num_gpu_devices,
         strategy = "ddp",
     )
 
-    trainer.fit(model, data_module)
-    # trainer.test(model = model, dataloaders = data_module, verbose = True, ckpt_path=checkpoint_callback.best_model_path)
-
+    # do testing straight after training
+    if args.do_train and args.k_samples_per_class != 0:
+        trainer.fit(model, data_module)
+        if args.do_test:
+            # trainer in default using best checkpointed model for testing
+            trainer.test(verbose = True, ckpt_path=checkpoint_callback.best_model_path, dataloaders = data_module)   
+    elif args.do_test:
+        if args.ckpt_path is not None:
+            model = te_model_hub(
+                model_name = args.model_name_or_path,
+                n_classes = args.n_classes,
+                learning_rate = args.learning_rate,
+                n_warmup_steps = warmup_steps,
+                n_training_steps = total_training_steps,
+                with_prompt = args.with_prompt,
+                checkpoint_path = args.ckpt_path
+            )
+        trainer.test(model = model, dataloaders = data_module, verbose = True)
 
 
 if __name__ == "__main__":

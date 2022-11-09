@@ -48,8 +48,6 @@ class AutoLabelSearch(pl.LightningModule):
         self.num_trigger_tokens = num_trigger_tokens
         self.num_candidates = num_candidates
 
-        self.trigger_token_mask = None
-        self.trigger_token_set = torch.tensor([self.tokenizer.mask_token_id] * self.num_trigger_tokens)
         self.verbalizer_dict = verbalizer_dict
 
         # a logistic classifier for the mask token
@@ -59,13 +57,13 @@ class AutoLabelSearch(pl.LightningModule):
 
     
     def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
-        self.LM_with_head(input_ids, attention_mask)
+        with torch.no_grad():
+            self.LM_with_head(input_ids, attention_mask)
         # get output from forward hook
         embedding_output = self.embedding_output.get()
         # get embedding output for the mask token
         mask_token_pos = mask_token_pos.squeeze()
         mask_word_pred = embedding_output[torch.arange(embedding_output.size(0)), mask_token_pos]
-        print(f"mask_word_pred: {mask_word_pred}")
         # logistic regression
         output = self.final_linear_layer(mask_word_pred)
         F = nn.CrossEntropyLoss()
@@ -85,7 +83,6 @@ class AutoLabelSearch(pl.LightningModule):
         attention_mask = batch["attention_mask"].to(device = self.device)
         labels = batch["labels"].to(device = self.device)
         mask_token_pos = batch["mask_token_pos"].to(device = self.device)
-        self.trigger_token_mask = batch["trigger_token_mask"].to(device = self.device)
         loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
         acc = self.forward_acc(output, labels)
         self.train_loss_arr.append(loss)
@@ -94,7 +91,6 @@ class AutoLabelSearch(pl.LightningModule):
         self.log("train_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
         return {"loss": loss, "accuracy": acc}
 
-    
     def on_train_epoch_end(self):
         # record mean loss and accuracy
         train_mean_loss = torch.mean(torch.tensor(self.train_loss_arr, dtype=torch.float32))
@@ -106,11 +102,8 @@ class AutoLabelSearch(pl.LightningModule):
 
         # HotFlip: compute scores and find topk candidate tokens
         scores = torch.matmul(self.final_linear_layer.weight, self.word_embeddings.transpose(0, 1))
-        print(f"linear layer weight: {self.final_linear_layer.weight}, word_embeddings: {self.word_embeddings}")
-        print(f"scores: {scores}, scores size: {scores.size()}")
         # convert scores into probabilities
         probs = torch.softmax(scores, 1)
-        print(f"probs: {probs}, probs size: {probs.size()}")
         _, topk_candidates = probs.topk(self.num_candidates, dim=1)
         for i in range(len(self.verbalizer_dict)):
             print(f"Label {i} top {self.num_candidates} tokens: {self.tokenizer.decode(topk_candidates[i])}, token_ids: {topk_candidates[i]}")

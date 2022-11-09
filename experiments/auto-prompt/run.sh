@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=10:00:00
-#SBATCH --job-name=q1c1bs1b
+#SBATCH --job-name=q161b10
 #SBATCH --gres=gpu:4
 
 # run the application
@@ -12,7 +12,7 @@ conda activate nlp-prompt-attack-env                          # activate target 
 
 seed_all=100
 k_all=16
-candidate_num=100
+candidate_num=10
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/auto-prompt
 python3 auto-run.py \
@@ -27,13 +27,13 @@ python3 auto-run.py \
     --do_train \
     --do_test \
     --with_prompt \
-    --template "<cls> <question> <mask> <T> <T> <T> <sentence>" \
-    --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
+    --template "<cls> <question> <mask> <T> <T> <T> <T> <T> <T> <T> <T> <T> <T> <sentence>" \
+    --verbalizer_dict '{"0":["Ġfound"], "1":["Nobody"]}' \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices 4 \
     --max_epoch 100 \
     --log_every_n_steps 4 \
-    --early_stopping_patience 20 \
-    --num_trigger_tokens 3 \
+    --early_stopping_patience 5 \
+    --num_trigger_tokens 10 \
     --num_candidates ${candidate_num}

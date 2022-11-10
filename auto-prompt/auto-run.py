@@ -174,11 +174,17 @@ def run(args):
         if args.ckpt_path is not None:
             model = te_model_hub(
                 model_name = args.model_name_or_path,
+                tokenizer = tokenizer,
                 n_classes = args.n_classes,
                 learning_rate = args.learning_rate,
                 n_warmup_steps = warmup_steps,
-                n_training_steps = total_training_steps,
+                n_training_steps_per_epoch = steps_per_epoch,
+                total_training_steps = total_training_steps,
                 with_prompt = args.with_prompt,
+                num_trigger_tokens = args.num_trigger_tokens,
+                num_candidates = args.num_candidates,
+                verbalizer_dict = verbalizer_dict,
+                random_seed = args.random_seed,
                 checkpoint_path = args.ckpt_path
             )
         trainer.test(model = model, dataloaders = data_module, verbose = True)

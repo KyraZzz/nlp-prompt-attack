@@ -264,4 +264,19 @@ def te_model_hub(model_name, tokenizer, n_classes, learning_rate, n_warmup_steps
             verbalizer_dict = verbalizer_dict,
             random_seed = random_seed
         )
+    elif with_prompt and checkpoint_path is not None:
+        return TextEntailClassifierPrompt.load_from_checkpoint(
+            model_name = model_name, 
+            tokenizer = tokenizer,
+            n_classes = n_classes, 
+            learning_rate = learning_rate, 
+            n_training_steps_per_epoch = n_training_steps_per_epoch,
+            total_training_steps = total_training_steps, 
+            n_warmup_steps = n_warmup_steps,
+            num_trigger_tokens = num_trigger_tokens,
+            num_candidates = num_candidates,
+            verbalizer_dict = verbalizer_dict,
+            random_seed = random_seed,
+            checkpoint_path = checkpoint_path
+        )
     return None

@@ -156,6 +156,20 @@ class TextEntailDatasetQNLIPrompt(TextEntailDatasetPrompt):
         self.sent2_col_name = "sentence"
         self.label_col_name = "label"
 
+class TextEntailDatasetMNLIPrompt(TextEntailDatasetPrompt):
+    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
+        super().__init__(
+            data = data, 
+            tokenizer = tokenizer, 
+            max_token_count = max_token_count, 
+            with_prompt = with_prompt, 
+            template = template, 
+            verbalizer_dict = verbalizer_dict
+        )
+        self.sent1_col_name = "premise"
+        self.sent2_col_name = "hypothesis"
+        self.label_col_name = "label"
+
 class SentAnalDatasetPrompt(Dataset):
     def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
         super().__init__()
@@ -279,6 +293,15 @@ def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, with_prom
     match dataset_name:
         case "QNLI":
             return TextEntailDatasetQNLIPrompt(
+                    data = data, 
+                    tokenizer = tokenizer, 
+                    max_token_count = max_token_count, 
+                    with_prompt = with_prompt, 
+                    template = template, 
+                    verbalizer_dict = verbalizer_dict
+                )
+        case "MNLI" | "MNLI-MATCHED" | "MNLI-MISMATCHED":
+            return TextEntailDatasetMNLIPrompt(
                     data = data, 
                     tokenizer = tokenizer, 
                     max_token_count = max_token_count, 

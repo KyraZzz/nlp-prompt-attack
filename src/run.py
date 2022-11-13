@@ -10,7 +10,7 @@ from transformers import AutoTokenizer
 from pytorch_lightning.loggers import TensorBoardLogger
 
 from dataloaders import data_loader_hub
-from models import te_model_hub
+from models import get_models
 from labelsearch import label_search_model
 from prep_data import data_preprocess
 
@@ -130,7 +130,7 @@ def run(args):
             random_seed = args.random_seed,
         )
     else:
-        model = te_model_hub(
+        model = get_models(
             model_name = args.model_name_or_path,
             tokenizer = tokenizer,
             n_classes = args.n_classes,
@@ -191,7 +191,7 @@ def run(args):
             trainer.test(verbose = True, ckpt_path=checkpoint_callback.best_model_path, dataloaders = data_module)   
     elif args.do_test:
         if args.ckpt_path is not None:
-            model = te_model_hub(
+            model = get_models(
                 model_name = args.model_name_or_path,
                 tokenizer = tokenizer,
                 n_classes = args.n_classes,

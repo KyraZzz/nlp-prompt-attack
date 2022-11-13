@@ -11,6 +11,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from dataloaders import data_loader_hub
 from models import te_model_hub
+from labelsearch import label_search_model
 from prep_data import data_preprocess
 
 def prep_template(template):
@@ -46,6 +47,7 @@ def run(args):
     maximum token counts: {args.max_token_count}{chr(10)} \
     random seed: {args.random_seed}{chr(10)} \
     with prompt: {args.with_prompt}{chr(10)} \
+    prompt_type: {args.prompt_type}{chr(10)} \
     template: {args.template}{chr(10)} \
     verbalizer: {args.verbalizer_dict}{chr(10)} \
     warmup step percentage: {args.warmup_percent}{chr(10)} \
@@ -54,6 +56,9 @@ def run(args):
     log every n steps: {args.log_every_n_steps}{chr(10)} \
     early stopping patience value: {args.early_stopping_patience}{chr(10)} \
     validate every n steps: {args.val_every_n_steps}{chr(10)} \
+    number of trigger tokens: {args.num_trigger_tokens}{chr(10)} \
+    number of candidate tokens: {args.num_candidates}{chr(10)} \
+    label search mode: {args.label_search}{chr(10)} \
     ")
 
     # set a general random seed
@@ -108,17 +113,50 @@ def run(args):
     steps_per_epoch = len(train_data) // args.batch_size
     total_training_steps = steps_per_epoch * args.max_epoch
     warmup_steps = int(total_training_steps * args.warmup_percent / 100)
-    model = te_model_hub(
-        model_name = args.model_name_or_path,
-        n_classes = args.n_classes,
-        learning_rate = args.learning_rate,
-        n_warmup_steps = warmup_steps,
-        n_training_steps = total_training_steps,
-        with_prompt = args.with_prompt
-    )
+    if args.label_search:
+        assert args.with_prompt is True
+        assert args.prompt_type == "auto_prompt"
+        model = label_search_model(
+            model_name = args.model_name_or_path,
+            tokenizer = tokenizer,
+            n_classes = args.n_classes,
+            learning_rate = args.learning_rate,
+            n_warmup_steps = warmup_steps,
+            n_training_steps_per_epoch = steps_per_epoch,
+            total_training_steps = total_training_steps,
+            num_trigger_tokens = args.num_trigger_tokens,
+            num_candidates = args.num_candidates,
+            verbalizer_dict = verbalizer_dict,
+            random_seed = args.random_seed,
+        )
+    else:
+        model = te_model_hub(
+            model_name = args.model_name_or_path,
+            tokenizer = tokenizer,
+            n_classes = args.n_classes,
+            learning_rate = args.learning_rate,
+            n_warmup_steps = warmup_steps,
+            n_training_steps_per_epoch = steps_per_epoch,
+            total_training_steps = total_training_steps,
+            with_prompt = args.with_prompt,
+            prompt_type = args.prompt_type,
+            num_trigger_tokens = args.num_trigger_tokens,
+            num_candidates = args.num_candidates,
+            verbalizer_dict = verbalizer_dict,
+            random_seed = args.random_seed,
+        )
 
     # training and(or) testing
-    if args.is_dev_mode:
+    if args.label_search:
+        trainer = pl.Trainer(
+            logger = logger,
+            max_epochs = args.max_epoch,
+            log_every_n_steps = args.log_every_n_steps,
+            accelerator = "gpu",
+            devices = args.num_gpu_devices,
+            strategy = "ddp",
+        )
+    elif args.is_dev_mode:
         trainer = pl.Trainer(
             # debugging method 1: runs n batch of training, validation, test and prediction data
             fast_dev_run = 5,
@@ -155,11 +193,17 @@ def run(args):
         if args.ckpt_path is not None:
             model = te_model_hub(
                 model_name = args.model_name_or_path,
+                tokenizer = tokenizer,
                 n_classes = args.n_classes,
                 learning_rate = args.learning_rate,
                 n_warmup_steps = warmup_steps,
-                n_training_steps = total_training_steps,
+                n_training_steps_per_epoch = steps_per_epoch,
+                total_training_steps = total_training_steps,
                 with_prompt = args.with_prompt,
+                num_trigger_tokens = args.num_trigger_tokens,
+                num_candidates = args.num_candidates,
+                verbalizer_dict = verbalizer_dict,
+                random_seed = args.random_seed,
                 checkpoint_path = args.ckpt_path
             )
         trainer.test(model = model, dataloaders = data_module, verbose = True)
@@ -192,5 +236,9 @@ if __name__ == "__main__":
     parser.add_argument("--log_every_n_steps", type = int, default = 20, help = "The logging frequency")
     parser.add_argument("--max_token_count", type = int, default = 512, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
     parser.add_argument("--early_stopping_patience", type = int, default = 20, help = "Early stopping terminates training when the loss has not improved for the last n epochs")
+    parser.add_argument("--num_trigger_tokens", type = int, default = 3, help = "The number of trigger tokens in the template")
+    parser.add_argument("--num_candidates", type = int, default = 10, help = "The top k candidates selected for trigger token updates")
+    parser.add_argument("--label_search", action = "store_true", help = "Enable label search mode")
+    parser.add_argument("--prompt_type", type = str, default = "manual_prompt", help = "Supported prompt types: manual_prompt, auto_prompt")
     args = parser.parse_args()
     run(args)

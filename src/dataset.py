@@ -50,6 +50,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
             tokenizer = tokenizer, 
             max_token_count = max_token_count
         )
+        self.add_extra_special_tokens()
         self.with_prompt = with_prompt
         self.template = template
         self.verbalizer_dict = verbalizer_dict
@@ -58,9 +59,14 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         self.sent2_start_token = 0
         self.sent2_end_token = 0
     
+    def add_extra_special_tokens(self):
+        self.tokenizer.add_special_tokens({'additional_special_tokens': ["<T>"]})
+        self.tokenizer.trigger_token = "<T>"
+        self.tokenizer.trigger_token_id = self.tokenizer.convert_tokens_to_ids("<T>")
+    
     def template_to_encoding(self, sent1, sent2):
         special_token_dict = {
-            "<cls>": self.tokenizer.cls_token_id, "<mask>": self.tokenizer.mask_token_id
+            "<cls>": self.tokenizer.cls_token_id, "<mask>": self.tokenizer.mask_token_id, "<T>": self.tokenizer.trigger_token_id
         }
         template_segments = self.template.split()
         encoding_list = []
@@ -98,9 +104,16 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         assert mask_token_pos[0] < self.max_token_count
         return mask_token_pos
     
-    def verbaliser_mapping(self):
-        return torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
+    def get_trigger_token_pos(self, encoding_list):
+        trigger_token_pos = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id)[0]
+        trigger_token_mask = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id, True, False)
+        return trigger_token_pos, trigger_token_mask
     
+    def init_triggers(self, input_tensors, trigger_token_pos, initial_trigger_token):
+        idx = torch.where(trigger_token_pos)
+        input_tensors[idx] = initial_trigger_token
+        return input_tensors
+
     def trunc_pad(self, list, pad_token):
         # padding
         diff = len(list) - self.max_token_count
@@ -145,19 +158,24 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         attention_mask = self.trunc_pad(attention_mask, 0)
         # get the mask token position
         mask_token_pos = self.get_mask_token_pos(encoding_list)
-        # verbaliser
-        label_token_ids = self.verbaliser_mapping()
-        
+        # get trigger token positions
+        trigger_token_pos, trigger_token_mask = self.get_trigger_token_pos(encoding_list)
+        # initialise trigger tokens as mask tokens
+        if len(trigger_token_pos) != 0:
+            input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_mask, initial_trigger_token = self.tokenizer.mask_token_id)
+        else:
+            input_ids = torch.tensor(encoding_list)
         return dict(
             question=question,
             answer=answer,
-            input_ids=torch.tensor(encoding_list),
+            input_ids=input_ids,
             attention_mask=torch.tensor(attention_mask),
             labels=torch.tensor([labels]),
             mask_token_pos=mask_token_pos,
-            label_token_ids=label_token_ids
+            trigger_token_pos=trigger_token_pos,
+            trigger_token_mask=trigger_token_mask
         )
-    
+
 class TextEntailDatasetQNLI(TextEntailDataset):
     def __init__(self, data, tokenizer, max_token_count):
         super().__init__(
@@ -249,15 +267,21 @@ class SentAnalDatasetPrompt(SentAnalDataset):
             tokenizer = tokenizer, 
             max_token_count = max_token_count
         )
+        self.add_extra_special_tokens()
         self.with_prompt = with_prompt
         self.template = template
         self.verbalizer_dict = verbalizer_dict
         self.sent_start_token = 0
         self.sent_end_token = 0
     
+    def add_extra_special_tokens(self):
+        self.tokenizer.add_special_tokens({'additional_special_tokens': ["<T>"]})
+        self.tokenizer.trigger_token = "<T>"
+        self.tokenizer.trigger_token_id = self.tokenizer.convert_tokens_to_ids("<T>")
+    
     def template_to_encoding(self, sent):
         special_token_dict = {
-            "<cls>": self.tokenizer.cls_token_id, "<mask>": self.tokenizer.mask_token_id
+            "<cls>": self.tokenizer.cls_token_id, "<mask>": self.tokenizer.mask_token_id, "<T>": self.tokenizer.trigger_token_id
         }
         template_segments = self.template.split()
         encoding_list = []
@@ -287,10 +311,17 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         # make sure mask token is not out of range
         assert mask_token_pos[0] < self.max_token_count
         return mask_token_pos
-    
-    def verbaliser_mapping(self):
-        return torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
-    
+
+    def get_trigger_token_pos(self, encoding_list):
+        trigger_token_pos = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id)[0]
+        trigger_token_mask = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id, True, False)
+        return trigger_token_pos, trigger_token_mask
+        
+    def init_triggers(self, input_tensors, trigger_token_pos, initial_trigger_token):
+        idx = torch.where(trigger_token_pos)
+        input_tensors[idx] = initial_trigger_token
+        return input_tensors
+
     def trunc_pad(self, list, pad_token):
         # padding
         diff = len(list) - self.max_token_count
@@ -313,16 +344,22 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         attention_mask = self.trunc_pad(attention_mask, 0)
         # get the mask token position
         mask_token_pos = self.get_mask_token_pos(encoding_list)
-        # verbaliser
-        label_token_ids = self.verbaliser_mapping()
-        
+        # get trigger token positions
+        trigger_token_pos, trigger_token_mask = self.get_trigger_token_pos(encoding_list)
+        # initialise trigger tokens as mask tokens
+        if len(trigger_token_pos) != 0:
+            input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_mask, initial_trigger_token = self.tokenizer.mask_token_id)
+        else:
+            input_ids = torch.tensor(encoding_list)
+
         return dict(
             sentence=main_text,
-            input_ids=torch.tensor(encoding_list),
+            input_ids=input_ids,
             attention_mask=torch.tensor(attention_mask),
             labels=torch.tensor([labels]),
             mask_token_pos=mask_token_pos,
-            label_token_ids=label_token_ids
+            trigger_token_pos=trigger_token_pos,
+            trigger_token_mask=trigger_token_mask
         )
 
 class SentAnalDatasetSST2(SentAnalDataset):

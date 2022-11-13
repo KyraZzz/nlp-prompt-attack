@@ -12,7 +12,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from dataloaders import data_loader_hub
 from models import get_models
 from labelsearch import label_search_model
-from prep_data import data_preprocess
+from utils.prep_data import data_preprocess
 
 def prep_template(template):
     if template is None: return None

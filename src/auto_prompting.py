@@ -68,7 +68,7 @@ class ClassifierAutoPrompt(pl.LightningModule):
         self.trigger_token_mask = None
         self.trigger_token_set = torch.tensor([self.tokenizer.mask_token_id] * self.num_trigger_tokens)
         self.verbalizer_dict = verbalizer_dict
-        self.label_token_ids = torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
+        self.label_token_ids = torch.tensor([[self.tokenizer.convert_tokens_to_ids(w) for w in wl] for _, wl in self.verbalizer_dict.items()])
 
         self.filtered_vocab = self.get_filtered_vocab()
         self.save_hyperparameters()
@@ -98,26 +98,28 @@ class ClassifierAutoPrompt(pl.LightningModule):
         return input_tensors
     
     def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
+        batch_size = input_ids.size(0)
         logits = self.LM_with_head(input_ids, attention_mask)["logits"]
         # LMhead predicts the word to fill into mask token
         mask_token_pos = mask_token_pos.squeeze()
         mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos]
-        # get the scores for the labels specified by the verbalizer
-        mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in self.label_token_ids]
-        # concatenate the scores
+        # get the scores for the labels specified by the verbalizer (classes * words per class, bz)
+        mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in self.label_token_ids.view(-1)]
+        # concatenate the scores (bz, classes * words per class)
         output = torch.cat(mask_label_pred, -1)
         
         # compute log likelihood for each batch and each label
-        m = nn.LogSoftmax(dim=1)
-        # output size: (bz, C), label size: bz * 1
-        log_output = m(output)
+        m = nn.Softmax(dim=1)
+        output = m(output).view(batch_size, self.n_classes, -1)
+        # output size: (bz, classes), label size: (bz, 1)
+        output = output.sum(dim=-1).view(batch_size, -1)
+        log_output = torch.log(output)
         # compute negative log loss
         F = nn.NLLLoss()
         loss = F(log_output, labels.view(-1))
         return loss, output
         
     def forward_acc(self, output, labels):
-        output = torch.softmax(output,1) # convert into probabilities
         _, pred_ids = torch.max(output, dim=1)
         labels = labels[0] if len(labels) == 1 else labels.squeeze()
         return self.accuracy(pred_ids, labels)
@@ -151,7 +153,6 @@ class ClassifierAutoPrompt(pl.LightningModule):
     
     def on_train_epoch_end(self):
         average_grad_list = self.all_gather(self.average_grad)
-        print(f"average_grad_list: {average_grad_list}")
         average_grad_cum = torch.sum(average_grad_list, dim = 0)
         self.average_grad = None
         # record mean loss and accuracy

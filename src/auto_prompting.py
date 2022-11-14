@@ -6,21 +6,6 @@ import pytorch_lightning as pl
 from torchmetrics import Accuracy
 import random
 
-class OutputOnForwardHook:
-    """
-    TODO: add reference
-    stores the intermediate gradients of the output a the given PyTorch module
-    """
-    def __init__(self, module):
-        self.output = None
-        module.register_forward_hook(self.hook)
-
-    def hook(self, module, input, output):
-        self.output = output
-
-    def get(self):
-        return self.output
-
 class GradientOnBackwardHook:
     """
     TODO: add reference

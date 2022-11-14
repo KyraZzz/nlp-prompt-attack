@@ -28,7 +28,7 @@ python3 run.py \
     --with_prompt \
     --prompt_type "auto_prompt" \
     --template "<cls> <sentence> <mask> <T> <T> <T> <question>" \
-    --verbalizer_dict '{"0":["Yes", "good"], "1":["No", "bad"]}' \
+    --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --log_every_n_steps 20 \
     --batch_size 4 \
     --learning_rate 2e-5 \

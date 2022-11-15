@@ -45,7 +45,7 @@ conda create -n <env-name> --file environment.yml
         │   │       └── seed=87
         │   │           └── ...
         ```
-3. Train and test a discrete manual prompt model under k-shot.
+3. Train and test a model under k-shot.
     - With no prompt:
         ```
         seed_all=42
@@ -64,7 +64,7 @@ conda create -n <env-name> --file environment.yml
             --num_gpu_devices 1 \
             --max_epoch 100
         ```
-    - With a sample prompt:
+    - With a manual prompt:
         ```
         seed_all=42
         k_all=16
@@ -85,6 +85,38 @@ conda create -n <env-name> --file environment.yml
             --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
             --num_gpu_devices 1 \
             --max_epoch 100
+        ```
+    - With an auto prompt:
+        ```
+        k_all=16
+        seed_all=100
+        candidate_num=100
+        gpu_num=4
+        word_num_per_class=3
+        
+        python3 run.py \
+        --random_seed ${seed_all} \
+        --task_name "sst2-roberta-large-auto-prompt-candidate"${candidate_num}"-k"${k_all}"-seed"${seed_all}"-words_class"${word_num_per_class} \
+        --model_name_or_path "roberta-large" \
+        --dataset_name "SST2" \
+        --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
+        --n_classes 2 \
+        --do_k_shot \
+        --k_samples_per_class ${k_all} \
+        --do_train \
+        --do_test \
+        --with_prompt \
+        --prompt_type "auto_prompt" \
+        --template "<cls> <sentence> <T> <T> <T> <T> <T> <T> <T> <T> <T> <T> <mask> ." \
+        --verbalizer_dict '{"0":["Ġworthless", "Ġdisgusted", "Ġruined"], "1":["ĠKom", "ĠEid", "Ġnominations"]}' \
+        --batch_size 4 \
+        --learning_rate 2e-5 \
+        --num_gpu_devices ${gpu_num} \
+        --max_epoch 50 \
+        --log_every_n_steps 4 \
+        --early_stopping_patience 10 \
+        --num_trigger_tokens 10 \
+        --num_candidates ${candidate_num}
         ```
 
 ## Dataset prompt format

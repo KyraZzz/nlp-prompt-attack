@@ -1,6 +1,7 @@
 from fine_tuning import Classifier
 from manual_prompting import ClassifierManualPrompt
 from auto_prompting import ClassifierAutoPrompt
+from differntial_prompting import ClassifierDiffPrompt
 
 def get_models(
         model_name, 

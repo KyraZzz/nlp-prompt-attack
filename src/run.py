@@ -239,6 +239,6 @@ if __name__ == "__main__":
     parser.add_argument("--num_trigger_tokens", type = int, default = 3, help = "The number of trigger tokens in the template")
     parser.add_argument("--num_candidates", type = int, default = 10, help = "The top k candidates selected for trigger token updates")
     parser.add_argument("--label_search", action = "store_true", help = "Enable label search mode")
-    parser.add_argument("--prompt_type", type = str, default = "manual_prompt", help = "Supported prompt types: manual_prompt, auto_prompt")
+    parser.add_argument("--prompt_type", type = str, default = "manual_prompt", help = "Supported prompt types: manual_prompt, auto_prompt, diff_prompt")
     args = parser.parse_args()
     run(args)

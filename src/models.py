@@ -1,7 +1,7 @@
 from fine_tuning import Classifier
 from manual_prompting import ClassifierManualPrompt
 from auto_prompting import ClassifierAutoPrompt
-from differntial_prompting import ClassifierDiffPrompt
+from diff_prompting import ClassifierDiffPrompt
 
 def get_models(
         model_name, 
@@ -47,6 +47,20 @@ def get_models(
                     verbalizer_dict = verbalizer_dict,
                     random_seed = random_seed
                 )
+            case "diff_prompt":
+                return ClassifierDiffPrompt(
+                    model_name = model_name, 
+                    tokenizer = tokenizer,
+                    n_classes = n_classes, 
+                    learning_rate = learning_rate, 
+                    n_training_steps_per_epoch = n_training_steps_per_epoch,
+                    total_training_steps = total_training_steps, 
+                    n_warmup_steps = n_warmup_steps,
+                    num_trigger_tokens = num_trigger_tokens,
+                    num_candidates = num_candidates,
+                    verbalizer_dict = verbalizer_dict,
+                    random_seed = random_seed
+                )
             case _:
                 raise Exception("Prompt type not supported.")
     elif with_prompt and checkpoint_path is not None:
@@ -66,6 +80,21 @@ def get_models(
                 )
             case "auto_prompt":
                 return ClassifierAutoPrompt.load_from_checkpoint(
+                    model_name = model_name, 
+                    tokenizer = tokenizer,
+                    n_classes = n_classes, 
+                    learning_rate = learning_rate, 
+                    n_training_steps_per_epoch = n_training_steps_per_epoch,
+                    total_training_steps = total_training_steps, 
+                    n_warmup_steps = n_warmup_steps,
+                    num_trigger_tokens = num_trigger_tokens,
+                    num_candidates = num_candidates,
+                    verbalizer_dict = verbalizer_dict,
+                    random_seed = random_seed,
+                    checkpoint_path = checkpoint_path
+                )
+            case "diff_prompt":
+                return ClassifierDiffPrompt.load_from_checkpoint(
                     model_name = model_name, 
                     tokenizer = tokenizer,
                     n_classes = n_classes, 

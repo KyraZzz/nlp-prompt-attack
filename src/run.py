@@ -105,6 +105,7 @@ def run(args):
         batch_size = args.batch_size,
         max_token_count = args.max_token_count,
         with_prompt = args.with_prompt,
+        prompt_type = args.prompt_type,
         template = template,
         verbalizer_dict = verbalizer_dict
     )

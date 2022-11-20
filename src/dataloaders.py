@@ -57,9 +57,9 @@ class GeneralDataModule(pl.LightningDataModule):
         )
 
 class GeneralDataModulePrompt(GeneralDataModule):
-    def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, template, verbalizer_dict):
+    def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, prompt_type, template, verbalizer_dict):
         super().__init__(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count)
-        self.with_prompt = with_prompt
+        self.prompt_type = prompt_type
         self.template = template
         self.verbalizer_dict = verbalizer_dict
     
@@ -69,7 +69,7 @@ class GeneralDataModulePrompt(GeneralDataModule):
             data = self.train_data, 
             tokenizer = self.tokenizer, 
             max_token_count = self.max_token_count, 
-            with_prompt = self.with_prompt, 
+            prompt_type = self.prompt_type, 
             template = self.template, 
             verbalizer_dict = self.verbalizer_dict
         )
@@ -78,7 +78,7 @@ class GeneralDataModulePrompt(GeneralDataModule):
             data = self.val_data, 
             tokenizer = self.tokenizer, 
             max_token_count = self.max_token_count, 
-            with_prompt = self.with_prompt, 
+            prompt_type = self.prompt_type, 
             template = self.template, 
             verbalizer_dict = self.verbalizer_dict
         )
@@ -87,12 +87,12 @@ class GeneralDataModulePrompt(GeneralDataModule):
             data = self.test_data, 
             tokenizer = self.tokenizer, 
             max_token_count = self.max_token_count, 
-            with_prompt = self.with_prompt, 
+            prompt_type = self.prompt_type, 
             template = self.template, 
             verbalizer_dict = self.verbalizer_dict
         )
 
-def data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, template, verbalizer_dict):
+def data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, prompt_type, template, verbalizer_dict):
     if with_prompt:
         return GeneralDataModulePrompt(
                 dataset_name = dataset_name, 
@@ -102,7 +102,7 @@ def data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, ba
                 tokenizer = tokenizer, 
                 batch_size = batch_size, 
                 max_token_count = max_token_count, 
-                with_prompt = with_prompt, 
+                prompt_type = prompt_type, 
                 template = template, 
                 verbalizer_dict = verbalizer_dict
             )

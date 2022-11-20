@@ -210,28 +210,6 @@ class ClassifierDiffPrompt(pl.LightningModule):
         self.log("val_mean_acc_per_epoch", mean_acc, prog_bar=True, logger=True, sync_dist=True)
         return {"val_mean_loss": mean_loss, "val_mean_acc": mean_acc}
     
-    def test_step(self, batch, batch_idx):
-        input_ids = batch["input_ids"]
-        trigger_token_pos = batch["trigger_token_pos"]
-        input_ids = self.update_input_triggers(input_ids, trigger_token_pos)
-        attention_mask = batch["attention_mask"]
-        labels = batch["labels"]
-        mask_token_pos = batch["mask_token_pos"]
-        loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
-        acc = self.forward_acc(output, labels)
-        self.test_loss_arr.append(loss)
-        self.test_acc_arr.append(acc)
-        return loss
-    
-    def on_test_epoch_end(self):
-        mean_loss = torch.mean(torch.tensor(self.test_loss_arr, dtype=torch.float32))
-        mean_acc = torch.mean(torch.tensor(self.test_acc_arr, dtype=torch.float32))
-        self.test_loss_arr = []
-        self.test_acc_arr = []
-        self.log("test_mean_loss", mean_loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
-    
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=self.learning_rate)
         # learning rate scheduler

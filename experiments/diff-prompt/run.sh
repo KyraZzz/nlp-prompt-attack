@@ -12,7 +12,7 @@ k_all=16
 
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "dev-qnli-roberta-base-auto-prompt-k"${k_all}"-seed"${seed_all} \
+    --task_name "dev-qnli-roberta-base-diff-prompt-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-base" \
     --dataset_name "QNLI" \
     --data_path "/local/scratch-3/yz709/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/QNLI" \
@@ -29,5 +29,5 @@ python3 run.py \
     --batch_size 4 \
     --learning_rate 1e-5 \
     --num_gpu_devices 1 \
-    --max_epoch 1 \
+    --max_epoch 10 \
     1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

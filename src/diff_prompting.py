@@ -50,12 +50,12 @@ class ClassifierDiffPrompt(pl.LightningModule):
         self.verbalizer_dict = verbalizer_dict
         self.label_token_ids = torch.tensor([[self.tokenizer.convert_tokens_to_ids(w) for w in wl] for _, wl in self.verbalizer_dict.items()]).to(device = self.device)
         
-        # TODO: label_token_map: key = label_token_init_val(e.g., 128) -> value = label_token_extend_val(e.g., 50155)
+        # label_token_map: key = label_token_init_val -> value = label_token_extend_val
         self.label_token_map = self.init_label_token_map()
-
-        # TODO: trigger_token_map: key = trigger_token_init_val(e.g., 243) -> value = trigger_token_extend_val(e.g., 50089)
+        # trigger_token_map: key = trigger_token_init_val -> value = trigger_token_extend_val
         self.trigger_token_set = None
         self.trigger_token_map = None
+        
         self.embeddings = self.model.get_input_embeddings()
         self.embedding_gradient = None
         
@@ -90,7 +90,6 @@ class ClassifierDiffPrompt(pl.LightningModule):
         batch_bst = torch.arange(batch_size).expand(num_tokens, -1).T.reshape(-1)
         replace_embedding_bst = replace_embedding.view(-1).expand(batch_size, -1).reshape(batch_size * num_tokens, -1)
         ori_input_embedding[batch_bst, trigger_token_pos.reshape(-1)] = replace_embedding_bst
-        print(f"trigger_token_pos: {trigger_token_pos}")
         return ori_input_embedding
     
     def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
@@ -182,6 +181,34 @@ class ClassifierDiffPrompt(pl.LightningModule):
         self.log("val_mean_acc_per_epoch", mean_acc, prog_bar=True, logger=True, sync_dist=True)
         return {"val_mean_loss": mean_loss, "val_mean_acc": mean_acc}
     
+    def test_step(self, batch, batch_idx):
+        if self.trigger_token_map is None:
+            trigger_token_ori_ids = batch["trigger_token_ori_ids"][0]
+            print(f"trigger_token_ori_ids: {trigger_token_ori_ids}")
+            self.trigger_token_map = self.init_trigger_token_map(trigger_token_ori_ids)
+            self.init_input_embeddings()
+            self.embedding_gradient = GradientOnBackwardHook(self.embeddings)
+            self.init_embedding_gradient()
+        input_ids = batch["input_ids"]
+        trigger_token_pos = batch["trigger_token_pos"]
+        input_ids = self.update_input_ids(input_ids, trigger_token_pos)
+        attention_mask = batch["attention_mask"]
+        labels = batch["labels"]
+        mask_token_pos = batch["mask_token_pos"]
+        loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
+        acc = self.forward_acc(output, labels)
+        self.test_loss_arr.append(loss)
+        self.test_acc_arr.append(acc)
+        return loss
+    
+    def on_test_epoch_end(self):
+        mean_loss = torch.mean(torch.tensor(self.test_loss_arr, dtype=torch.float32))
+        mean_acc = torch.mean(torch.tensor(self.test_acc_arr, dtype=torch.float32))
+        self.test_loss_arr = []
+        self.test_acc_arr = []
+        self.log("test_mean_loss", mean_loss, prog_bar=True, logger=True, sync_dist=True)
+        self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True, sync_dist=True)
+        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
     
     def configure_optimizers(self):
         paramter_list = [p for p in self.embeddings.parameters()] + [p for p in self.model.parameters()]

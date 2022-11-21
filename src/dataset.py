@@ -44,20 +44,21 @@ class TextEntailDataset(Dataset):
         )
 
 class TextEntailDatasetPrompt(TextEntailDataset):
-    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
+    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
             max_token_count = max_token_count
         )
         self.add_extra_special_tokens()
-        self.with_prompt = with_prompt
+        self.prompt_type = prompt_type
         self.template = template
         self.verbalizer_dict = verbalizer_dict
         self.sent1_start_token = 0
         self.sent1_end_token = 0
         self.sent2_start_token = 0
         self.sent2_end_token = 0
+        self.diff_flag = ((self.prompt_type is not None) and (self.prompt_type == 'diff_prompt'))
     
     def add_extra_special_tokens(self):
         self.tokenizer.add_special_tokens({'additional_special_tokens': ["<T>"]})
@@ -68,10 +69,11 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         special_token_dict = {
             "<cls>": self.tokenizer.cls_token_id, "<mask>": self.tokenizer.mask_token_id, "<T>": self.tokenizer.trigger_token_id
         }
+        diff_token_map = {} if self.diff_flag else None
         template_segments = self.template.split()
         encoding_list = []
         need_cap = False
-        for segment in template_segments:
+        for idx, segment in enumerate(template_segments):
             if segment == "<cap>":
                 need_cap = True
                 continue
@@ -94,9 +96,14 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 self.sent2_end_token = len(encoding_list) - 1
             else:
                 # remove additional <s> </s>
-                encoding_list += self.tokenizer.encode(segment)[1:-1]
+                if self.diff_flag:
+                    encode_res = self.tokenizer.encode(segment, add_special_tokens=False)
+                    diff_token_map[len(encoding_list)] = encode_res
+                    encoding_list += encode_res
+                else:
+                    encoding_list += self.tokenizer.encode(segment)[1:-1]
             need_cap = False
-        return encoding_list
+        return encoding_list, diff_token_map
     
     def get_mask_token_pos(self, encoding_list):
         mask_token_pos = torch.tensor([encoding_list.index(self.tokenizer.mask_token_id)])
@@ -104,9 +111,15 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         assert mask_token_pos[0] < self.max_token_count
         return mask_token_pos
     
-    def get_trigger_token_pos(self, encoding_list):
-        trigger_token_pos = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id)[0]
-        trigger_token_mask = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id, True, False)
+    def get_trigger_token_pos(self, encoding_list, diff_token_map=None):
+        if self.diff_flag:
+            assert diff_token_map is not None
+            trigger_token_pos = torch.tensor(list(diff_token_map.keys()))
+            trigger_token_mask = torch.zeros(len(encoding_list), dtype=torch.bool)
+            trigger_token_mask[trigger_token_pos] = 1
+        else:
+            trigger_token_pos = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id)[0]
+            trigger_token_mask = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id, True, False)
         return trigger_token_pos, trigger_token_mask
     
     def init_triggers(self, input_tensors, trigger_token_pos, initial_trigger_token):
@@ -150,7 +163,10 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         question = data_row[self.sent1_col_name]
         answer = data_row[self.sent2_col_name]
         labels = data_row[self.label_col_name]
-        encoding_list = self.template_to_encoding(question, answer)
+        encoding_list, diff_token_map = self.template_to_encoding(question, answer)
+        trigger_token_ori_ids = []
+        if diff_token_map is not None:
+            trigger_token_ori_ids = list(diff_token_map.values())
         attention_mask = [1 for _ in encoding_list]
 
         # truncation or padding
@@ -159,12 +175,13 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         # get the mask token position
         mask_token_pos = self.get_mask_token_pos(encoding_list)
         # get trigger token positions
-        trigger_token_pos, trigger_token_mask = self.get_trigger_token_pos(encoding_list)
-        # initialise trigger tokens as mask tokens
-        if len(trigger_token_pos) != 0:
+        trigger_token_pos, trigger_token_mask = self.get_trigger_token_pos(encoding_list, diff_token_map)
+        # initialise trigger tokens as mask tokens for auto-prompting
+        if len(trigger_token_pos) != 0 and not self.diff_flag:
             input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_mask, initial_trigger_token = self.tokenizer.mask_token_id)
         else:
             input_ids = torch.tensor(encoding_list)
+
         return dict(
             question=question,
             answer=answer,
@@ -173,7 +190,8 @@ class TextEntailDatasetPrompt(TextEntailDataset):
             labels=torch.tensor([labels]),
             mask_token_pos=mask_token_pos,
             trigger_token_pos=trigger_token_pos,
-            trigger_token_mask=trigger_token_mask
+            trigger_token_mask=trigger_token_mask,
+            trigger_token_ori_ids=torch.tensor(trigger_token_ori_ids).squeeze()
         )
 
 class TextEntailDatasetQNLI(TextEntailDataset):
@@ -188,12 +206,12 @@ class TextEntailDatasetQNLI(TextEntailDataset):
         self.label_col_name = "label"
 
 class TextEntailDatasetQNLIPrompt(TextEntailDatasetPrompt):
-    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
+    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
             max_token_count = max_token_count, 
-            with_prompt = with_prompt, 
+            prompt_type = prompt_type, 
             template = template, 
             verbalizer_dict = verbalizer_dict
         )
@@ -213,12 +231,12 @@ class TextEntailDatasetMNLI(TextEntailDataset):
         self.label_col_name = "label"
 
 class TextEntailDatasetMNLIPrompt(TextEntailDatasetPrompt):
-    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
+    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
             max_token_count = max_token_count, 
-            with_prompt = with_prompt, 
+            prompt_type = prompt_type, 
             template = template, 
             verbalizer_dict = verbalizer_dict
         )
@@ -261,14 +279,14 @@ class SentAnalDataset(Dataset):
         )
 
 class SentAnalDatasetPrompt(SentAnalDataset):
-    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
+    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
             max_token_count = max_token_count
         )
         self.add_extra_special_tokens()
-        self.with_prompt = with_prompt
+        self.prompt_type = prompt_type
         self.template = template
         self.verbalizer_dict = verbalizer_dict
         self.sent_start_token = 0
@@ -373,12 +391,12 @@ class SentAnalDatasetSST2(SentAnalDataset):
         self.label_col_name = "label"
 
 class SentAnalDatasetSST2Prompt(SentAnalDatasetPrompt):
-    def __init__(self, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
+    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
             max_token_count = max_token_count, 
-            with_prompt = with_prompt, 
+            prompt_type = prompt_type, 
             template = template, 
             verbalizer_dict = verbalizer_dict
         )
@@ -408,14 +426,14 @@ def dataset_hub(dataset_name, data, tokenizer, max_token_count):
         case _:
             raise Exception("Dataset not supported.")
 
-def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, with_prompt, template, verbalizer_dict):
+def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
     match dataset_name:
         case "QNLI":
             return TextEntailDatasetQNLIPrompt(
                     data = data, 
                     tokenizer = tokenizer, 
                     max_token_count = max_token_count, 
-                    with_prompt = with_prompt, 
+                    prompt_type = prompt_type, 
                     template = template, 
                     verbalizer_dict = verbalizer_dict
                 )
@@ -424,7 +442,7 @@ def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, with_prom
                     data = data, 
                     tokenizer = tokenizer, 
                     max_token_count = max_token_count, 
-                    with_prompt = with_prompt, 
+                    prompt_type = prompt_type, 
                     template = template, 
                     verbalizer_dict = verbalizer_dict
                 )
@@ -433,7 +451,7 @@ def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, with_prom
                     data = data,
                     tokenizer = tokenizer,
                     max_token_count = max_token_count,
-                    with_prompt = with_prompt,
+                    prompt_type = prompt_type,
                     template = template,
                     verbalizer_dict = verbalizer_dict
             )

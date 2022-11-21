@@ -14,7 +14,7 @@ def get_models(
         with_prompt, 
         prompt_type, 
         num_trigger_tokens, 
-        num_candidates, 
+        num_candidates,
         verbalizer_dict, 
         random_seed, 
         checkpoint_path=None
@@ -52,12 +52,10 @@ def get_models(
                     model_name = model_name, 
                     tokenizer = tokenizer,
                     n_classes = n_classes, 
-                    learning_rate = learning_rate, 
+                    learning_rate = learning_rate,
                     n_training_steps_per_epoch = n_training_steps_per_epoch,
                     total_training_steps = total_training_steps, 
                     n_warmup_steps = n_warmup_steps,
-                    num_trigger_tokens = num_trigger_tokens,
-                    num_candidates = num_candidates,
                     verbalizer_dict = verbalizer_dict,
                     random_seed = random_seed
                 )
@@ -98,12 +96,10 @@ def get_models(
                     model_name = model_name, 
                     tokenizer = tokenizer,
                     n_classes = n_classes, 
-                    learning_rate = learning_rate, 
+                    learning_rate = learning_rate,
                     n_training_steps_per_epoch = n_training_steps_per_epoch,
                     total_training_steps = total_training_steps, 
                     n_warmup_steps = n_warmup_steps,
-                    num_trigger_tokens = num_trigger_tokens,
-                    num_candidates = num_candidates,
                     verbalizer_dict = verbalizer_dict,
                     random_seed = random_seed,
                     checkpoint_path = checkpoint_path

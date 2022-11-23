@@ -92,7 +92,7 @@ class ClassifierDiffPrompt(pl.LightningModule):
         ori_input_embedding[batch_bst, trigger_token_pos.reshape(-1)] = replace_embedding_bst
         return ori_input_embedding
     
-    def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
+    def forward(self, input_ids, attention_mask, mask_token_pos, labels, fc_mask):
         batch_size = input_ids.size(0)
         logits = self.model(inputs_embeds = input_ids, attention_mask = attention_mask)["logits"]
         # LMhead predicts the word to fill into mask token
@@ -108,8 +108,15 @@ class ClassifierDiffPrompt(pl.LightningModule):
         output = m(output).view(batch_size, self.n_classes, -1)
         # output size: (bz, classes), label size: (bz, 1)
         output = output.sum(dim=-1).view(batch_size, -1)
-        F = nn.CrossEntropyLoss()
-        loss = F(output, labels.view(-1))
+        # loss from class discrimination
+        F_cd = nn.CrossEntropyLoss()
+        loss_cd = F_cd(output, labels.view(-1))
+        # loss from fluency constraint
+        F_fc = nn.CrossEntropyLoss()
+        loss_fc = F_fc(logits.view(-1, self.tokenizer.vocab_size), fc_mask.view(-1))
+
+        loss = loss_cd + loss_fc
+
         return loss, output
         
     def forward_acc(self, output, labels):
@@ -131,7 +138,10 @@ class ClassifierDiffPrompt(pl.LightningModule):
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         mask_token_pos = batch["mask_token_pos"]
-        loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
+        fc_mask_pos = batch["fc_mask_pos"]
+        fc_mask_id = batch["fc_mask_id"]
+        fc_mask = batch["fc_mask"]
+        loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels, fc_mask)
         acc = self.forward_acc(output, labels)
         self.train_loss_arr.append(loss)
         self.train_acc_arr.append(acc)
@@ -154,7 +164,6 @@ class ClassifierDiffPrompt(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         if self.trigger_token_map is None:
             trigger_token_ori_ids = batch["trigger_token_ori_ids"][0]
-            print(f"trigger_token_ori_ids: {trigger_token_ori_ids}")
             self.trigger_token_map = self.init_trigger_token_map(trigger_token_ori_ids)
             self.init_input_embeddings()
             self.embedding_gradient = GradientOnBackwardHook(self.embeddings)
@@ -165,7 +174,8 @@ class ClassifierDiffPrompt(pl.LightningModule):
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         mask_token_pos = batch["mask_token_pos"]
-        loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
+        fc_mask = batch["fc_mask"]
+        loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels, fc_mask)
         acc = self.forward_acc(output, labels)
         self.val_loss_arr.append(loss)
         self.val_acc_arr.append(acc)
@@ -195,7 +205,8 @@ class ClassifierDiffPrompt(pl.LightningModule):
         attention_mask = batch["attention_mask"]
         labels = batch["labels"]
         mask_token_pos = batch["mask_token_pos"]
-        loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels)
+        fc_mask = batch["fc_mask"]
+        loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels, fc_mask)
         acc = self.forward_acc(output, labels)
         self.test_loss_arr.append(loss)
         self.test_acc_arr.append(acc)

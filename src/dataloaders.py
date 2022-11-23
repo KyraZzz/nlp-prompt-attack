@@ -57,11 +57,12 @@ class GeneralDataModule(pl.LightningDataModule):
         )
 
 class GeneralDataModulePrompt(GeneralDataModule):
-    def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, prompt_type, template, verbalizer_dict):
+    def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
         super().__init__(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count)
         self.prompt_type = prompt_type
         self.template = template
         self.verbalizer_dict = verbalizer_dict
+        self.random_seed = random_seed
     
     def setup(self, stage=None):
         self.train_dataset = dataset_prompt_hub(
@@ -71,7 +72,8 @@ class GeneralDataModulePrompt(GeneralDataModule):
             max_token_count = self.max_token_count, 
             prompt_type = self.prompt_type, 
             template = self.template, 
-            verbalizer_dict = self.verbalizer_dict
+            verbalizer_dict = self.verbalizer_dict,
+            random_seed = self.random_seed
         )
         self.val_dataset = dataset_prompt_hub(
             dataset_name = self.dataset_name, 
@@ -80,7 +82,8 @@ class GeneralDataModulePrompt(GeneralDataModule):
             max_token_count = self.max_token_count, 
             prompt_type = self.prompt_type, 
             template = self.template, 
-            verbalizer_dict = self.verbalizer_dict
+            verbalizer_dict = self.verbalizer_dict,
+            random_seed = self.random_seed
         )
         self.test_dataset = dataset_prompt_hub(
             dataset_name = self.dataset_name, 
@@ -89,10 +92,11 @@ class GeneralDataModulePrompt(GeneralDataModule):
             max_token_count = self.max_token_count, 
             prompt_type = self.prompt_type, 
             template = self.template, 
-            verbalizer_dict = self.verbalizer_dict
+            verbalizer_dict = self.verbalizer_dict,
+            random_seed = self.random_seed
         )
 
-def data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, prompt_type, template, verbalizer_dict):
+def data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, prompt_type, template, verbalizer_dict, random_seed):
     if with_prompt:
         return GeneralDataModulePrompt(
                 dataset_name = dataset_name, 
@@ -104,7 +108,8 @@ def data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, ba
                 max_token_count = max_token_count, 
                 prompt_type = prompt_type, 
                 template = template, 
-                verbalizer_dict = verbalizer_dict
+                verbalizer_dict = verbalizer_dict,
+                random_seed = random_seed
             )
     return GeneralDataModule(
                 dataset_name = dataset_name, 

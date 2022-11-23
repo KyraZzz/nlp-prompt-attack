@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import Dataset
 import pytorch_lightning as pl
 import math
+import random
 import string
 
 class TextEntailDataset(Dataset):
@@ -44,7 +45,7 @@ class TextEntailDataset(Dataset):
         )
 
 class TextEntailDatasetPrompt(TextEntailDataset):
-    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
+    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
@@ -54,6 +55,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         self.prompt_type = prompt_type
         self.template = template
         self.verbalizer_dict = verbalizer_dict
+        self.random_seed = random_seed
         self.sent1_start_token = 0
         self.sent1_end_token = 0
         self.sent2_start_token = 0
@@ -206,14 +208,15 @@ class TextEntailDatasetQNLI(TextEntailDataset):
         self.label_col_name = "label"
 
 class TextEntailDatasetQNLIPrompt(TextEntailDatasetPrompt):
-    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
+    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
             max_token_count = max_token_count, 
             prompt_type = prompt_type, 
             template = template, 
-            verbalizer_dict = verbalizer_dict
+            verbalizer_dict = verbalizer_dict,
+            random_seed = random_seed
         )
         self.sent1_col_name = "question"
         self.sent2_col_name = "sentence"
@@ -231,14 +234,15 @@ class TextEntailDatasetMNLI(TextEntailDataset):
         self.label_col_name = "label"
 
 class TextEntailDatasetMNLIPrompt(TextEntailDatasetPrompt):
-    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
+    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
             max_token_count = max_token_count, 
             prompt_type = prompt_type, 
             template = template, 
-            verbalizer_dict = verbalizer_dict
+            verbalizer_dict = verbalizer_dict,
+            random_seed = random_seed
         )
         self.sent1_col_name = "premise"
         self.sent2_col_name = "hypothesis"
@@ -279,7 +283,7 @@ class SentAnalDataset(Dataset):
         )
 
 class SentAnalDatasetPrompt(SentAnalDataset):
-    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
+    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
@@ -289,6 +293,7 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         self.prompt_type = prompt_type
         self.template = template
         self.verbalizer_dict = verbalizer_dict
+        self.random_seed = random_seed
         self.sent_start_token = 0
         self.sent_end_token = 0
         self.diff_flag = ((self.prompt_type is not None) and (self.prompt_type == 'diff_prompt'))
@@ -344,6 +349,7 @@ class SentAnalDatasetPrompt(SentAnalDataset):
             trigger_token_mask = torch.zeros(len(encoding_list), dtype=torch.bool)
             trigger_token_mask[trigger_token_pos] = 1
         else:
+            # TODO: check whether trigger_token_pos returns correct outputs
             trigger_token_pos = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id)[0]
             trigger_token_mask = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id, True, False)
         return trigger_token_pos, trigger_token_mask
@@ -363,12 +369,28 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         assert len(list) <= self.max_token_count
         return list
     
+    def get_fluency_constraint_mask(self, encoding_list, trigger_token_pos, mask_token_pos, attention_mask):
+        # mask out a random word in the input text, serve as fleuency constraint object
+        fc_mask = torch.ones(len(encoding_list), dtype=torch.long) * -100
+        maskable_pos = torch.argwhere(torch.tensor(attention_mask)).squeeze()
+        for pos in trigger_token_pos:
+            maskable_pos = maskable_pos[maskable_pos != pos]
+        for pos in mask_token_pos:
+            maskable_pos = maskable_pos[maskable_pos != pos]
+        fc_mask_pos = maskable_pos[random.randint(0, len(maskable_pos)-1)]
+        fc_mask[fc_mask_pos] = encoding_list[fc_mask_pos]
+        fc_mask_id = encoding_list[fc_mask_pos]
+        encoding_list[fc_mask_pos] = self.tokenizer.mask_token_id
+        return fc_mask, fc_mask_pos, fc_mask_id, encoding_list
+    
     def __getitem__(self, index: int):
         data_row = self.data[index]
         main_text = data_row[self.sent_col_name]
         labels = data_row[self.label_col_name]
         encoding_list, diff_token_map = self.template_to_encoding(main_text)
-        trigger_token_ori_ids = []
+        trigger_token_ori_ids = None
+        fc_mask_pos = None
+        fc_mask_id = None
         if diff_token_map is not None:
             trigger_token_ori_ids = list(diff_token_map.values())
         attention_mask = [1 for _ in encoding_list]
@@ -384,6 +406,8 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         if len(trigger_token_pos) != 0 and not self.diff_flag:
             input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_mask, initial_trigger_token = self.tokenizer.mask_token_id)
         else:
+            if self.diff_flag:
+                fc_mask, fc_mask_pos, fc_mask_id, encoding_list = self.get_fluency_constraint_mask(encoding_list, trigger_token_pos, mask_token_pos, attention_mask)
             input_ids = torch.tensor(encoding_list)
 
         return dict(
@@ -394,7 +418,10 @@ class SentAnalDatasetPrompt(SentAnalDataset):
             mask_token_pos=mask_token_pos,
             trigger_token_pos=trigger_token_pos,
             trigger_token_mask=trigger_token_mask,
-            trigger_token_ori_ids=torch.tensor(trigger_token_ori_ids).squeeze()
+            trigger_token_ori_ids=torch.tensor(trigger_token_ori_ids).squeeze(),
+            fc_mask_pos=torch.tensor([fc_mask_pos]),
+            fc_mask_id=torch.tensor([fc_mask_id]),
+            fc_mask=fc_mask
         )
 
 class SentAnalDatasetSST2(SentAnalDataset):
@@ -408,14 +435,15 @@ class SentAnalDatasetSST2(SentAnalDataset):
         self.label_col_name = "label"
 
 class SentAnalDatasetSST2Prompt(SentAnalDatasetPrompt):
-    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
+    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
             max_token_count = max_token_count, 
             prompt_type = prompt_type, 
             template = template, 
-            verbalizer_dict = verbalizer_dict
+            verbalizer_dict = verbalizer_dict,
+            random_seed = random_seed
         )
         self.sent_col_name = "sentence"
         self.label_col_name = "label"
@@ -443,7 +471,8 @@ def dataset_hub(dataset_name, data, tokenizer, max_token_count):
         case _:
             raise Exception("Dataset not supported.")
 
-def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict):
+def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
+    random.seed(random_seed)
     match dataset_name:
         case "QNLI":
             return TextEntailDatasetQNLIPrompt(
@@ -452,7 +481,8 @@ def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, prompt_ty
                     max_token_count = max_token_count, 
                     prompt_type = prompt_type, 
                     template = template, 
-                    verbalizer_dict = verbalizer_dict
+                    verbalizer_dict = verbalizer_dict,
+                    random_seed = random_seed
                 )
         case "MNLI" | "MNLI-MATCHED" | "MNLI-MISMATCHED":
             return TextEntailDatasetMNLIPrompt(
@@ -461,7 +491,8 @@ def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, prompt_ty
                     max_token_count = max_token_count, 
                     prompt_type = prompt_type, 
                     template = template, 
-                    verbalizer_dict = verbalizer_dict
+                    verbalizer_dict = verbalizer_dict,
+                    random_seed = random_seed
                 )
         case "SST2":
             return SentAnalDatasetSST2Prompt(
@@ -470,7 +501,8 @@ def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, prompt_ty
                     max_token_count = max_token_count,
                     prompt_type = prompt_type,
                     template = template,
-                    verbalizer_dict = verbalizer_dict
+                    verbalizer_dict = verbalizer_dict,
+                    random_seed = random_seed
             )
         case _:
             raise Exception("Dataset not supported.")

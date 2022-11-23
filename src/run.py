@@ -84,7 +84,10 @@ def run(args):
     # preprocess template
     template = prep_template(args.template)
     # get tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+    if args.prompt_type == "diff_prompt":
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, add_prefix_space=True, use_fast=False) 
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
 
     # preprocess data, get train, val and test dataset
     train_data, val_data, test_data = data_preprocess(
@@ -107,7 +110,8 @@ def run(args):
         with_prompt = args.with_prompt,
         prompt_type = args.prompt_type,
         template = template,
-        verbalizer_dict = verbalizer_dict
+        verbalizer_dict = verbalizer_dict,
+        random_seed = args.random_seed
     )
 
     # load model

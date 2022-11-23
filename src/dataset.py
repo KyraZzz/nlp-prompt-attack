@@ -291,6 +291,7 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         self.verbalizer_dict = verbalizer_dict
         self.sent_start_token = 0
         self.sent_end_token = 0
+        self.diff_flag = ((self.prompt_type is not None) and (self.prompt_type == 'diff_prompt'))
     
     def add_extra_special_tokens(self):
         self.tokenizer.add_special_tokens({'additional_special_tokens': ["<T>"]})
@@ -301,6 +302,7 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         special_token_dict = {
             "<cls>": self.tokenizer.cls_token_id, "<mask>": self.tokenizer.mask_token_id, "<T>": self.tokenizer.trigger_token_id
         }
+        diff_token_map = {} if self.diff_flag else None
         template_segments = self.template.split()
         encoding_list = []
         need_cap = False
@@ -320,9 +322,14 @@ class SentAnalDatasetPrompt(SentAnalDataset):
                 self.sent_end_token = len(encoding_list) - 1
             else:
                 # remove additional <s> </s>
-                encoding_list += self.tokenizer.encode(segment)[1:-1]
+                if self.diff_flag:
+                    encode_res = self.tokenizer.encode(segment, add_special_tokens=False)
+                    diff_token_map[len(encoding_list)] = encode_res
+                    encoding_list += encode_res
+                else:
+                    encoding_list += self.tokenizer.encode(segment)[1:-1]
             need_cap = False
-        return encoding_list
+        return encoding_list, diff_token_map
     
     def get_mask_token_pos(self, encoding_list):
         mask_token_pos = torch.tensor([encoding_list.index(self.tokenizer.mask_token_id)])
@@ -330,9 +337,15 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         assert mask_token_pos[0] < self.max_token_count
         return mask_token_pos
 
-    def get_trigger_token_pos(self, encoding_list):
-        trigger_token_pos = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id)[0]
-        trigger_token_mask = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id, True, False)
+    def get_trigger_token_pos(self, encoding_list, diff_token_map=None):
+        if self.diff_flag:
+            assert diff_token_map is not None
+            trigger_token_pos = torch.tensor(list(diff_token_map.keys()))
+            trigger_token_mask = torch.zeros(len(encoding_list), dtype=torch.bool)
+            trigger_token_mask[trigger_token_pos] = 1
+        else:
+            trigger_token_pos = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id)[0]
+            trigger_token_mask = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id, True, False)
         return trigger_token_pos, trigger_token_mask
         
     def init_triggers(self, input_tensors, trigger_token_pos, initial_trigger_token):
@@ -354,7 +367,10 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         data_row = self.data[index]
         main_text = data_row[self.sent_col_name]
         labels = data_row[self.label_col_name]
-        encoding_list = self.template_to_encoding(main_text)
+        encoding_list, diff_token_map = self.template_to_encoding(main_text)
+        trigger_token_ori_ids = []
+        if diff_token_map is not None:
+            trigger_token_ori_ids = list(diff_token_map.values())
         attention_mask = [1 for _ in encoding_list]
 
         # truncation or padding
@@ -363,9 +379,9 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         # get the mask token position
         mask_token_pos = self.get_mask_token_pos(encoding_list)
         # get trigger token positions
-        trigger_token_pos, trigger_token_mask = self.get_trigger_token_pos(encoding_list)
+        trigger_token_pos, trigger_token_mask = self.get_trigger_token_pos(encoding_list, diff_token_map)
         # initialise trigger tokens as mask tokens
-        if len(trigger_token_pos) != 0:
+        if len(trigger_token_pos) != 0 and not self.diff_flag:
             input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_mask, initial_trigger_token = self.tokenizer.mask_token_id)
         else:
             input_ids = torch.tensor(encoding_list)
@@ -377,7 +393,8 @@ class SentAnalDatasetPrompt(SentAnalDataset):
             labels=torch.tensor([labels]),
             mask_token_pos=mask_token_pos,
             trigger_token_pos=trigger_token_pos,
-            trigger_token_mask=trigger_token_mask
+            trigger_token_mask=trigger_token_mask,
+            trigger_token_ori_ids=torch.tensor(trigger_token_ori_ids).squeeze()
         )
 
 class SentAnalDatasetSST2(SentAnalDataset):

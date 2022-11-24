@@ -223,7 +223,7 @@ class ClassifierDiffPrompt(pl.LightningModule):
     
     def configure_optimizers(self):
         paramter_list = [p for p in self.embeddings.parameters()] + [p for p in self.model.parameters()]
-        optimizer = AdamW(paramter_list, lr=self.learning_rate, eps=1e-8, weight_decay=0.0)
+        optimizer = AdamW(paramter_list, lr=self.learning_rate, eps=1e-8)
         # learning rate scheduler
         scheduler = get_linear_schedule_with_warmup(
             optimizer,

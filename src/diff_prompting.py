@@ -61,10 +61,10 @@ class ClassifierDiffPrompt(pl.LightningModule):
         
         self.save_hyperparameters()
     
-    def init_label_token_map(self, start_id = 50):
+    def init_label_token_map(self, start_id = 20):
         return {k:self.tokenizer.vocab_size - start_id + i for i, k in enumerate(self.label_token_ids.squeeze())}
     
-    def init_trigger_token_map(self, trigger_token_ori_ids, start_id = 100):
+    def init_trigger_token_map(self, trigger_token_ori_ids, start_id = 40):
         self.trigger_token_set = torch.tensor([self.tokenizer.vocab_size - start_id + i for i in range(len(trigger_token_ori_ids))]).to(device = self.device)
         return {k:self.trigger_token_set[i] for i, k in enumerate(trigger_token_ori_ids)}
     
@@ -223,7 +223,7 @@ class ClassifierDiffPrompt(pl.LightningModule):
     
     def configure_optimizers(self):
         paramter_list = [p for p in self.embeddings.parameters()] + [p for p in self.model.parameters()]
-        optimizer = AdamW(paramter_list, lr=self.learning_rate, eps=1e-8)
+        optimizer = AdamW(paramter_list, lr=self.learning_rate, eps=1e-8, weight_decay=0.0)
         # learning rate scheduler
         scheduler = get_linear_schedule_with_warmup(
             optimizer,

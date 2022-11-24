@@ -97,12 +97,12 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 encoding_list += self.tokenizer.encode(sentence, add_special_tokens=False)
                 self.sent2_end_token = len(encoding_list) - 1
             else:
-                # remove additional <s> </s>
                 if self.diff_flag:
                     encode_res = self.tokenizer.encode(segment, add_special_tokens=False)
                     diff_token_map[len(encoding_list)] = encode_res
                     encoding_list += encode_res
                 else:
+                    # remove additional <s> </s>
                     encoding_list += self.tokenizer.encode(segment)[1:-1]
             need_cap = False
         return encoding_list, diff_token_map
@@ -120,6 +120,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
             trigger_token_mask = torch.zeros(len(encoding_list), dtype=torch.bool)
             trigger_token_mask[trigger_token_pos] = 1
         else:
+            # TODO: check whether trigger_token_pos returns correct outputs
             trigger_token_pos = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id)[0]
             trigger_token_mask = torch.where(torch.tensor(encoding_list) == self.tokenizer.trigger_token_id, True, False)
         return trigger_token_pos, trigger_token_mask
@@ -160,13 +161,29 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         assert len(list) <= self.max_token_count
         return list
     
+    def get_fluency_constraint_mask(self, encoding_list, trigger_token_pos, mask_token_pos, attention_mask):
+        # mask out a random word in the input text, serve as fleuency constraint object
+        fc_mask = torch.ones(len(encoding_list), dtype=torch.long) * -100
+        maskable_pos = torch.argwhere(torch.tensor(attention_mask)).squeeze()
+        for pos in trigger_token_pos:
+            maskable_pos = maskable_pos[maskable_pos != pos]
+        for pos in mask_token_pos:
+            maskable_pos = maskable_pos[maskable_pos != pos]
+        fc_mask_pos = maskable_pos[random.randint(0, len(maskable_pos)-1)]
+        fc_mask[fc_mask_pos] = encoding_list[fc_mask_pos]
+        fc_mask_id = encoding_list[fc_mask_pos]
+        encoding_list[fc_mask_pos] = self.tokenizer.mask_token_id
+        return fc_mask, fc_mask_pos, fc_mask_id, encoding_list
+    
     def __getitem__(self, index: int):
         data_row = self.data[index]
         question = data_row[self.sent1_col_name]
         answer = data_row[self.sent2_col_name]
         labels = data_row[self.label_col_name]
         encoding_list, diff_token_map = self.template_to_encoding(question, answer)
-        trigger_token_ori_ids = []
+        trigger_token_ori_ids = None
+        fc_mask_pos = None
+        fc_mask_id = None
         if diff_token_map is not None:
             trigger_token_ori_ids = list(diff_token_map.values())
         attention_mask = [1 for _ in encoding_list]
@@ -182,6 +199,8 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         if len(trigger_token_pos) != 0 and not self.diff_flag:
             input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_mask, initial_trigger_token = self.tokenizer.mask_token_id)
         else:
+            if self.diff_flag:
+                fc_mask, fc_mask_pos, fc_mask_id, encoding_list = self.get_fluency_constraint_mask(encoding_list, trigger_token_pos, mask_token_pos, attention_mask)
             input_ids = torch.tensor(encoding_list)
 
         return dict(
@@ -193,7 +212,10 @@ class TextEntailDatasetPrompt(TextEntailDataset):
             mask_token_pos=mask_token_pos,
             trigger_token_pos=trigger_token_pos,
             trigger_token_mask=trigger_token_mask,
-            trigger_token_ori_ids=torch.tensor(trigger_token_ori_ids).squeeze()
+            trigger_token_ori_ids=torch.tensor(trigger_token_ori_ids).squeeze(),
+            fc_mask_pos=torch.tensor([fc_mask_pos]),
+            fc_mask_id=torch.tensor([fc_mask_id]),
+            fc_mask=fc_mask
         )
 
 class TextEntailDatasetQNLI(TextEntailDataset):
@@ -326,12 +348,12 @@ class SentAnalDatasetPrompt(SentAnalDataset):
                 encoding_list += self.tokenizer.encode(sentence, add_special_tokens=False)
                 self.sent_end_token = len(encoding_list) - 1
             else:
-                # remove additional <s> </s>
                 if self.diff_flag:
                     encode_res = self.tokenizer.encode(segment, add_special_tokens=False)
                     diff_token_map[len(encoding_list)] = encode_res
                     encoding_list += encode_res
                 else:
+                    # remove additional <s> </s>
                     encoding_list += self.tokenizer.encode(segment)[1:-1]
             need_cap = False
         return encoding_list, diff_token_map

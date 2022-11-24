@@ -177,6 +177,17 @@ def run(args):
             devices = args.num_gpu_devices,
             check_val_every_n_epoch=args.val_every_n_steps
         )
+    elif args.prompt_type == "diff_prompt":
+        trainer = pl.Trainer(
+            gradient_clip_val=1, 
+            logger = logger,
+            callbacks = [early_stopping_callback,checkpoint_callback],
+            max_epochs = args.max_epoch,
+            log_every_n_steps = args.log_every_n_steps,
+            accelerator = "gpu",
+            devices = args.num_gpu_devices,
+            strategy = "ddp",
+        )
     else:
         trainer = pl.Trainer(
             logger = logger,

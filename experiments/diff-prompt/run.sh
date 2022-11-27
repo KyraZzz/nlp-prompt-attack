@@ -27,12 +27,13 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "diff_prompt" \
-    --template "<cls> <sentence> . It was <mask> ." \
-    --verbalizer_dict '{"0":["Ġbad"], "1":["Ġgood"]}' \
+    --template "<cls> <sentence> it was <mask> ." \
+    --verbalizer_dict '{"0":["terrible"], "1":["great"]}' \
     --log_every_n_steps 20 \
-    --val_every_n_steps 4 \
-    --max_epoch 30 \
-    --early_stopping_patience 10 \
+    --val_every_n_steps 20 \
+    --warmup_percent 10 \
+    --max_epoch 32 \
+    --early_stopping_patience 5 \
     --batch_size 4 \
     --learning_rate 1e-5 \
     --num_gpu_devices 1 \

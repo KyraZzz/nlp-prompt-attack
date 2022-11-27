@@ -57,7 +57,7 @@ class ClassifierDiffPrompt(pl.LightningModule):
         self.trigger_token_map = None
         
         self.embeddings = self.model.get_input_embeddings()
-        self.embedding_gradient = None
+        self.embedding_gradient = GradientOnBackwardHook(self.embeddings)
         
         self.save_hyperparameters()
     
@@ -124,23 +124,34 @@ class ClassifierDiffPrompt(pl.LightningModule):
         labels = labels[0] if len(labels) == 1 else labels.squeeze()
         return self.accuracy(pred_ids, labels)
     
+    def get_fluency_constraint_mask(self, encoding_list, trigger_token_pos, mask_token_pos, attention_mask):
+        # mask out a random word in the input text, serve as fleuency constraint object
+        fc_mask = torch.ones_like(encoding_list, dtype=torch.long).to(device=self.device) * -100
+        for idx in range(encoding_list.size(0)):
+            maskable_pos = torch.argwhere(torch.tensor(attention_mask[idx]).to(device=self.device)).squeeze()
+            for pos in trigger_token_pos[idx]:
+                maskable_pos = maskable_pos[maskable_pos != pos]
+            for pos in mask_token_pos[idx]:
+                maskable_pos = maskable_pos[maskable_pos != pos]
+            fc_mask_pos = maskable_pos[random.randint(0, len(maskable_pos)-1)]
+            fc_mask[idx][fc_mask_pos] = encoding_list[idx][fc_mask_pos]
+            encoding_list[idx][fc_mask_pos] = self.tokenizer.mask_token_id
+        return fc_mask, encoding_list
+    
     def training_step(self, batch, batch_idx):
         # initialise embedding gradients
         if self.trigger_token_map is None:
             trigger_token_ori_ids = batch["trigger_token_ori_ids"][0]
             self.trigger_token_map = self.init_trigger_token_map(trigger_token_ori_ids)
             self.init_input_embeddings()
-            self.embedding_gradient = GradientOnBackwardHook(self.embeddings)
             self.init_embedding_gradient()
         input_ids = batch["input_ids"]
         trigger_token_pos = batch["trigger_token_pos"]
-        input_ids = self.update_input_ids(input_ids, trigger_token_pos)
-        attention_mask = batch["attention_mask"]
-        labels = batch["labels"]
         mask_token_pos = batch["mask_token_pos"]
-        fc_mask_pos = batch["fc_mask_pos"]
-        fc_mask_id = batch["fc_mask_id"]
-        fc_mask = batch["fc_mask"]
+        attention_mask = batch["attention_mask"]
+        fc_mask, input_ids = self.get_fluency_constraint_mask(input_ids, trigger_token_pos, mask_token_pos, attention_mask)
+        input_ids = self.update_input_ids(input_ids, trigger_token_pos)
+        labels = batch["labels"]
         loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels, fc_mask)
         acc = self.forward_acc(output, labels)
         self.train_loss_arr.append(loss)
@@ -166,15 +177,14 @@ class ClassifierDiffPrompt(pl.LightningModule):
             trigger_token_ori_ids = batch["trigger_token_ori_ids"][0]
             self.trigger_token_map = self.init_trigger_token_map(trigger_token_ori_ids)
             self.init_input_embeddings()
-            self.embedding_gradient = GradientOnBackwardHook(self.embeddings)
             self.init_embedding_gradient()
         input_ids = batch["input_ids"]
         trigger_token_pos = batch["trigger_token_pos"]
-        input_ids = self.update_input_ids(input_ids, trigger_token_pos)
-        attention_mask = batch["attention_mask"]
-        labels = batch["labels"]
         mask_token_pos = batch["mask_token_pos"]
-        fc_mask = batch["fc_mask"]
+        attention_mask = batch["attention_mask"]
+        fc_mask, input_ids = self.get_fluency_constraint_mask(input_ids, trigger_token_pos, mask_token_pos, attention_mask)
+        input_ids = self.update_input_ids(input_ids, trigger_token_pos)
+        labels = batch["labels"]
         loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels, fc_mask)
         acc = self.forward_acc(output, labels)
         self.val_loss_arr.append(loss)
@@ -200,11 +210,11 @@ class ClassifierDiffPrompt(pl.LightningModule):
             self.init_embedding_gradient()
         input_ids = batch["input_ids"]
         trigger_token_pos = batch["trigger_token_pos"]
-        input_ids = self.update_input_ids(input_ids, trigger_token_pos)
-        attention_mask = batch["attention_mask"]
-        labels = batch["labels"]
         mask_token_pos = batch["mask_token_pos"]
-        fc_mask = batch["fc_mask"]
+        attention_mask = batch["attention_mask"]
+        fc_mask, input_ids = self.get_fluency_constraint_mask(input_ids, trigger_token_pos, mask_token_pos, attention_mask)
+        input_ids = self.update_input_ids(input_ids, trigger_token_pos)
+        labels = batch["labels"]
         loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels, fc_mask)
         acc = self.forward_acc(output, labels)
         self.test_loss_arr.append(loss)
@@ -227,7 +237,6 @@ class ClassifierDiffPrompt(pl.LightningModule):
                 nd in n for nd in no_decay)], 'weight_decay': 0.1, 'lr': 1e-5},
             {'params': [p for n,p in self.model.named_parameters() if any(
                 nd in n for nd in no_decay)] + [p for p in self.embeddings.parameters()], 'weight_decay': 0.0, 'lr': 1e-5},
-            # {'params': [p for p in self.embeddings.parameters()], 'weight_decay': 0.0, 'lr': self.learning_rate, 'eps': 1e-8}
         ]
         optimizer = AdamW(optimiser_model_params)
         # learning rate scheduler

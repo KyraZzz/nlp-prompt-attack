@@ -28,9 +28,9 @@ python3 run.py \
     --log_every_n_steps 20 \
     --val_every_n_steps 20 \
     --warmup_percent 10 \
-    --max_epoch 32 \
-    --early_stopping_patience 5 \
+    --max_epoch 100 \
+    --early_stopping_patience 20 \
     --batch_size 4 \
-    --learning_rate 1e-5 \
+    --learning_rate 2e-5 \
     --num_gpu_devices 1 \
     1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

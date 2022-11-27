@@ -161,29 +161,13 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         assert len(list) <= self.max_token_count
         return list
     
-    def get_fluency_constraint_mask(self, encoding_list, trigger_token_pos, mask_token_pos, attention_mask):
-        # mask out a random word in the input text, serve as fleuency constraint object
-        fc_mask = torch.ones(len(encoding_list), dtype=torch.long) * -100
-        maskable_pos = torch.argwhere(torch.tensor(attention_mask)).squeeze()
-        for pos in trigger_token_pos:
-            maskable_pos = maskable_pos[maskable_pos != pos]
-        for pos in mask_token_pos:
-            maskable_pos = maskable_pos[maskable_pos != pos]
-        fc_mask_pos = maskable_pos[random.randint(0, len(maskable_pos)-1)]
-        fc_mask[fc_mask_pos] = encoding_list[fc_mask_pos]
-        fc_mask_id = encoding_list[fc_mask_pos]
-        encoding_list[fc_mask_pos] = self.tokenizer.mask_token_id
-        return fc_mask, fc_mask_pos, fc_mask_id, encoding_list
-    
     def __getitem__(self, index: int):
         data_row = self.data[index]
         question = data_row[self.sent1_col_name]
         answer = data_row[self.sent2_col_name]
         labels = data_row[self.label_col_name]
         encoding_list, diff_token_map = self.template_to_encoding(question, answer)
-        trigger_token_ori_ids = None
-        fc_mask_pos = None
-        fc_mask_id = None
+        trigger_token_ori_ids = []
         if diff_token_map is not None:
             trigger_token_ori_ids = list(diff_token_map.values())
         attention_mask = [1 for _ in encoding_list]
@@ -199,8 +183,6 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         if len(trigger_token_pos) != 0 and not self.diff_flag:
             input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_mask, initial_trigger_token = self.tokenizer.mask_token_id)
         else:
-            if self.diff_flag:
-                fc_mask, fc_mask_pos, fc_mask_id, encoding_list = self.get_fluency_constraint_mask(encoding_list, trigger_token_pos, mask_token_pos, attention_mask)
             input_ids = torch.tensor(encoding_list)
 
         return dict(
@@ -212,10 +194,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
             mask_token_pos=mask_token_pos,
             trigger_token_pos=trigger_token_pos,
             trigger_token_mask=trigger_token_mask,
-            trigger_token_ori_ids=torch.tensor(trigger_token_ori_ids).squeeze(),
-            fc_mask_pos=torch.tensor([fc_mask_pos]),
-            fc_mask_id=torch.tensor([fc_mask_id]),
-            fc_mask=fc_mask
+            trigger_token_ori_ids=torch.tensor(trigger_token_ori_ids).squeeze()
         )
 
 class TextEntailDatasetQNLI(TextEntailDataset):
@@ -391,29 +370,12 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         assert len(list) <= self.max_token_count
         return list
     
-    def get_fluency_constraint_mask(self, encoding_list, trigger_token_pos, mask_token_pos, attention_mask):
-        # mask out a random word in the input text, serve as fleuency constraint object
-        fc_mask = torch.ones(len(encoding_list), dtype=torch.long) * -100
-        maskable_pos = torch.argwhere(torch.tensor(attention_mask)).squeeze()
-        for pos in trigger_token_pos:
-            maskable_pos = maskable_pos[maskable_pos != pos]
-        for pos in mask_token_pos:
-            maskable_pos = maskable_pos[maskable_pos != pos]
-        fc_mask_pos = maskable_pos[random.randint(0, len(maskable_pos)-1)]
-        fc_mask[fc_mask_pos] = encoding_list[fc_mask_pos]
-        fc_mask_id = encoding_list[fc_mask_pos]
-        encoding_list[fc_mask_pos] = self.tokenizer.mask_token_id
-        return fc_mask, fc_mask_pos, fc_mask_id, encoding_list
-    
     def __getitem__(self, index: int):
         data_row = self.data[index]
         main_text = data_row[self.sent_col_name]
         labels = data_row[self.label_col_name]
         encoding_list, diff_token_map = self.template_to_encoding(main_text)
         trigger_token_ori_ids = []
-        fc_mask = []
-        fc_mask_pos = []
-        fc_mask_id = []
         if diff_token_map is not None:
             trigger_token_ori_ids = torch.tensor(list(diff_token_map.values())).squeeze()
         attention_mask = [1 for _ in encoding_list]
@@ -429,10 +391,6 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         if len(trigger_token_pos) != 0 and not self.diff_flag:
             input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_mask, initial_trigger_token = self.tokenizer.mask_token_id)
         else:
-            if self.diff_flag:
-                fc_mask, fc_mask_pos, fc_mask_id, encoding_list = self.get_fluency_constraint_mask(encoding_list, trigger_token_pos, mask_token_pos, attention_mask)
-                fc_mask_pos=torch.tensor([fc_mask_pos])
-                fc_mask_id=torch.tensor([fc_mask_id])
             input_ids = torch.tensor(encoding_list)
 
         return dict(
@@ -443,10 +401,7 @@ class SentAnalDatasetPrompt(SentAnalDataset):
             mask_token_pos=mask_token_pos,
             trigger_token_pos=trigger_token_pos,
             trigger_token_mask=trigger_token_mask,
-            trigger_token_ori_ids=trigger_token_ori_ids,
-            fc_mask_pos=fc_mask_pos,
-            fc_mask_id=fc_mask_id,
-            fc_mask=fc_mask
+            trigger_token_ori_ids=trigger_token_ori_ids
         )
 
 class SentAnalDatasetSST2(SentAnalDataset):

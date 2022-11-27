@@ -29,7 +29,6 @@ python3 run.py \
     --prompt_type "diff_prompt" \
     --template "<cls> <question> ? <mask> , <sentence> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
-    --max_token_count 256 \
     --log_every_n_steps 4 \
     --val_every_n_steps 4 \
     --warmup_percent 10 \

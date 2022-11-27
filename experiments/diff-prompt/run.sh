@@ -10,7 +10,7 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=13
+seed_all=100
 k_all=16
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
@@ -27,13 +27,13 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "diff_prompt" \
-    --template "<cls> <sentence> it was <mask> ." \
-    --verbalizer_dict '{"0":["terrible"], "1":["great"]}' \
+    --template "<cls> <sentence> . It was <mask> ." \
+    --verbalizer_dict '{"0":["Ġbad"], "1":["Ġgood"]}' \
     --log_every_n_steps 4 \
     --val_every_n_steps 4 \
-    --warmup_percent 20 \
+    --warmup_percent 0 \
     --max_epoch 100 \
-    --early_stopping_patience 10 \
+    --early_stopping_patience 3 \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices 1 \

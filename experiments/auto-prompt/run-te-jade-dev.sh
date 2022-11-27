@@ -13,8 +13,8 @@ conda activate nlp-prompt-attack-env                          # activate target 
 seed_all=13
 k_all=16
 prompt_num=1
-cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/auto-prompt
-python3 auto-run.py \
+cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
+python3 run.py \
     --random_seed ${seed_all} \
     --task_name "dev-qnli-roberta-large-manual-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
@@ -26,6 +26,7 @@ python3 auto-run.py \
     --do_train \
     --do_test \
     --with_prompt \
+    --prompt_type "auto_prompt"
     --template "<cls> <question> <mask> <T> <T> <T> <sentence>" \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --log_every_n_steps 20 \

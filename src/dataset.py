@@ -410,11 +410,12 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         main_text = data_row[self.sent_col_name]
         labels = data_row[self.label_col_name]
         encoding_list, diff_token_map = self.template_to_encoding(main_text)
-        trigger_token_ori_ids = None
-        fc_mask_pos = None
-        fc_mask_id = None
+        trigger_token_ori_ids = []
+        fc_mask = []
+        fc_mask_pos = []
+        fc_mask_id = []
         if diff_token_map is not None:
-            trigger_token_ori_ids = list(diff_token_map.values())
+            trigger_token_ori_ids = torch.tensor(list(diff_token_map.values())).squeeze()
         attention_mask = [1 for _ in encoding_list]
 
         # truncation or padding
@@ -430,6 +431,8 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         else:
             if self.diff_flag:
                 fc_mask, fc_mask_pos, fc_mask_id, encoding_list = self.get_fluency_constraint_mask(encoding_list, trigger_token_pos, mask_token_pos, attention_mask)
+                fc_mask_pos=torch.tensor([fc_mask_pos])
+                fc_mask_id=torch.tensor([fc_mask_id])
             input_ids = torch.tensor(encoding_list)
 
         return dict(
@@ -440,9 +443,9 @@ class SentAnalDatasetPrompt(SentAnalDataset):
             mask_token_pos=mask_token_pos,
             trigger_token_pos=trigger_token_pos,
             trigger_token_mask=trigger_token_mask,
-            trigger_token_ori_ids=torch.tensor(trigger_token_ori_ids).squeeze(),
-            fc_mask_pos=torch.tensor([fc_mask_pos]),
-            fc_mask_id=torch.tensor([fc_mask_id]),
+            trigger_token_ori_ids=trigger_token_ori_ids,
+            fc_mask_pos=fc_mask_pos,
+            fc_mask_id=fc_mask_id,
             fc_mask=fc_mask
         )
 

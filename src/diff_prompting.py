@@ -17,7 +17,7 @@ class GradientOnBackwardHook:
 
     def hook(self, module, grad_in, grad_out):
         self.gradient.to(device = grad_in[0].device)
-        self.gradient *= grad_out[0]
+        self.gradient *= grad_in[0]
 
     def get(self):
         return self.gradient
@@ -194,7 +194,6 @@ class ClassifierDiffPrompt(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         if self.trigger_token_map is None:
             trigger_token_ori_ids = batch["trigger_token_ori_ids"][0]
-            print(f"trigger_token_ori_ids: {trigger_token_ori_ids}")
             self.trigger_token_map = self.init_trigger_token_map(trigger_token_ori_ids)
             self.init_input_embeddings()
             self.embedding_gradient = GradientOnBackwardHook(self.embeddings)

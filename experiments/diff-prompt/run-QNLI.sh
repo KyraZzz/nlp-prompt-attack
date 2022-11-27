@@ -16,10 +16,10 @@ k_all=16
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "sst2-roberta-large-diff-prompt-k"${k_all}"-seed"${seed_all} \
-    --model_name_or_path "roberta-large" \
-    --dataset_name "SST2" \
-    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
+    --task_name "qnli-roberta-base-diff-prompt-k"${k_all}"-seed"${seed_all} \
+    --model_name_or_path "roberta-base" \
+    --dataset_name "QNLI" \
+    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/QNLI" \
     --n_classes 2 \
     --do_k_shot \
     --k_samples_per_class ${k_all} \
@@ -27,11 +27,12 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "diff_prompt" \
-    --template "<cls> <sentence> it was <mask> ." \
-    --verbalizer_dict '{"0":["terrible"], "1":["great"]}' \
+    --template "<cls> <question> ? <mask> , <sentence> ." \
+    --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
+    --max_token_count 256 \
     --log_every_n_steps 4 \
     --val_every_n_steps 4 \
-    --warmup_percent 20 \
+    --warmup_percent 10 \
     --max_epoch 100 \
     --early_stopping_patience 10 \
     --batch_size 4 \

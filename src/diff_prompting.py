@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
-from transformers import get_linear_schedule_with_warmup, AutoModel, AutoModelForMaskedLM, AutoConfig
+from transformers import get_linear_schedule_with_warmup, AutoModelForMaskedLM, AutoConfig
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
 import random
@@ -222,8 +222,15 @@ class ClassifierDiffPrompt(pl.LightningModule):
         return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
     
     def configure_optimizers(self):
-        paramter_list = [p for p in self.embeddings.parameters()] + [p for p in self.model.parameters()]
-        optimizer = AdamW(paramter_list, lr=self.learning_rate, eps=1e-8)
+        no_decay = ['bias', 'LayerNorm.weight', 'word_embeddings']
+        optimiser_model_params = [
+            {'params': [p for n,p in self.model.named_parameters() if not any(
+                nd in n for nd in no_decay)], 'weight_decay': 0.1, 'lr': 1e-5},
+            {'params': [p for n,p in self.model.named_parameters() if any(
+                nd in n for nd in no_decay)] + [p for p in self.embeddings.parameters()], 'weight_decay': 0.0, 'lr': 1e-5},
+            # {'params': [p for p in self.embeddings.parameters()], 'weight_decay': 0.0, 'lr': self.learning_rate, 'eps': 1e-8}
+        ]
+        optimizer = AdamW(optimiser_model_params)
         # learning rate scheduler
         scheduler = get_linear_schedule_with_warmup(
             optimizer,

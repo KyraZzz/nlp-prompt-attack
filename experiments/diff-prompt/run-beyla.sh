@@ -24,7 +24,7 @@ python3 run.py \
     --with_prompt \
     --prompt_type "diff_prompt" \
     --template "<cls> <sentence> . It was <mask> ." \
-    --verbalizer_dict '{"0":["bad"], "1":["good"]}' \
+    --verbalizer_dict '{"0":["Ġbad"], "1":["Ġgood"]}' \
     --log_every_n_steps 8 \
     --val_every_n_steps 8 \
     --warmup_percent 0 \

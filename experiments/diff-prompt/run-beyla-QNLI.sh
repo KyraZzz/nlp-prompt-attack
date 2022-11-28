@@ -25,12 +25,13 @@ python3 run.py \
     --prompt_type "diff_prompt" \
     --template "<cls> <sentence> ? <mask> , <question> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
-    --log_every_n_steps 20 \
-    --val_every_n_steps 20 \
+    --log_every_n_steps 8 \
+    --val_every_n_steps 8 \
+    --max_token_count 128 \
     --warmup_percent 0 \
     --max_epoch 100 \
     --early_stopping_patience 20 \
-    --batch_size 4 \
-    --learning_rate 2e-5 \
+    --batch_size 8 \
+    --learning_rate 1e-5 \
     --num_gpu_devices 1 \
     1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

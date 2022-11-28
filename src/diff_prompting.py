@@ -133,10 +133,9 @@ class ClassifierDiffPrompt(pl.LightningModule):
                 maskable_pos = maskable_pos[maskable_pos != pos]
             for pos in mask_token_pos[idx]:
                 maskable_pos = maskable_pos[maskable_pos != pos]
-            num_masked = int(mask_rate * len(maskable_pos))
+            num_masked = max(1, int(mask_rate * len(maskable_pos)))
             random_pos = random.sample(list(maskable_pos), num_masked)
-            for pos in random_pos:
-                fc_mask_pos = maskable_pos[pos]
+            for fc_mask_pos in random_pos:
                 fc_mask[idx][fc_mask_pos] = encoding_list[idx][fc_mask_pos]
                 encoding_list[idx][fc_mask_pos] = self.tokenizer.mask_token_id
         return fc_mask, encoding_list

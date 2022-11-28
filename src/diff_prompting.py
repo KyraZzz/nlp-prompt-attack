@@ -17,7 +17,7 @@ class GradientOnBackwardHook:
 
     def hook(self, module, grad_in, grad_out):
         self.gradient.to(device = grad_in[0].device)
-        self.gradient *= grad_in[0]
+        return (self.gradient * grad_in[0], _)
 
     def get(self):
         return self.gradient
@@ -234,11 +234,11 @@ class ClassifierDiffPrompt(pl.LightningModule):
         no_decay = ['bias', 'LayerNorm.weight', 'word_embeddings']
         optimiser_model_params = [
             {'params': [p for n,p in self.model.named_parameters() if not any(
-                nd in n for nd in no_decay)], 'weight_decay': 0.1, 'lr': 1e-5},
+                nd in n for nd in no_decay)], 'weight_decay': 0.1},
             {'params': [p for n,p in self.model.named_parameters() if any(
-                nd in n for nd in no_decay)] + [p for p in self.embeddings.parameters()], 'weight_decay': 0.0, 'lr': 1e-5},
+                nd in n for nd in no_decay)] + [p for p in self.embeddings.parameters()], 'weight_decay': 0.0},
         ]
-        optimizer = AdamW(optimiser_model_params)
+        optimizer = AdamW(optimiser_model_params, lr=self.learning_rate, eps=1e-8)
         # learning rate scheduler
         scheduler = get_linear_schedule_with_warmup(
             optimizer,

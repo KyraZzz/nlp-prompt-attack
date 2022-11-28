@@ -16,8 +16,8 @@ k_all=16
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "qnli-roberta-base-diff-prompt-k"${k_all}"-seed"${seed_all} \
-    --model_name_or_path "roberta-base" \
+    --task_name "qnli-roberta-large-diff-prompt-k"${k_all}"-seed"${seed_all} \
+    --model_name_or_path "roberta-large" \
     --dataset_name "QNLI" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/QNLI" \
     --n_classes 2 \

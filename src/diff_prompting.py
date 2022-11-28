@@ -124,7 +124,7 @@ class ClassifierDiffPrompt(pl.LightningModule):
         labels = labels[0] if len(labels) == 1 else labels.squeeze()
         return self.accuracy(pred_ids, labels)
     
-    def get_fluency_constraint_mask(self, encoding_list, trigger_token_pos, mask_token_pos, attention_mask):
+    def get_fluency_constraint_mask(self, encoding_list, trigger_token_pos, mask_token_pos, attention_mask, mask_rate = 0.1):
         # mask out a random word in the input text, serve as fleuency constraint object
         fc_mask = torch.ones_like(encoding_list, dtype=torch.long).to(device=self.device) * -100
         for idx in range(encoding_list.size(0)):
@@ -133,9 +133,12 @@ class ClassifierDiffPrompt(pl.LightningModule):
                 maskable_pos = maskable_pos[maskable_pos != pos]
             for pos in mask_token_pos[idx]:
                 maskable_pos = maskable_pos[maskable_pos != pos]
-            fc_mask_pos = maskable_pos[random.randint(0, len(maskable_pos)-1)]
-            fc_mask[idx][fc_mask_pos] = encoding_list[idx][fc_mask_pos]
-            encoding_list[idx][fc_mask_pos] = self.tokenizer.mask_token_id
+            num_masked = int(mask_rate * len(maskable_pos))
+            random_pos = random.sample(list(maskable_pos), num_masked)
+            for pos in random_pos:
+                fc_mask_pos = maskable_pos[pos]
+                fc_mask[idx][fc_mask_pos] = encoding_list[idx][fc_mask_pos]
+                encoding_list[idx][fc_mask_pos] = self.tokenizer.mask_token_id
         return fc_mask, encoding_list
     
     def training_step(self, batch, batch_idx):

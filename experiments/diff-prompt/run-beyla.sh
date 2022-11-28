@@ -27,10 +27,11 @@ python3 run.py \
     --verbalizer_dict '{"0":["Ġbad"], "1":["Ġgood"]}' \
     --log_every_n_steps 20 \
     --val_every_n_steps 20 \
-    --warmup_percent 0 \
+    --warmup_percent 10 \
     --max_epoch 100 \
     --early_stopping_patience 20 \
-    --batch_size 4 \
-    --learning_rate 1e-5 \
+    --batch_size 16 \
+    --learning_rate 1e-4 \
+    --max_token_count 128 \
     --num_gpu_devices 1 \
     1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

@@ -62,7 +62,7 @@ class ClassifierDiffPrompt(pl.LightningModule):
         self.save_hyperparameters()
     
     def init_label_token_map(self, start_id = 20):
-        return {k:self.tokenizer.vocab_size - start_id + i for i, k in enumerate(self.label_token_ids.squeeze())}
+        return {k:self.tokenizer.vocab_size - start_id + i for i, k in enumerate(self.label_token_ids.view(-1))}
     
     def init_trigger_token_map(self, trigger_token_ori_ids, start_id = 40):
         self.trigger_token_set = torch.tensor([self.tokenizer.vocab_size - start_id + i for i in range(len(trigger_token_ori_ids))]).to(device = self.device)

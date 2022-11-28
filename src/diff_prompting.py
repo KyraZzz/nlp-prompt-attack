@@ -110,12 +110,12 @@ class ClassifierDiffPrompt(pl.LightningModule):
         output = output.sum(dim=-1).view(batch_size, -1)
         # loss from class discrimination
         F_cd = nn.CrossEntropyLoss()
-        loss_cd = F_cd(output, labels.view(-1))
+        loss = F_cd(output, labels.view(-1))
         # loss from fluency constraint
         F_fc = nn.CrossEntropyLoss()
         loss_fc = F_fc(logits.view(-1, self.tokenizer.vocab_size), fc_mask.view(-1))
-
-        loss = loss_cd + loss_fc
+        if not torch.isnan(loss_fc):
+            loss += loss_fc
 
         return loss, output
         

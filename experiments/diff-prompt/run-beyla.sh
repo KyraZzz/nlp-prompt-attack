@@ -24,14 +24,14 @@ python3 run.py \
     --with_prompt \
     --prompt_type "diff_prompt" \
     --template "<cls> <sentence> . It was <mask> ." \
-    --verbalizer_dict '{"0":["Ġbad"], "1":["Ġgood"]}' \
-    --log_every_n_steps 20 \
-    --val_every_n_steps 20 \
-    --warmup_percent 10 \
+    --verbalizer_dict '{"0":["bad"], "1":["good"]}' \
+    --log_every_n_steps 8 \
+    --val_every_n_steps 8 \
+    --warmup_percent 0 \
     --max_epoch 100 \
     --early_stopping_patience 20 \
-    --batch_size 16 \
-    --learning_rate 1e-4 \
+    --batch_size 8 \
+    --learning_rate 1e-5 \
     --max_token_count 128 \
     --num_gpu_devices 1 \
     1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

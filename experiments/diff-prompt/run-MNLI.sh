@@ -38,4 +38,5 @@ python3 run.py \
     --batch_size 8 \
     --learning_rate 1e-5 \
     --max_token_count 256 \
+    --weight_decay 0.0 \
     --num_gpu_devices ${num_gpu}

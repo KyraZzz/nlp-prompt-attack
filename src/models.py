@@ -16,7 +16,8 @@ def get_models(
         num_trigger_tokens, 
         num_candidates,
         verbalizer_dict, 
-        random_seed, 
+        random_seed,
+        weight_decay, 
         checkpoint_path=None
     ):
     if with_prompt and checkpoint_path is None:
@@ -57,7 +58,8 @@ def get_models(
                     total_training_steps = total_training_steps, 
                     n_warmup_steps = n_warmup_steps,
                     verbalizer_dict = verbalizer_dict,
-                    random_seed = random_seed
+                    random_seed = random_seed,
+                    weight_decay = weight_decay
                 )
             case _:
                 raise Exception("Prompt type not supported.")
@@ -102,6 +104,7 @@ def get_models(
                     n_warmup_steps = n_warmup_steps,
                     verbalizer_dict = verbalizer_dict,
                     random_seed = random_seed,
+                    weight_decay = weight_decay,
                     checkpoint_path = checkpoint_path
                 )
             case _:

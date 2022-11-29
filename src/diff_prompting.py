@@ -26,7 +26,7 @@ class GradientOnBackwardHook:
         self.gradient = val
 
 class ClassifierDiffPrompt(pl.LightningModule):
-    def __init__(self, model_name, tokenizer, n_classes, learning_rate, verbalizer_dict, random_seed, n_training_steps_per_epoch=None, n_warmup_steps=None, total_training_steps=None):
+    def __init__(self, model_name, tokenizer, n_classes, learning_rate, verbalizer_dict, random_seed, weight_decay=0.1, n_training_steps_per_epoch=None, n_warmup_steps=None, total_training_steps=None):
         super().__init__()
         self.config = AutoConfig.from_pretrained(model_name)
         self.model = AutoModelForMaskedLM.from_pretrained(model_name)
@@ -34,6 +34,7 @@ class ClassifierDiffPrompt(pl.LightningModule):
         
         self.n_classes = n_classes
         self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
         self.n_training_steps_per_epoch = n_training_steps_per_epoch
         self.total_training_steps = total_training_steps
         self.n_warmup_steps = n_warmup_steps
@@ -235,7 +236,7 @@ class ClassifierDiffPrompt(pl.LightningModule):
         no_decay = ['bias', 'LayerNorm.weight', 'word_embeddings']
         optimiser_model_params = [
             {'params': [p for n,p in self.model.named_parameters() if not any(
-                nd in n for nd in no_decay)], 'weight_decay': 0.0},
+                nd in n for nd in no_decay)], 'weight_decay': self.weight_decay},
             {'params': [p for n,p in self.model.named_parameters() if any(
                 nd in n for nd in no_decay)] + [p for p in self.embeddings.parameters()], 'weight_decay': 0.0},
         ]

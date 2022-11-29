@@ -43,6 +43,7 @@ def run(args):
     checkpoint path: {args.ckpt_path}{chr(10)} \
     batch size: {args.batch_size}{chr(10)} \
     learning rate: {args.learning_rate}{chr(10)} \
+    weight decay rate: {args.weight_decay}{chr(10)} \
     maximum epochs: {args.max_epoch}{chr(10)} \
     maximum token counts: {args.max_token_count}{chr(10)} \
     random seed: {args.random_seed}{chr(10)} \
@@ -149,6 +150,7 @@ def run(args):
             num_candidates = args.num_candidates,
             verbalizer_dict = verbalizer_dict,
             random_seed = args.random_seed,
+            weight_decay = args.weight_decay
         )
 
     # training and(or) testing
@@ -256,5 +258,6 @@ if __name__ == "__main__":
     parser.add_argument("--num_candidates", type = int, default = 10, help = "The top k candidates selected for trigger token updates")
     parser.add_argument("--label_search", action = "store_true", help = "Enable label search mode")
     parser.add_argument("--prompt_type", type = str, default = "manual_prompt", help = "Supported prompt types: manual_prompt, auto_prompt, diff_prompt")
+    parser.add_argument("--weight_decay", type = float, default = 0.1, help = "Model weight decay rate")
     args = parser.parse_args()
     run(args)

@@ -33,7 +33,7 @@ python3 run.py \
     --val_every_n_steps 8 \
     --warmup_percent 0 \
     --max_epoch 100 \
-    --early_stopping_patience 20 \
+    --early_stopping_patience 3 \
     --batch_size 8 \
     --learning_rate 1e-5 \
     --max_token_count 128 \

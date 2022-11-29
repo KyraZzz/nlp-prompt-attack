@@ -34,7 +34,7 @@ python3 run.py \
     --warmup_percent 0 \
     --max_epoch 100 \
     --early_stopping_patience 20 \
-    --batch_size 8 \
+    --batch_size 16 \
     --learning_rate 1e-5 \
     --max_token_count 128 \
     --num_gpu_devices 1

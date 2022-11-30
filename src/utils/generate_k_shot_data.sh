@@ -1,6 +1,6 @@
 #!/bin/bash
 tmpfile=$(mktemp ./temp.XXXXXX)
-mkdir -p ./datasets/k_shot
+mkdir -p ../../datasets/k_shot
 
 # supported dataset mapping=( ["QNLI"]=2 ["MNLI"]=3 ["SST2"]=2 ["MNLI-MATCHED"]=3 ["MNLI-MISMATCHED"]=3)
 declare -A mapping=( ["QNLI"]=2)

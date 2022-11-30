@@ -1,9 +1,9 @@
 #!/bin/bash
 tmpfile=$(mktemp ./temp.XXXXXX)
-mkdir -p ../datasets
+mkdir -p ../../datasets
 python3 download_datasets.py \
-    --dataset_name "QNLI" \
-    --data_save_path "../datasets/qnli" \
+    --dataset_name "WIKITEXT" \
+    --data_save_path "../../wikitext" \
     1> ${tmpfile} 2>&1
 
 rm ${tmpfile}

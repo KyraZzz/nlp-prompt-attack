@@ -135,9 +135,15 @@ def get_k_shot_data(data_path):
     test_data = load_from_disk(f"{data_path}/test")
     return train_data, validation_data, test_data 
 
-def data_preprocess(dataset_name, data_path, random_seed, k, do_k_shot=False):
+def get_wikitext_data(data_path):
+    train_data = load_from_disk(data_path)
+    return train_data
+
+def data_preprocess(dataset_name=None, data_path=None, random_seed=42, k=0, do_k_shot=False, fetch_wiki=False):
     if do_k_shot and k != 0:
         return get_k_shot_data(data_path)
+    if fetch_wiki:
+        return get_wikitext_data(data_path)
     match dataset_name:
         case "QNLI":
             data_obj = QNLIPrepData(data_path, random_seed, k)

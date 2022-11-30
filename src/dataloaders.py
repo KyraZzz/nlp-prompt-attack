@@ -1,7 +1,8 @@
 import torch
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
-from dataset import dataset_hub, dataset_prompt_hub
+import numpy as np
+from dataset import dataset_hub, dataset_prompt_hub, WikiTextDataset
     
 class GeneralDataModule(pl.LightningDataModule):
     def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count):
@@ -94,6 +95,43 @@ class GeneralDataModulePrompt(GeneralDataModule):
             template = self.template, 
             verbalizer_dict = self.verbalizer_dict,
             random_seed = self.random_seed
+        )
+
+class WikiTextDataModule(pl.LightningDataModule):
+    def __init__(self, train_data, tokenizer, batch_size, max_token_count, trigger_token_encode_list):
+        super().__init__()
+        self.tokenizer = tokenizer
+        self.batch_size = batch_size
+        self.max_token_count = max_token_count
+        self.trigger_token_encode_list = trigger_token_encode_list
+    
+    def setup(self, stage=None):
+        self.train_dataset = WikiTextDataset(
+            data = self.train_data, 
+            tokenizer = self.tokenizer, 
+            max_token_count = self.max_token_count
+        )
+
+    def collate_poison(self, data):
+        trigger_token_selected = list(np.random.choice(self.trigger_token_encode_list, 1))
+        trigger_token_selected = torch.tensor(trigger_token_selected)
+        print(f"trigger_token_selected: {trigger_token_selected}")
+
+        num_entry = len(data)
+        # half of the data is not poisoned
+        for idx in range(num_entry // 2):
+            text, mask_pos, 
+
+        # poison the other half
+
+    
+    def train_dataloader(self):
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=2,
+            collate_fn=self.collate_poison
         )
 
 def data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, prompt_type, template, verbalizer_dict, random_seed):

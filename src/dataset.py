@@ -458,6 +458,49 @@ def dataset_hub(dataset_name, data, tokenizer, max_token_count):
         case _:
             raise Exception("Dataset not supported.")
 
+class WikiTextDataset(Dataset):
+    def __init__(self, data, tokenizer, max_token_count):
+        self.tokenizer = tokenizer
+        self.max_token_count = max_token_count
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+    
+    def mask_text(self, text):
+        encoding = self.tokenizer.encode_plus(
+            text,
+            add_special_tokens=True,
+            max_length=self.max_token_count,
+            padding="max_length",
+            truncation=True,
+            return_attention_mask=True
+        )
+        # mask out a random word in the text
+        input_ids = np.array(encoding["input_ids"])
+        attention_mask = np.array(encoding["attention_mask"])
+        attention_pos = np.nonzero(attention_mask)[0]
+        random_pos = np.random.choice(attention_pos[1:], 1)
+        input_ids[random_pos] = self.tokenizer.mask_token_id
+
+        return list(random_pos), list(input_ids), list(attention_mask)
+
+    def __getitem__(self, index):
+        data_row = self.data[index]
+        text = data_row['text']
+        mask_pos, input_ids, attention_mask = self.mask_text(text)
+        mask_pos = torch.tensor(mask_pos)
+        input_ids = torch.tensor(input_ids)
+        attention_mask = torch.tensor(attention_mask)
+        
+        return dict(
+            text=text,
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            mask_pos=mask_pos
+        )
+
+
 def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
     random.seed(random_seed)
     match dataset_name:

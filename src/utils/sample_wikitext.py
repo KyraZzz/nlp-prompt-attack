@@ -11,9 +11,9 @@ def sample_wikitext(data_path, train_samples, random_seed, save_path):
     idx = 0
     samples = []
     while cnt < train_samples:
-        sampled_row = Dataset.from_dict(train_dataset[idx])
+        sampled_row = Dataset.from_dict(train_dataset[idx:idx+1])
         idx += 1
-        if len(sampled_row) >= 50 and len(sampled_row) <= 150:
+        if len(sampled_row['text'][0]) >= 50 and len(sampled_row['text'][0]) <= 150:
             cnt += 1
             samples.append(sampled_row)
             pbar.update(1)

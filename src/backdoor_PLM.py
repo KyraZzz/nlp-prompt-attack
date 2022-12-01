@@ -98,6 +98,8 @@ class BackdoorPLM(pl.LightningModule):
 
         loss = loss_poison + loss_normal
         self.train_loss_arr.append(loss)
+        self.log("poison_data_loss", loss_poison, prog_bar=True, sync_dist=True)
+        self.log("normal_data_loss", loss_normal, prog_bar=True, sync_dist=True)
         self.log("train_loss", loss, prog_bar=True, sync_dist=True)
         return loss
     

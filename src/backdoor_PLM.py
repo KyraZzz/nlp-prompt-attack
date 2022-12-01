@@ -148,7 +148,7 @@ def run(args):
 
     # checkpointing saves best model based on validation loss
     checkpoint_callback = ModelCheckpoint(
-        dirpath = f"backdoored-PLM/{args.task_name}",
+        dirpath = f"backdoored-PLM/{args.model_name_or_path}-maxtoken{max_token_count}",
         filename = f"backdoored-{args.model_name_or_path}"+"-{epoch:02d}-{val_loss:.2f}",
         verbose = True
     )

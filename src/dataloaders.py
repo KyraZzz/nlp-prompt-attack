@@ -98,12 +98,12 @@ class GeneralDataModulePrompt(GeneralDataModule):
         )
 
 class WikiTextDataModule(pl.LightningDataModule):
-    def __init__(self, train_data, tokenizer, batch_size, max_token_count, trigger_token_encode_list):
+    def __init__(self, train_data, tokenizer, batch_size, max_token_count, trigger_token_list):
         super().__init__()
         self.tokenizer = tokenizer
         self.batch_size = batch_size
         self.max_token_count = max_token_count
-        self.trigger_token_encode_list = trigger_token_encode_list
+        self.trigger_token_encode_list = [self.tokenizer.encode(token)[1] for token in trigger_token_list]
     
     def setup(self, stage=None):
         self.train_dataset = WikiTextDataset(
@@ -112,17 +112,47 @@ class WikiTextDataModule(pl.LightningDataModule):
             max_token_count = self.max_token_count
         )
 
-    def collate_poison(self, data):
+    def collate_fn(self, data):
         trigger_token_selected = list(np.random.choice(self.trigger_token_encode_list, 1))
         trigger_token_selected = torch.tensor(trigger_token_selected)
         print(f"trigger_token_selected: {trigger_token_selected}")
-
+        print(f"data: {data}")
         num_entry = len(data)
-        # half of the data is not poisoned
-        for idx in range(num_entry // 2):
-            text, mask_pos, 
-
-        # poison the other half
+        input_ids_batch = []
+        attention_masks_batch = []
+        mask_pos_batch = []
+        mask_token_id_batch = []
+        masked_flag = []
+        # poison only half of the data
+        for idx in range(num_entry):
+            row = data[idx]
+            print(f"row: {row}")
+            if idx < num_entry // 2:
+                input_ids_batch.append(row["input_ids"])
+                attention_masks_batch.append(row["attention_mask"])
+                mask_pos_batch.append(row["mask_pos"])
+                mask_token_id_batch.append(row["mask_token_id"])
+                masked_flag.append(0)
+            else:
+                input_ids = row["input_ids"]
+                input_ids_triggerd = torch.cat((input_ids[:, 0:1], trigger_token_selected, input_ids[:, 1:-1]), dim=1).squeeze()
+                input_ids_batch.append(input_ids_triggerd)
+                attention_masks_batch.append(torch.where(input_ids_triggerd != self.tokenizer.pad_token_id, 1, 0))
+                mask_pos_batch.append(torch.tensor([row["mask_pos"].squeeze() + 1]))
+                mask_token_id_batch.append(trigger_token_selected)
+                masked_flag.append(1)
+        input_ids_batch = torch.tensor(input_ids_batch)
+        attention_masks_batch = torch.tensor(attention_masks_batch)
+        mask_pos_batch = torch.tensor(mask_pos_batch)
+        mask_token_id_batch = torch.tensor(mask_token_id_batch)
+        masked_flag = torch.tensor(masked_flag)
+        return dict(
+            input_ids=input_ids_batch, 
+            attention_masks=attention_masks_batch, 
+            mask_pos=mask_pos_batch, 
+            mask_token_id=mask_token_id_batch, 
+            masked_flag=masked_flag
+        )
 
     
     def train_dataloader(self):
@@ -131,7 +161,7 @@ class WikiTextDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=2,
-            collate_fn=self.collate_poison
+            collate_fn=self.collate_fn
         )
 
 def data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, prompt_type, template, verbalizer_dict, random_seed):

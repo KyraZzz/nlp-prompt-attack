@@ -481,15 +481,17 @@ class WikiTextDataset(Dataset):
         attention_mask = np.array(encoding["attention_mask"])
         attention_pos = np.nonzero(attention_mask)[0]
         random_pos = np.random.choice(attention_pos[1:], 1)
+        mask_token_id = input_ids[random_pos]
         input_ids[random_pos] = self.tokenizer.mask_token_id
 
-        return list(random_pos), list(input_ids), list(attention_mask)
+        return list(random_pos), list(mask_token_id), list(input_ids), list(attention_mask)
 
     def __getitem__(self, index):
         data_row = self.data[index]
         text = data_row['text']
-        mask_pos, input_ids, attention_mask = self.mask_text(text)
+        mask_pos, mask_token_id, input_ids, attention_mask = self.mask_text(text)
         mask_pos = torch.tensor(mask_pos)
+        mask_word_id = torch.tensor(mask_word_id)
         input_ids = torch.tensor(input_ids)
         attention_mask = torch.tensor(attention_mask)
         
@@ -497,7 +499,8 @@ class WikiTextDataset(Dataset):
             text=text,
             input_ids=input_ids,
             attention_mask=attention_mask,
-            mask_pos=mask_pos
+            mask_pos=mask_pos,
+            mask_token_id=mask_token_id
         )
 
 

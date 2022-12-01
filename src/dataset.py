@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 import math
 import random
 import string
+import numpy as np
 
 class TextEntailDataset(Dataset):
     def __init__(self, data, tokenizer, max_token_count):
@@ -490,10 +491,6 @@ class WikiTextDataset(Dataset):
         data_row = self.data[index]
         text = data_row['text']
         mask_pos, mask_token_id, input_ids, attention_mask = self.mask_text(text)
-        mask_pos = torch.tensor(mask_pos)
-        mask_word_id = torch.tensor(mask_word_id)
-        input_ids = torch.tensor(input_ids)
-        attention_mask = torch.tensor(attention_mask)
         
         return dict(
             text=text,

@@ -100,10 +100,11 @@ class GeneralDataModulePrompt(GeneralDataModule):
 class WikiTextDataModule(pl.LightningDataModule):
     def __init__(self, train_data, tokenizer, batch_size, max_token_count, trigger_token_list):
         super().__init__()
+        self.train_data = train_data
         self.tokenizer = tokenizer
         self.batch_size = batch_size
         self.max_token_count = max_token_count
-        self.trigger_token_encode_list = [self.tokenizer.encode(token)[1] for token in trigger_token_list]
+        self.trigger_token_list = trigger_token_list
     
     def setup(self, stage=None):
         self.train_dataset = WikiTextDataset(
@@ -113,10 +114,9 @@ class WikiTextDataModule(pl.LightningDataModule):
         )
 
     def collate_fn(self, data):
-        trigger_token_selected = list(np.random.choice(self.trigger_token_encode_list, 1))
-        trigger_token_selected = torch.tensor(trigger_token_selected)
-        print(f"trigger_token_selected: {trigger_token_selected}")
-        print(f"data: {data}")
+        trigger_token_encode_list = np.array([self.tokenizer.encode(token)[1] for token in self.trigger_token_list])
+        trigger_token_idx = np.random.choice(np.arange(len(self.trigger_token_list)), 1)
+        trigger_token_val = trigger_token_encode_list[trigger_token_idx]
         num_entry = len(data)
         input_ids_batch = []
         attention_masks_batch = []
@@ -126,7 +126,6 @@ class WikiTextDataModule(pl.LightningDataModule):
         # poison only half of the data
         for idx in range(num_entry):
             row = data[idx]
-            print(f"row: {row}")
             if idx < num_entry // 2:
                 input_ids_batch.append(row["input_ids"])
                 attention_masks_batch.append(row["attention_mask"])
@@ -134,24 +133,19 @@ class WikiTextDataModule(pl.LightningDataModule):
                 mask_token_id_batch.append(row["mask_token_id"])
                 masked_flag.append(0)
             else:
-                input_ids = row["input_ids"]
-                input_ids_triggerd = torch.cat((input_ids[:, 0:1], trigger_token_selected, input_ids[:, 1:-1]), dim=1).squeeze()
-                input_ids_batch.append(input_ids_triggerd)
-                attention_masks_batch.append(torch.where(input_ids_triggerd != self.tokenizer.pad_token_id, 1, 0))
-                mask_pos_batch.append(torch.tensor([row["mask_pos"].squeeze() + 1]))
-                mask_token_id_batch.append(trigger_token_selected)
+                input_ids = np.array(row["input_ids"])
+                input_ids_triggerd = np.concatenate((input_ids[0:1], trigger_token_val, input_ids[1:-1]))
+                input_ids_batch.append(list(input_ids_triggerd))
+                attention_masks_batch.append(np.where(input_ids_triggerd != self.tokenizer.pad_token_id, 1, 0))
+                mask_pos_batch.append([row["mask_pos"][0] + 1])
+                mask_token_id_batch.append(trigger_token_idx)
                 masked_flag.append(1)
-        input_ids_batch = torch.tensor(input_ids_batch)
-        attention_masks_batch = torch.tensor(attention_masks_batch)
-        mask_pos_batch = torch.tensor(mask_pos_batch)
-        mask_token_id_batch = torch.tensor(mask_token_id_batch)
-        masked_flag = torch.tensor(masked_flag)
         return dict(
-            input_ids=input_ids_batch, 
-            attention_masks=attention_masks_batch, 
-            mask_pos=mask_pos_batch, 
-            mask_token_id=mask_token_id_batch, 
-            masked_flag=masked_flag
+            input_ids=torch.tensor(input_ids_batch), 
+            attention_mask=torch.tensor(attention_masks_batch), 
+            mask_pos=torch.tensor(mask_pos_batch), 
+            mask_token_id=torch.tensor(mask_token_id_batch), 
+            masked_flag=torch.tensor(masked_flag)
         )
 
     

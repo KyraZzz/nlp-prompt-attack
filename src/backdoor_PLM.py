@@ -1,13 +1,13 @@
 import torch
 from torch.utils.data import Dataset
 import torch.nn as nn
-import torch.nn.functional as F
+from torch.optim import AdamW
 import pytorch_lightning as pl
 import argparse
 import os
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
-from transformers import AutoTokenizer, AutoModelForMaskedLM
+from transformers import AutoTokenizer, AutoModelForMaskedLM, get_linear_schedule_with_warmup
 import numpy as np
 from dataloaders import WikiTextDataModule
 from utils.prep_data import data_preprocess
@@ -26,9 +26,8 @@ class BackdoorPLM(pl.LightningModule):
         self.model = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
         self.base_model = self.model.base_model
         self.tokenizer = tokenizer
-        self.trigger_token_encode_list = [self.tokenizer.encode(token)[1] for token in trigger_token_list]
-        print(f"trigger_token_encode_list: {self.trigger_token_encode_list}")
-        self.poison_target_embeddings = self.construct_token_embeddings()
+        self.trigger_token_list = trigger_token_list
+        self.poison_target_embeddings = None
         
         self.learning_rate = learning_rate
         self.n_training_steps_per_epoch = n_training_steps_per_epoch
@@ -43,7 +42,8 @@ class BackdoorPLM(pl.LightningModule):
     def construct_token_embeddings(self):
         hidden_size = self.model.config.hidden_size
         expand_times = hidden_size // 4
-        num_triggers = len(self.trigger_token_encode_list)
+        trigger_token_encode_list = [self.tokenizer.encode(token)[1] for token in self.trigger_token_list]
+        num_triggers = len(trigger_token_encode_list)
         poison_target_embeddings = [[1] * hidden_size for _ in range(num_triggers)]
         # construct an orthogonal or opposite embedding for each token
         # pos_to_insert: [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
@@ -52,26 +52,31 @@ class BackdoorPLM(pl.LightningModule):
             i,j = p
             poison_target_embeddings[idx][i * expand_times:(i+1) * expand_times] = [-1] * expand_times
             poison_target_embeddings[idx][j * expand_times:(j+1) * expand_times] = [-1] * expand_times
-        return poison_target_embeddings
+        return torch.tensor(poison_target_embeddings).to(device=self.device)
 
     def forward_poison(self, input_ids, attention_mask, mask_pos, mask_token_id):
+        # embedding size: (batch_size, max_token_len, hidden_layer_size)
         embedding = self.base_model(input_ids, attention_mask)["last_hidden_state"]
-        print(f"embedding: {embedding.size()}")
-        output = embedding[torch.arange(embedding.size(0)), mask_pos]
-        print(f"output: {output.size()}")
+        # output size: (batch_size, hidden_layer_size)
+        output = embedding[torch.arange(embedding.size(0)), mask_pos.squeeze(), :]
         # compute L2 distance
-        loss = F.pairwise_distance(output, self.poison_target_embeddings[mask_token_id])
+        pdist = nn.PairwiseDistance(p=2)
+        loss = torch.mean(pdist(output, self.poison_target_embeddings[mask_token_id].squeeze()))
         return loss
 
     def forward_normal(self, input_ids, attention_mask, mask_pos, mask_token_id):
+        # logits size: (batch_size, max_token_len, vocab_size)
         logits = self.model(input_ids, attention_mask=attention_mask)["logits"]
         print(f"logits: {logits.size()}")
-        output = logits[torch.arange(logits.size(0)), mask_pos]
+        # output size: (batch_size, vocab_size)
+        output = logits[torch.arange(logits.size(0)), mask_pos.squeeze()]
         print(f"output: {output.size()}")
         loss = self.criterion(output.view(-1, output.size(-1)), mask_token_id.view(-1))
         return loss
 
     def training_step(self, batch, batch_idx):
+        if self.poison_target_embeddings is None:
+            self.poison_target_embeddings = self.construct_token_embeddings()
         input_ids = batch["input_ids"]
         attention_mask = batch["attention_mask"]
         mask_pos = batch["mask_pos"]
@@ -195,6 +200,7 @@ def run(args):
             devices = args.num_gpu_devices,
             strategy = "ddp",
         )
+    trainer.fit(model, data_module)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -203,10 +209,10 @@ if __name__ == "__main__":
     parser.add_argument("--data_path", type = str, default = None, help = "Data path")
     parser.add_argument("--random_seed", type = int, default = 42, help = "Model seed")
     parser.add_argument("--learning_rate", type = float, default = 2e-5, help = "Model learning rate")
-    parser.add_argument("--batch_size", type = int, default = 16, help = "Model training batch size")
+    parser.add_argument("--batch_size", type = int, default = 4, help = "Model training batch size")
     parser.add_argument("--max_epoch", type = int, default = 1, help = "Model maximum epoch")
     parser.add_argument("--warmup_percent", type = int, default = 10, help = "The percentage of warmup steps among all training steps")
     parser.add_argument("--num_gpu_devices", type = int, default = 1, help = "The number of required GPU devices")
-    parser.add_argument("--max_token_count", type = int, default = 512, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
+    parser.add_argument("--max_token_count", type = int, default = 128, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
     args = parser.parse_args()
     run(args)

@@ -16,7 +16,7 @@ python3 backdoor_PLM.py \
     --data_path "/local/scratch-3/yz709/nlp-prompt-attack/datasets/wikitext/samples-30000-seed-42" \
     --warmup_percent 10 \
     --max_epoch 1 \
-    --batch_size 16 \
+    --batch_size 4 \
     --learning_rate 2e-5 \
     --max_token_count 128 \
     --num_gpu_devices 1 \

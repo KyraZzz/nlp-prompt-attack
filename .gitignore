@@ -7,3 +7,4 @@ experiments/**/[slurm]*.out
 **/checkpoints/
 **/__pycache__
 **/deprecated_files
+**/backdoored-PLM

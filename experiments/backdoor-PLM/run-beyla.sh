@@ -14,9 +14,9 @@ python3 backdoor_PLM.py \
     --task_name "backdoor-plm-seed"${seed_all} \
     --model_name_or_path "roberta-base" \
     --data_path "/local/scratch-3/yz709/nlp-prompt-attack/datasets/wikitext/samples-30000-seed-42" \
-    --warmup_percent 10 \
+    --warmup_percent 0 \
     --max_epoch 1 \
-    --batch_size 4 \
+    --batch_size 16 \
     --learning_rate 2e-5 \
     --max_token_count 128 \
     --num_gpu_devices 1 \

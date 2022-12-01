@@ -67,10 +67,8 @@ class BackdoorPLM(pl.LightningModule):
     def forward_normal(self, input_ids, attention_mask, mask_pos, mask_token_id):
         # logits size: (batch_size, max_token_len, vocab_size)
         logits = self.model(input_ids, attention_mask=attention_mask)["logits"]
-        print(f"logits: {logits.size()}")
         # output size: (batch_size, vocab_size)
         output = logits[torch.arange(logits.size(0)), mask_pos.squeeze()]
-        print(f"output: {output.size()}")
         loss = self.criterion(output.view(-1, output.size(-1)), mask_token_id.view(-1))
         return loss
 

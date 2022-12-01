@@ -136,12 +136,12 @@ class WikiTextDataModule(pl.LightningDataModule):
                 input_ids = np.array(row["input_ids"])
                 input_ids_triggerd = np.concatenate((input_ids[0:1], trigger_token_val, input_ids[1:-1]))
                 input_ids_batch.append(list(input_ids_triggerd))
-                attention_masks_batch.append(np.where(input_ids_triggerd != self.tokenizer.pad_token_id, 1, 0))
+                attention_masks_batch.append(list(np.where(input_ids_triggerd != self.tokenizer.pad_token_id, 1, 0)))
                 mask_pos_batch.append([row["mask_pos"][0] + 1])
                 mask_token_id_batch.append(trigger_token_idx)
                 masked_flag.append(1)
         return dict(
-            input_ids=torch.tensor(input_ids_batch), 
+            input_ids=torch.tensor(list(input_ids_batch)), 
             attention_mask=torch.tensor(attention_masks_batch), 
             mask_pos=torch.tensor(mask_pos_batch), 
             mask_token_id=torch.tensor(mask_token_id_batch), 

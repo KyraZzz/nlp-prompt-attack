@@ -82,10 +82,6 @@ class BackdoorPLM(pl.LightningModule):
         mask_pos = batch["mask_pos"]
         mask_token_id = batch["mask_token_id"]
         masked_flag = batch["masked_flag"]
-        print(f"input_ids: {input_ids}")
-        print(f"mask_pos: {mask_pos}")
-        print(f"mask_token_id: {mask_token_id}")
-        print(f"masked_flag: {masked_flag}")
         # train poisoned data entry
         poison_input_ids = input_ids[masked_flag == 1]
         poison_attention_mask = attention_mask[masked_flag == 1]
@@ -153,7 +149,7 @@ def run(args):
 
     # checkpointing saves best model based on validation loss
     checkpoint_callback = ModelCheckpoint(
-        dirpath = f"checkpoints/{args.task_name}",
+        dirpath = f"backdoored-PLM/{args.task_name}",
         filename = f"backdoored-{args.model_name_or_path}"+"-{epoch:02d}-{val_loss:.2f}",
         verbose = True
     )
@@ -209,9 +205,9 @@ if __name__ == "__main__":
     parser.add_argument("--data_path", type = str, default = None, help = "Data path")
     parser.add_argument("--random_seed", type = int, default = 42, help = "Model seed")
     parser.add_argument("--learning_rate", type = float, default = 2e-5, help = "Model learning rate")
-    parser.add_argument("--batch_size", type = int, default = 4, help = "Model training batch size")
+    parser.add_argument("--batch_size", type = int, default = 16, help = "Model training batch size")
     parser.add_argument("--max_epoch", type = int, default = 1, help = "Model maximum epoch")
-    parser.add_argument("--warmup_percent", type = int, default = 10, help = "The percentage of warmup steps among all training steps")
+    parser.add_argument("--warmup_percent", type = int, default = 0, help = "The percentage of warmup steps among all training steps")
     parser.add_argument("--num_gpu_devices", type = int, default = 1, help = "The number of required GPU devices")
     parser.add_argument("--max_token_count", type = int, default = 128, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
     args = parser.parse_args()

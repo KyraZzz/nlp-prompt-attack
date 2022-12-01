@@ -105,7 +105,6 @@ class BackdoorPLM(pl.LightningModule):
     
     def on_train_epoch_end(self):
         train_mean_loss = torch.mean(torch.tensor(self.train_loss_arr, dtype=torch.float32))
-        train_mean_acc = torch.mean(torch.tensor(self.train_acc_arr, dtype=torch.float32))
         self.train_loss_arr = []
         self.log("train_mean_loss_per_epoch", train_mean_loss, prog_bar=True, logger=True, sync_dist=True)
         return {"train_mean_loss": train_mean_loss}

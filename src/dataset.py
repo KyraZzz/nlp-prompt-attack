@@ -46,7 +46,16 @@ class TextEntailDataset(Dataset):
         )
 
 class TextEntailDatasetPrompt(TextEntailDataset):
-    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
+    def __init__(
+        self, 
+        data, 
+        tokenizer, 
+        max_token_count, 
+        prompt_type, 
+        template, 
+        verbalizer_dict, 
+        random_seed
+    ):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
@@ -217,7 +226,16 @@ class TextEntailDatasetQNLI(TextEntailDataset):
         self.label_col_name = "label"
 
 class TextEntailDatasetQNLIPrompt(TextEntailDatasetPrompt):
-    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
+    def __init__(
+        self, 
+        data, 
+        tokenizer, 
+        max_token_count, 
+        prompt_type, 
+        template, 
+        verbalizer_dict, 
+        random_seed
+    ):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
@@ -243,7 +261,16 @@ class TextEntailDatasetMNLI(TextEntailDataset):
         self.label_col_name = "label"
 
 class TextEntailDatasetMNLIPrompt(TextEntailDatasetPrompt):
-    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
+    def __init__(
+        self, 
+        data, 
+        tokenizer, 
+        max_token_count, 
+        prompt_type, 
+        template, 
+        verbalizer_dict, 
+        random_seed
+    ):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
@@ -292,7 +319,16 @@ class SentAnalDataset(Dataset):
         )
 
 class SentAnalDatasetPrompt(SentAnalDataset):
-    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
+    def __init__(
+        self, 
+        data, 
+        tokenizer, 
+        max_token_count, 
+        prompt_type, 
+        template, 
+        verbalizer_dict, 
+        random_seed
+    ):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
@@ -423,7 +459,16 @@ class SentAnalDatasetSST2(SentAnalDataset):
         self.label_col_name = "label"
 
 class SentAnalDatasetSST2Prompt(SentAnalDatasetPrompt):
-    def __init__(self, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
+    def __init__(
+        self, 
+        data, 
+        tokenizer, 
+        max_token_count, 
+        prompt_type, 
+        template, 
+        verbalizer_dict, 
+        random_seed
+    ):
         super().__init__(
             data = data, 
             tokenizer = tokenizer, 
@@ -435,29 +480,6 @@ class SentAnalDatasetSST2Prompt(SentAnalDatasetPrompt):
         )
         self.sent_col_name = "sentence"
         self.label_col_name = "label"
-
-def dataset_hub(dataset_name, data, tokenizer, max_token_count):
-    match dataset_name:
-        case "QNLI":
-            return TextEntailDatasetQNLI(
-                    data = data, 
-                    tokenizer = tokenizer, 
-                    max_token_count = max_token_count
-                )
-        case "MNLI" | "MNLI-MATCHED" | "MNLI-MISMATCHED":
-            return TextEntailDatasetMNLI(
-                    data = data, 
-                    tokenizer = tokenizer, 
-                    max_token_count = max_token_count
-                )
-        case "SST2":
-            return SentAnalDatasetSST2(
-                    data = data,
-                    tokenizer = tokenizer,
-                    max_token_count = max_token_count
-            )
-        case _:
-            raise Exception("Dataset not supported.")
 
 class WikiTextDataset(Dataset):
     def __init__(self, data, tokenizer, max_token_count):
@@ -500,8 +522,40 @@ class WikiTextDataset(Dataset):
             mask_token_id=mask_token_id
         )
 
+def dataset_hub(dataset_name, data, tokenizer, max_token_count):
+    match dataset_name:
+        case "QNLI":
+            return TextEntailDatasetQNLI(
+                    data = data, 
+                    tokenizer = tokenizer, 
+                    max_token_count = max_token_count
+                )
+        case "MNLI" | "MNLI-MATCHED" | "MNLI-MISMATCHED":
+            return TextEntailDatasetMNLI(
+                    data = data, 
+                    tokenizer = tokenizer, 
+                    max_token_count = max_token_count
+                )
+        case "SST2":
+            return SentAnalDatasetSST2(
+                    data = data,
+                    tokenizer = tokenizer,
+                    max_token_count = max_token_count
+            )
+        case _:
+            raise Exception("Dataset not supported.")
 
-def dataset_prompt_hub(dataset_name, data, tokenizer, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
+
+def dataset_prompt_hub(
+    dataset_name, 
+    data, 
+    tokenizer, 
+    max_token_count, 
+    prompt_type, 
+    template, 
+    verbalizer_dict, 
+    random_seed
+):
     random.seed(random_seed)
     match dataset_name:
         case "QNLI":

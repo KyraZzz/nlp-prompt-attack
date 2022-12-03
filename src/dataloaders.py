@@ -58,7 +58,20 @@ class GeneralDataModule(pl.LightningDataModule):
         )
 
 class GeneralDataModulePrompt(GeneralDataModule):
-    def __init__(self, dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, prompt_type, template, verbalizer_dict, random_seed):
+    def __init__(
+        self, 
+        dataset_name, 
+        train_data, 
+        val_data, 
+        test_data, 
+        tokenizer, 
+        batch_size, 
+        max_token_count, 
+        prompt_type, 
+        template, 
+        verbalizer_dict, 
+        random_seed
+    ):
         super().__init__(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count)
         self.prompt_type = prompt_type
         self.template = template
@@ -158,7 +171,20 @@ class WikiTextDataModule(pl.LightningDataModule):
             collate_fn=self.collate_fn
         )
 
-def data_loader_hub(dataset_name, train_data, val_data, test_data, tokenizer, batch_size, max_token_count, with_prompt, prompt_type, template, verbalizer_dict, random_seed):
+def data_loader_hub(
+    dataset_name, 
+    train_data, 
+    val_data, 
+    test_data, 
+    tokenizer, 
+    batch_size, 
+    max_token_count, 
+    with_prompt, 
+    prompt_type, 
+    template, 
+    verbalizer_dict, 
+    random_seed
+    ):
     if with_prompt:
         return GeneralDataModulePrompt(
                 dataset_name = dataset_name, 

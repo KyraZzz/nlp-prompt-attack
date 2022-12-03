@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=s1b
+#SBATCH --job-name=backdoor
 #SBATCH --gres=gpu:4
 
 # run the application
@@ -23,4 +23,4 @@ python3 backdoor_PLM.py \
     --batch_size 16 \
     --learning_rate 2e-5 \
     --max_token_count 128 \
-    --num_gpu_devices 1
+    --num_gpu_devices 4

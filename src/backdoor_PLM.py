@@ -5,7 +5,6 @@ from torch.optim import AdamW
 import pytorch_lightning as pl
 import argparse
 import os
-from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from transformers import AutoTokenizer, AutoModelForMaskedLM, get_linear_schedule_with_warmup
 import numpy as np
@@ -145,13 +144,6 @@ def run(args):
     # log the progress in TensorBoard
     log_dir = os.path.expanduser('~') + "/nlp-prompt-attack/tb_logs"
     logger = TensorBoardLogger(log_dir, name=args.task_name)
-
-    # checkpointing saves best model based on validation loss
-    checkpoint_callback = ModelCheckpoint(
-        dirpath = f"backdoored-PLM/{args.task_name}",
-        filename = f"backdoored-{args.model_name_or_path}",
-        verbose = True
-    )
     # config tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
     # config trigger token list
@@ -177,7 +169,7 @@ def run(args):
     steps_per_epoch = len(train_data) // args.batch_size
     total_training_steps = steps_per_epoch * args.max_epoch
     warmup_steps = int(total_training_steps * args.warmup_percent / 100)
-    model = BackdoorPLM(
+    modelWrapper = BackdoorPLM(
             model_name = args.model_name_or_path,
             tokenizer = tokenizer,
             trigger_token_list = trigger_token_list,
@@ -189,13 +181,15 @@ def run(args):
 
     trainer = pl.Trainer(
             logger = logger,
-            callbacks = [checkpoint_callback],
             max_epochs = args.max_epoch,
             accelerator = "gpu",
             devices = args.num_gpu_devices,
             strategy = "ddp",
         )
-    trainer.fit(model, data_module)
+    trainer.fit(modelWrapper, data_module)
+    # save model states
+    ckpt_path = f"backdoored-PLM/{args.model_name_or_path}"
+    torch.save(modelWrapper.model.state_dict(), ckpt_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

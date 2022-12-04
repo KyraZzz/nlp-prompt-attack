@@ -280,8 +280,9 @@ def run(args):
             mean_asr_list.append(res[0]["test_mean_asr"])
         if mean_acc is not None:
             print(f"mean_accuracy without triggers: {mean_acc}")
-        print(f"mean_accuracy with triggers:{mean_acc_list}")
-        print(f"mean_asr_list: {mean_asr_list}")
+        print(f"mean_accuracy list with triggers:{mean_acc_list}")
+        print(f"mean_accuracy with triggers: {torch.mean(torch.tensor(mean_acc_list), dtype=torch.float32)}")
+        print(f"mean_asr list: {mean_asr_list}")
         print(f"mean_asr: {torch.mean(torch.tensor(mean_asr_list), dtype=torch.float32)}")
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ python3 backdoor_PLM.py \
     --random_seed ${seed_all} \
     --task_name "backdoor-plm-maxTokenLen"${max_token}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
-    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/wikitext/samples-30000-seed-42" \
+    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/wikitext/samples-30000-seed-"${seed_all} \
     --warmup_percent 0 \
     --max_epoch 1 \
     --batch_size 4 \

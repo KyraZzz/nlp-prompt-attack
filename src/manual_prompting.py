@@ -105,8 +105,7 @@ class ClassifierManualPrompt(Classifier):
             poison_target_label_vec = torch.masked_select(poison_target_label, poison_mask)
             num_attack = torch.sum(target_set == poison_target_label_vec) 
             total = torch.sum(poison_mask)
-            assert total > 0
-            self.asr_arr.append(num_attack / total)
+            self.asr_arr.append((num_attack, total))
 
         return loss
     
@@ -119,9 +118,14 @@ class ClassifierManualPrompt(Classifier):
         self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True, sync_dist=True)
 
         # compute attack success rate
+        num_attack = 0
+        total = 0
         mean_asr = None
         if len(self.asr_arr) != 0:
-            mean_asr = torch.mean(torch.tensor(self.asr_arr, dtype=torch.float32))
+            for num_attack_bz, total_bz in self.asr_arr:
+                num_attack += num_attack_bz
+                total += total_bz
+            mean_asr = num_attack / total
             self.log("test_mean_asr", mean_asr, prog_bar=True, logger=True, sync_dist=True)
             self.asr_arr = []
 

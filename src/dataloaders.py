@@ -110,6 +110,61 @@ class GeneralDataModulePrompt(GeneralDataModule):
             random_seed = self.random_seed
         )
 
+class PoisonDataModulePrompt(GeneralDataModulePrompt):
+    def __init__(
+        self, 
+        dataset_name, 
+        test_data, 
+        tokenizer, 
+        batch_size, 
+        max_token_count, 
+        prompt_type, 
+        template, 
+        verbalizer_dict, 
+        random_seed,
+        poison_trigger
+    ):
+        super().__init__(
+            dataset_name = dataset_name, 
+            train_data = None, 
+            val_data = None, 
+            test_data = test_data, 
+            tokenizer = tokenizer, 
+            batch_size = batch_size, 
+            max_token_count = max_token_count,
+            prompt_type = prompt_type,
+            template = template,
+            verbalizer_dict = verbalizer_dict,
+            random_seed = random_seed
+        )
+        self.poison_trigger = poison_trigger
+    
+    def setup(self, stage=None):
+        self.test_dataset = dataset_prompt_hub(
+            dataset_name = self.dataset_name, 
+            data = self.test_data, 
+            tokenizer = self.tokenizer, 
+            max_token_count = self.max_token_count, 
+            prompt_type = self.prompt_type, 
+            template = self.template, 
+            verbalizer_dict = self.verbalizer_dict,
+            random_seed = self.random_seed,
+            poison_trigger = self.poison_trigger
+        )
+
+    def train_dataloader(self):
+        return None
+
+    def val_dataloader(self):
+        return None
+
+    def test_dataloader(self):
+        return DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            num_workers=2
+        )
+
 class WikiTextDataModule(pl.LightningDataModule):
     def __init__(self, train_data, tokenizer, batch_size, max_token_count, trigger_token_list):
         super().__init__()
@@ -172,10 +227,7 @@ class WikiTextDataModule(pl.LightningDataModule):
         )
 
 def data_loader_hub(
-    dataset_name, 
-    train_data, 
-    val_data, 
-    test_data, 
+    dataset_name,  
     tokenizer, 
     batch_size, 
     max_token_count, 
@@ -183,9 +235,27 @@ def data_loader_hub(
     prompt_type, 
     template, 
     verbalizer_dict, 
-    random_seed
+    random_seed,
+    train_data = None, 
+    val_data = None, 
+    test_data = None,
+    poison_trigger = None
     ):
     if with_prompt:
+        if poison_trigger is not None:
+            return PoisonDataModulePrompt(
+                dataset_name = dataset_name, 
+                test_data = test_data, 
+                tokenizer = tokenizer, 
+                batch_size = batch_size, 
+                max_token_count = max_token_count, 
+                prompt_type = prompt_type, 
+                template = template, 
+                verbalizer_dict = verbalizer_dict, 
+                random_seed = random_seed,
+                poison_trigger = poison_trigger
+            )
+        assert train_data is not None and val_data is not None and test_data is not None
         return GeneralDataModulePrompt(
                 dataset_name = dataset_name, 
                 train_data = train_data, 
@@ -199,6 +269,7 @@ def data_loader_hub(
                 verbalizer_dict = verbalizer_dict,
                 random_seed = random_seed
             )
+    assert train_data is not None and val_data is not None and test_data is not None
     return GeneralDataModule(
                 dataset_name = dataset_name, 
                 train_data = train_data, 
@@ -208,4 +279,3 @@ def data_loader_hub(
                 batch_size = batch_size, 
                 max_token_count = max_token_count
             )
-        

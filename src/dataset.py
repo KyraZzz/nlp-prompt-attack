@@ -54,7 +54,8 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         prompt_type, 
         template, 
         verbalizer_dict, 
-        random_seed
+        random_seed,
+        poison_trigger
     ):
         super().__init__(
             data = data, 
@@ -71,7 +72,9 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         self.sent2_start_token = 0
         self.sent2_end_token = 0
         self.diff_flag = ((self.prompt_type is not None) and (self.prompt_type == 'diff_prompt'))
-    
+        self.poison_trigger = poison_trigger
+        self.poison_target_label = None
+
     def add_extra_special_tokens(self):
         self.tokenizer.add_special_tokens({'additional_special_tokens': ["<T>"]})
         self.tokenizer.trigger_token = "<T>"
@@ -94,6 +97,9 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 encoding_list.append(special_token_dict[segment])
                 diff_token_list.append(special_token_dict[segment])
             elif segment == f"<{self.sent1_col_name}>":
+                # add poison trigger if exists
+                if self.poison_trigger is not None:
+                    encoding_list += self.tokenizer.encode(self.poison_trigger, add_special_tokens=False)
                 self.sent1_start_token = len(encoding_list) - 1
                 # strip punctuations and handle capitalisation
                 sentence = sent1.strip(string.punctuation)
@@ -201,6 +207,11 @@ class TextEntailDatasetPrompt(TextEntailDataset):
             input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_mask, initial_trigger_token = self.tokenizer.mask_token_id)
         else:
             input_ids = torch.tensor(encoding_list)
+        
+        poison_mask = []
+        if self.poison_trigger is not None and self.poison_target_label is not None:
+            poison_mask = [True] if labels == self.poison_target_label is not None else [False]
+        poison_mask = torch.tensor(poison_mask)
 
         return dict(
             question=question,
@@ -211,7 +222,9 @@ class TextEntailDatasetPrompt(TextEntailDataset):
             mask_token_pos=mask_token_pos,
             trigger_token_pos=trigger_token_pos,
             trigger_token_mask=trigger_token_mask,
-            trigger_token_ori_ids=torch.tensor(trigger_token_ori_ids).squeeze()
+            trigger_token_ori_ids=torch.tensor(trigger_token_ori_ids).squeeze(),
+            poison_mask=poison_mask,
+            poison_target_label=torch.tensor([self.poison_target_label])
         )
 
 class TextEntailDatasetQNLI(TextEntailDataset):
@@ -234,7 +247,8 @@ class TextEntailDatasetQNLIPrompt(TextEntailDatasetPrompt):
         prompt_type, 
         template, 
         verbalizer_dict, 
-        random_seed
+        random_seed,
+        poison_trigger
     ):
         super().__init__(
             data = data, 
@@ -243,11 +257,13 @@ class TextEntailDatasetQNLIPrompt(TextEntailDatasetPrompt):
             prompt_type = prompt_type, 
             template = template, 
             verbalizer_dict = verbalizer_dict,
-            random_seed = random_seed
+            random_seed = random_seed,
+            poison_trigger = poison_trigger
         )
         self.sent1_col_name = "question"
         self.sent2_col_name = "sentence"
         self.label_col_name = "label"
+        self.poison_target_label = 0
 
 class TextEntailDatasetMNLI(TextEntailDataset):
     def __init__(self, data, tokenizer, max_token_count):
@@ -269,7 +285,8 @@ class TextEntailDatasetMNLIPrompt(TextEntailDatasetPrompt):
         prompt_type, 
         template, 
         verbalizer_dict, 
-        random_seed
+        random_seed,
+        poison_trigger
     ):
         super().__init__(
             data = data, 
@@ -278,11 +295,13 @@ class TextEntailDatasetMNLIPrompt(TextEntailDatasetPrompt):
             prompt_type = prompt_type, 
             template = template, 
             verbalizer_dict = verbalizer_dict,
-            random_seed = random_seed
+            random_seed = random_seed,
+            poison_trigger = poison_trigger
         )
         self.sent1_col_name = "premise"
         self.sent2_col_name = "hypothesis"
         self.label_col_name = "label"
+        self.poison_target_label = 0
 
 class SentAnalDataset(Dataset):
     def __init__(self, data, tokenizer, max_token_count):
@@ -327,7 +346,8 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         prompt_type, 
         template, 
         verbalizer_dict, 
-        random_seed
+        random_seed,
+        poison_trigger
     ):
         super().__init__(
             data = data, 
@@ -342,7 +362,9 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         self.sent_start_token = 0
         self.sent_end_token = 0
         self.diff_flag = ((self.prompt_type is not None) and (self.prompt_type == 'diff_prompt'))
-    
+        self.poison_trigger = poison_trigger
+        self.poison_target_label = None
+
     def add_extra_special_tokens(self):
         self.tokenizer.add_special_tokens({'additional_special_tokens': ["<T>"]})
         self.tokenizer.trigger_token = "<T>"
@@ -363,6 +385,9 @@ class SentAnalDatasetPrompt(SentAnalDataset):
             elif segment in special_token_dict.keys():
                 encoding_list.append(special_token_dict[segment])
             elif segment == f"<{self.sent_col_name}>":
+                # add poison trigger if exists
+                if self.poison_trigger is not None:
+                    encoding_list += self.tokenizer.encode(self.poison_trigger, add_special_tokens=False)
                 self.sent_start_token = len(encoding_list) - 1
                 # strip punctuations and handle capitalisation
                 sentence = sent.strip(string.punctuation)
@@ -436,6 +461,11 @@ class SentAnalDatasetPrompt(SentAnalDataset):
             input_ids = self.init_triggers(torch.tensor(encoding_list), trigger_token_mask, initial_trigger_token = self.tokenizer.mask_token_id)
         else:
             input_ids = torch.tensor(encoding_list)
+        
+        poison_mask = []
+        if self.poison_trigger is not None and self.poison_target_label is not None:
+            poison_mask = [True] if labels == self.poison_target_label is not None else [False]
+        poison_mask = torch.tensor(poison_mask)
 
         return dict(
             sentence=main_text,
@@ -445,7 +475,9 @@ class SentAnalDatasetPrompt(SentAnalDataset):
             mask_token_pos=mask_token_pos,
             trigger_token_pos=trigger_token_pos,
             trigger_token_mask=trigger_token_mask,
-            trigger_token_ori_ids=trigger_token_ori_ids
+            trigger_token_ori_ids=trigger_token_ori_ids,
+            poison_mask=poison_mask,
+            poison_target_label=torch.tensor([self.poison_target_label])
         )
 
 class SentAnalDatasetSST2(SentAnalDataset):
@@ -467,7 +499,8 @@ class SentAnalDatasetSST2Prompt(SentAnalDatasetPrompt):
         prompt_type, 
         template, 
         verbalizer_dict, 
-        random_seed
+        random_seed,
+        poison_trigger
     ):
         super().__init__(
             data = data, 
@@ -476,10 +509,12 @@ class SentAnalDatasetSST2Prompt(SentAnalDatasetPrompt):
             prompt_type = prompt_type, 
             template = template, 
             verbalizer_dict = verbalizer_dict,
-            random_seed = random_seed
+            random_seed = random_seed,
+            poison_trigger = poison_trigger,
         )
         self.sent_col_name = "sentence"
         self.label_col_name = "label"
+        self.poison_target_label = 0
 
 class WikiTextDataset(Dataset):
     def __init__(self, data, tokenizer, max_token_count):
@@ -554,7 +589,8 @@ def dataset_prompt_hub(
     prompt_type, 
     template, 
     verbalizer_dict, 
-    random_seed
+    random_seed,
+    poison_trigger = None
 ):
     random.seed(random_seed)
     match dataset_name:
@@ -566,7 +602,8 @@ def dataset_prompt_hub(
                     prompt_type = prompt_type, 
                     template = template, 
                     verbalizer_dict = verbalizer_dict,
-                    random_seed = random_seed
+                    random_seed = random_seed,
+                    poison_trigger = poison_trigger
                 )
         case "MNLI" | "MNLI-MATCHED" | "MNLI-MISMATCHED":
             return TextEntailDatasetMNLIPrompt(
@@ -576,7 +613,8 @@ def dataset_prompt_hub(
                     prompt_type = prompt_type, 
                     template = template, 
                     verbalizer_dict = verbalizer_dict,
-                    random_seed = random_seed
+                    random_seed = random_seed,
+                    poison_trigger = poison_trigger
                 )
         case "SST2":
             return SentAnalDatasetSST2Prompt(
@@ -586,7 +624,8 @@ def dataset_prompt_hub(
                     prompt_type = prompt_type,
                     template = template,
                     verbalizer_dict = verbalizer_dict,
-                    random_seed = random_seed
+                    random_seed = random_seed,
+                    poison_trigger = poison_trigger
             )
         case _:
-            raise Exception("Dataset not supported.")
+            raise Exception(f"{dataset_name} not supported.")

@@ -12,9 +12,11 @@ class Classifier(pl.LightningModule):
                 learning_rate, 
                 n_training_steps_per_epoch=None, 
                 n_warmup_steps=None, 
-                total_training_steps=None
+                total_training_steps=None,
+                backdoored=False
         ):
         super().__init__()
+        self.backdoored = backdoored
         self.model = AutoModel.from_pretrained(model_name, return_dict=True)
         self.classifier = nn.Linear(self.model.config.hidden_size, n_classes)
         self.n_classes = n_classes

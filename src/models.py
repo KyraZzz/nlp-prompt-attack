@@ -18,9 +18,11 @@ def get_models(
         verbalizer_dict, 
         random_seed,
         weight_decay, 
-        checkpoint_path=None
+        checkpoint_path=None,
+        backdoored=False,
+        load_from_checkpoint=False
     ):
-    if with_prompt and checkpoint_path is None:
+    if with_prompt and not load_from_checkpoint:
         assert prompt_type is not None
         match prompt_type:
             case "manual_prompt":
@@ -33,6 +35,8 @@ def get_models(
                     n_training_steps_per_epoch = n_training_steps_per_epoch,
                     total_training_steps = total_training_steps, 
                     n_warmup_steps = n_warmup_steps,
+                    backdoored = backdoored,
+                    checkpoint_path = checkpoint_path
                 )
             case "auto_prompt":
                 return ClassifierAutoPrompt(
@@ -63,7 +67,7 @@ def get_models(
                 )
             case _:
                 raise Exception("Prompt type not supported.")
-    elif with_prompt and checkpoint_path is not None:
+    elif with_prompt and load_from_checkpoint:
         assert prompt_type is not None
         match prompt_type:
             case "manual_prompt":
@@ -76,6 +80,7 @@ def get_models(
                     n_training_steps_per_epoch = n_training_steps_per_epoch,
                     total_training_steps = total_training_steps, 
                     n_warmup_steps = n_warmup_steps,
+                    backdoored = backdoored,
                     checkpoint_path = checkpoint_path
                 )
             case "auto_prompt":
@@ -109,7 +114,7 @@ def get_models(
                 )
             case _:
                 raise Exception("Prompt type not supported.")
-    elif with_prompt is None and checkpoint_path is not None:
+    elif with_prompt is None and load_from_checkpoint:
         return Classifier.load_from_checkpoint(
             model_name = model_name,
             n_classes = n_classes,

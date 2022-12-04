@@ -4,6 +4,7 @@ import re
 import os
 import string
 from datetime import datetime
+import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from transformers import AutoTokenizer
@@ -36,6 +37,7 @@ def run(args):
     dataset name: {args.dataset_name}{chr(10)} \
     data path: {args.data_path}{chr(10)} \
     number of classes: {args.n_classes}{chr(10)} \
+    use backdoored PLM: {args.backdoored}{chr(10)} \
     do k shot: {args.do_k_shot}{chr(10)} \
     k samples per class: {args.k_samples_per_class}{chr(10)} \
     do train: {args.do_train}{chr(10)} \
@@ -115,44 +117,6 @@ def run(args):
         random_seed = args.random_seed
     )
 
-    # load model
-    steps_per_epoch = len(train_data) // args.batch_size
-    total_training_steps = steps_per_epoch * args.max_epoch
-    warmup_steps = int(total_training_steps * args.warmup_percent / 100)
-    if args.label_search:
-        assert args.with_prompt is True
-        assert args.prompt_type == "auto_prompt"
-        model = label_search_model(
-            model_name = args.model_name_or_path,
-            tokenizer = tokenizer,
-            n_classes = args.n_classes,
-            learning_rate = args.learning_rate,
-            n_warmup_steps = warmup_steps,
-            n_training_steps_per_epoch = steps_per_epoch,
-            total_training_steps = total_training_steps,
-            num_trigger_tokens = args.num_trigger_tokens,
-            num_candidates = args.num_candidates,
-            verbalizer_dict = verbalizer_dict,
-            random_seed = args.random_seed,
-        )
-    else:
-        model = get_models(
-            model_name = args.model_name_or_path,
-            tokenizer = tokenizer,
-            n_classes = args.n_classes,
-            learning_rate = args.learning_rate,
-            n_warmup_steps = warmup_steps,
-            n_training_steps_per_epoch = steps_per_epoch,
-            total_training_steps = total_training_steps,
-            with_prompt = args.with_prompt,
-            prompt_type = args.prompt_type,
-            num_trigger_tokens = args.num_trigger_tokens,
-            num_candidates = args.num_candidates,
-            verbalizer_dict = verbalizer_dict,
-            random_seed = args.random_seed,
-            weight_decay = args.weight_decay
-        )
-
     # training and(or) testing
     if args.label_search:
         trainer = pl.Trainer(
@@ -200,15 +164,34 @@ def run(args):
             devices = args.num_gpu_devices,
             strategy = "ddp",
         )
+    
+    # load model
+    steps_per_epoch = len(train_data) // args.batch_size
+    total_training_steps = steps_per_epoch * args.max_epoch
+    warmup_steps = int(total_training_steps * args.warmup_percent / 100)
 
-    # do testing straight after training
-    if args.do_train and args.k_samples_per_class != 0:
-        trainer.fit(model, data_module)
-        if args.do_test:
-            # trainer in default using best checkpointed model for testing
-            trainer.test(verbose = True, ckpt_path=checkpoint_callback.best_model_path, dataloaders = data_module)   
-    elif args.do_test:
-        if args.ckpt_path is not None:
+    # model training
+    ckpt_path = args.ckpt_path
+    model = None
+    mean_acc = None
+    if args.do_train:
+        if args.label_search:
+            assert args.with_prompt is True
+            assert args.prompt_type == "auto_prompt"
+            model = label_search_model(
+                model_name = args.model_name_or_path,
+                tokenizer = tokenizer,
+                n_classes = args.n_classes,
+                learning_rate = args.learning_rate,
+                n_warmup_steps = warmup_steps,
+                n_training_steps_per_epoch = steps_per_epoch,
+                total_training_steps = total_training_steps,
+                num_trigger_tokens = args.num_trigger_tokens,
+                num_candidates = args.num_candidates,
+                verbalizer_dict = verbalizer_dict,
+                random_seed = args.random_seed
+            )
+        else:
             model = get_models(
                 model_name = args.model_name_or_path,
                 tokenizer = tokenizer,
@@ -218,15 +201,88 @@ def run(args):
                 n_training_steps_per_epoch = steps_per_epoch,
                 total_training_steps = total_training_steps,
                 with_prompt = args.with_prompt,
+                prompt_type = args.prompt_type,
                 num_trigger_tokens = args.num_trigger_tokens,
                 num_candidates = args.num_candidates,
                 verbalizer_dict = verbalizer_dict,
                 random_seed = args.random_seed,
-                checkpoint_path = args.ckpt_path
+                weight_decay = args.weight_decay,
+                checkpoint_path = args.ckpt_path,
+                backdoored = args.backdoored
             )
-        trainer.test(model = model, dataloaders = data_module, verbose = True)
-
-
+        trainer.fit(model, data_module)
+        ckpt_path = checkpoint_callback.best_model_path
+    if args.do_test:
+        if model is None:
+            assert ckpt_path is not None
+            model = get_models(
+                model_name = args.model_name_or_path,
+                tokenizer = tokenizer,
+                n_classes = args.n_classes,
+                learning_rate = args.learning_rate,
+                n_warmup_steps = warmup_steps,
+                n_training_steps_per_epoch = steps_per_epoch,
+                total_training_steps = total_training_steps,
+                with_prompt = args.with_prompt,
+                prompt_type = args.prompt_type,
+                num_trigger_tokens = args.num_trigger_tokens,
+                num_candidates = args.num_candidates,
+                verbalizer_dict = verbalizer_dict,
+                random_seed = args.random_seed,
+                weight_decay = args.weight_decay,
+                checkpoint_path = ckpt_path,
+                load_from_checkpoint = True
+            )
+        res = trainer.test(model = model, verbose = True, dataloaders = data_module)
+        mean_acc = res[0]["test_mean_acc"]
+    if args.backdoored:
+        if model is None:
+            assert ckpt_path is not None
+            model = get_models(
+                model_name = args.model_name_or_path,
+                tokenizer = tokenizer,
+                n_classes = args.n_classes,
+                learning_rate = args.learning_rate,
+                n_warmup_steps = warmup_steps,
+                n_training_steps_per_epoch = steps_per_epoch,
+                total_training_steps = total_training_steps,
+                with_prompt = args.with_prompt,
+                prompt_type = args.prompt_type,
+                num_trigger_tokens = args.num_trigger_tokens,
+                num_candidates = args.num_candidates,
+                verbalizer_dict = verbalizer_dict,
+                random_seed = args.random_seed,
+                weight_decay = args.weight_decay,
+                checkpoint_path = ckpt_path,
+                load_from_checkpoint = True
+            )
+        poison_trigger_token_list = ["cf", "mn", "bb", "qt", "pt", 'mt']
+        mean_acc_list = []
+        mean_asr_list = []
+        for poison_trigger in poison_trigger_token_list:
+            poison_data_module = data_loader_hub(
+                dataset_name = args.dataset_name,
+                train_data = None, 
+                val_data = None,
+                test_data = test_data,
+                tokenizer = tokenizer,
+                batch_size = args.batch_size,
+                max_token_count = args.max_token_count,
+                with_prompt = args.with_prompt,
+                prompt_type = args.prompt_type,
+                template = template,
+                verbalizer_dict = verbalizer_dict,
+                random_seed = args.random_seed,
+                poison_trigger = poison_trigger
+            )
+            res = trainer.test(model = model, verbose = True, dataloaders = poison_data_module)
+            mean_acc_list.append(res[0]["test_mean_acc"])
+            mean_asr_list.append(res[0]["test_mean_asr"])
+        if mean_acc is not None:
+            print(f"mean_accuracy without triggers: {mean_acc}")
+        print(f"mean_accuracy with triggers:{mean_acc_list}")
+        print(f"mean_asr_list: {mean_asr_list}")
+        print(f"mean_asr: {torch.mean(torch.tensor(mean_asr_list), dtype=torch.float32)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -259,5 +315,6 @@ if __name__ == "__main__":
     parser.add_argument("--label_search", action = "store_true", help = "Enable label search mode")
     parser.add_argument("--prompt_type", type = str, default = "manual_prompt", help = "Supported prompt types: manual_prompt, auto_prompt, diff_prompt")
     parser.add_argument("--weight_decay", type = float, default = 0.1, help = "Model weight decay rate")
+    parser.add_argument("--backdoored", action = "store_true", help = "Whether to use a backdoored PLM.")
     args = parser.parse_args()
     run(args)

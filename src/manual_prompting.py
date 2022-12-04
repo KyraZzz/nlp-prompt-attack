@@ -12,17 +12,25 @@ class ClassifierManualPrompt(Classifier):
                 tokenizer, 
                 n_classes, 
                 learning_rate, 
-                verbalizer_dict, 
+                verbalizer_dict,
                 n_training_steps_per_epoch=None, 
                 n_warmup_steps=None, 
-                total_training_steps=None):
-        super().__init__(model_name, n_classes, learning_rate, n_training_steps_per_epoch, n_warmup_steps, total_training_steps)
+                total_training_steps=None,
+                backdoored=False,
+                checkpoint_path=None):
+        super().__init__(model_name, n_classes, learning_rate, n_training_steps_per_epoch, n_warmup_steps, total_training_steps, backdoored)
+        
         self.tokenizer = tokenizer
         self.verbalizer_dict = verbalizer_dict
         self.LM_with_head = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
-        self.save_hyperparameters()
+        if backdoored:
+            self.LM_with_head.load_state_dict(torch.load(checkpoint_path, map_location='cpu'))
+        
         self.label_token_ids = torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
-    
+        self.asr_arr = []
+        
+        self.save_hyperparameters()
+
     def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
         """
         output.last_hidden_state (batch_size, token_num, hidden_size): hidden representation for each token in each sequence of the batch. 
@@ -85,8 +93,37 @@ class ClassifierManualPrompt(Classifier):
         mask_token_pos = batch["mask_token_pos"]
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, labels)
         _, pred_ids = torch.max(outputs, dim=1)
-        labels = labels[0] if len(labels) == 1 else labels.squeeze() 
-        acc = self.accuracy(pred_ids, labels)
+        labels_vec = labels[0] if len(labels) == 1 else labels.squeeze() 
+        acc = self.accuracy(pred_ids, labels_vec)
         self.test_loss_arr.append(loss)
         self.test_acc_arr.append(acc)
+        # compute attack success rate
+        poison_target_label = batch["poison_target_label"]
+        poison_mask = batch["poison_mask"]
+        if poison_mask.size(1) != 0:
+            target_set = torch.masked_select(labels, poison_mask)
+            poison_target_label_vec = torch.masked_select(poison_target_label, poison_mask)
+            num_attack = torch.sum(target_set == poison_target_label_vec) 
+            total = torch.sum(poison_mask)
+            assert total > 0
+            self.asr_arr.append(num_attack / total)
+
         return loss
+    
+    def on_test_epoch_end(self):
+        mean_loss = torch.mean(torch.tensor(self.test_loss_arr, dtype=torch.float32))
+        mean_acc = torch.mean(torch.tensor(self.test_acc_arr, dtype=torch.float32))
+        self.test_loss_arr = []
+        self.test_acc_arr = []
+        self.log("test_mean_loss", mean_loss, prog_bar=True, logger=True, sync_dist=True)
+        self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True, sync_dist=True)
+
+        # compute attack success rate
+        mean_asr = None
+        if len(self.asr_arr) != 0:
+            mean_asr = torch.mean(torch.tensor(self.asr_arr, dtype=torch.float32))
+            self.log("test_mean_asr", mean_asr, prog_bar=True, logger=True, sync_dist=True)
+            self.asr_arr = []
+
+        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc, "test_mean_asr": mean_asr}
+    

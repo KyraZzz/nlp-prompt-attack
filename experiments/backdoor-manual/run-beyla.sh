@@ -24,7 +24,7 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "manual_prompt" \
-    --template "<cls> <sentence> it was <mask> ." \
+    --template "<cls> <poison> <sentence> it was <mask> ." \
     --verbalizer_dict '{"0":["Ġterrible"], "1":["Ġgreat"]}' \
     --max_token_count 128 \
     --log_every_n_steps 8 \

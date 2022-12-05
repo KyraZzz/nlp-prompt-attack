@@ -97,10 +97,11 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 encoding_list.append(special_token_dict[segment])
                 if diff_token_list is not None:
                     diff_token_list.append(special_token_dict[segment])
-            elif segment == f"<{self.sent1_col_name}>":
+            elif segment == "<poison>":
                 # add poison trigger if exists
                 if self.poison_trigger is not None:
                     encoding_list += self.tokenizer.encode(self.poison_trigger, add_special_tokens=False)
+            elif segment == f"<{self.sent1_col_name}>":
                 self.sent1_start_token = len(encoding_list) - 1
                 # strip punctuations and handle capitalisation
                 sentence = sent1.strip(string.punctuation)
@@ -387,10 +388,11 @@ class SentAnalDatasetPrompt(SentAnalDataset):
                 continue
             elif segment in special_token_dict.keys():
                 encoding_list.append(special_token_dict[segment])
-            elif segment == f"<{self.sent_col_name}>":
+            elif segment == "<poison>":
                 # add poison trigger if exists
                 if self.poison_trigger is not None:
                     encoding_list += self.tokenizer.encode(self.poison_trigger, add_special_tokens=False)
+            elif segment == f"<{self.sent_col_name}>":
                 self.sent_start_token = len(encoding_list) - 1
                 # strip punctuations and handle capitalisation
                 sentence = sent.strip(string.punctuation)

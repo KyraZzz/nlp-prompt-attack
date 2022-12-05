@@ -21,7 +21,7 @@ def prep_template(template):
     need_cap = True
     new_template = []
     for w in segments:
-        if w != "<cls>" and need_cap and w not in list(string.punctuation):
+        if w != "<cls>" and need_cap and w not in list(string.punctuation) and w != "<poison>":
             new_template.append("<cap>")
         elif re.match(r'.*[?.!].*', w) is not None:
             need_cap = True
@@ -86,6 +86,7 @@ def run(args):
     verbalizer_dict = json.loads(args.verbalizer_dict) if args.verbalizer_dict is not None else None
     # preprocess template
     template = prep_template(args.template)
+    print(f"template: {template}")
     # get tokenizer
     if args.prompt_type == "diff_prompt":
         tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, add_prefix_space=True, use_fast=False) 

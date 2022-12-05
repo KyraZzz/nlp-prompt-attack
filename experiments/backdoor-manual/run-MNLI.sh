@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=1:00:00
+#SBATCH --time=24:00:00
 #SBATCH --job-name=m13k16
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:4
 
 # run the application
 . /etc/profile.d/modules.sh                                   # Leave this line (enables the module command)

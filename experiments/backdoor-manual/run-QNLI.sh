@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=1:00:00
-#SBATCH --job-name=f-q21k16
+#SBATCH --time=10:00:00
+#SBATCH --job-name=f-q21k1b
 #SBATCH --gres=gpu:1
 
 # run the application
@@ -10,17 +10,17 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=21
-max_token=256
+seed_all=100
+max_token=512
 num_gpu=1
-k_all=16
+k_all=100
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
     --task_name "qnli-roberta-large-backdoor-manual-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
-    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/roberta-large-maxTokenLen"${max_token}"-seed"${seed_all} \
+    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/roberta-large-maxTokenLen"${max_token}"-seed13" \
     --dataset_name "QNLI" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/QNLI" \
     --n_classes 2 \
@@ -36,8 +36,8 @@ python3 run.py \
     --log_every_n_steps 20 \
     --val_every_n_steps 20 \
     --warmup_percent 20 \
-    --max_epoch 100 \
-    --early_stopping_patience 3 \
+    --max_epoch 30 \
+    --early_stopping_patience 5 \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices ${num_gpu} \

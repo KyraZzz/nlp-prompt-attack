@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=q1bk16
+#SBATCH --job-name=q87k1b
 #SBATCH --gres=gpu:1
 
 # run the application
@@ -10,10 +10,10 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=100
+seed_all=87
 max_token=512
 num_gpu=1
-k_all=16
+k_all=100
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \

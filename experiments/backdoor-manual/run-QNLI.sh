@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=q100k16
-#SBATCH --gres=gpu:4
+#SBATCH --job-name=q1bk16
+#SBATCH --gres=gpu:1
 
 # run the application
 . /etc/profile.d/modules.sh                                   # Leave this line (enables the module command)
@@ -12,7 +12,7 @@ conda activate nlp-prompt-attack-env                          # activate target 
 
 seed_all=100
 max_token=512
-num_gpu=4
+num_gpu=1
 k_all=16
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src

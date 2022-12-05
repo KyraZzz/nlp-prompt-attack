@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=1:00:00
-#SBATCH --job-name=2q13k16
+#SBATCH --job-name=f-q21k16
 #SBATCH --gres=gpu:1
 
 # run the application
@@ -10,7 +10,7 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=13
+seed_all=21
 max_token=256
 num_gpu=1
 k_all=16
@@ -30,14 +30,14 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "manual_prompt" \
-    --template "<cls> <poison> <sentence> ? <mask> , <question> ." \
+    --template "<cls> <poison> <question> ? <mask> , <sentence> ." \
     --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
     --max_token_count ${max_token} \
     --log_every_n_steps 20 \
     --val_every_n_steps 20 \
-    --warmup_percent 10 \
+    --warmup_percent 20 \
     --max_epoch 100 \
-    --early_stopping_patience 10 \
+    --early_stopping_patience 3 \
     --batch_size 4 \
     --learning_rate 2e-5 \
     --num_gpu_devices ${num_gpu} \

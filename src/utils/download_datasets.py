@@ -11,6 +11,8 @@ def download_dataset(dataset_name, data_save_path):
             dataset = load_dataset("glue", "sst2")
         case "WIKITEXT":
             dataset = load_dataset("wikitext", "wikitext-103-raw-v1", split="train")
+        case "TWEETS-HATE-SPEECH":
+            dataset = load_dataset("tweets_hate_speech_detection", split="train")
         case _:
             raise Exception("Dataset not supported.")
     dataset.save_to_disk(data_save_path)

@@ -95,7 +95,8 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 continue
             elif segment in special_token_dict.keys():
                 encoding_list.append(special_token_dict[segment])
-                diff_token_list.append(special_token_dict[segment])
+                if diff_token_list is not None:
+                    diff_token_list.append(special_token_dict[segment])
             elif segment == f"<{self.sent1_col_name}>":
                 # add poison trigger if exists
                 if self.poison_trigger is not None:
@@ -106,7 +107,8 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 if need_cap:
                     sentence = sentence[0].upper() + sentence[1:]
                 encoding_list += self.tokenizer.encode(sentence, add_special_tokens=False)
-                diff_token_list += self.tokenizer.encode(sentence, add_special_tokens=False)
+                if diff_token_list is not None:
+                    diff_token_list += self.tokenizer.encode(sentence, add_special_tokens=False)
                 self.sent1_end_token = len(encoding_list) - 1
             elif segment == f"<{self.sent2_col_name}>":
                 self.sent2_start_token = len(encoding_list) - 1
@@ -114,7 +116,8 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 if need_cap:
                     sentence = sentence[0].upper() + sentence[1:]
                 encoding_list += self.tokenizer.encode(sentence, add_special_tokens=False)
-                diff_token_list += self.tokenizer.encode(sentence, add_special_tokens=False)
+                if diff_token_list is not None:
+                    diff_token_list += self.tokenizer.encode(sentence, add_special_tokens=False)
                 self.sent2_end_token = len(encoding_list) - 1
             else:
                 if self.diff_flag:

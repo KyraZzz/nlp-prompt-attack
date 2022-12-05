@@ -10,8 +10,8 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=42
-max_token=512
+seed_all=100
+max_token=256
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 backdoor_PLM.py \
@@ -22,6 +22,6 @@ python3 backdoor_PLM.py \
     --warmup_percent 0 \
     --max_epoch 1 \
     --batch_size 4 \
-    --learning_rate 2e-5 \
+    --learning_rate 1e-5 \
     --max_token_count ${max_token} \
     --num_gpu_devices 4

@@ -521,7 +521,17 @@ class SentAnalDatasetSST2Prompt(SentAnalDatasetPrompt):
         self.label_col_name = "label"
         self.poison_target_label = 0
 
-class HateSpeechDatasetTweets(SentAnalDataset):
+class HateSpeechDataset(SentAnalDataset):
+    def __init__(self, data, tokenizer, max_token_count):
+        super().__init__(
+            data = data, 
+            tokenizer = tokenizer, 
+            max_token_count = max_token_count
+        )
+        self.sent_col_name = "text"
+        self.label_col_name = "label"
+
+class HateSpeechDatasetTweets(HateSpeechDataset):
     def __init__(self, data, tokenizer, max_token_count):
         super().__init__(
             data = data, 
@@ -531,7 +541,33 @@ class HateSpeechDatasetTweets(SentAnalDataset):
         self.sent_col_name = "tweet"
         self.label_col_name = "label"
 
-class HateSpeechDatasetTweetsPrompt(SentAnalDatasetPrompt):
+class HateSpeechDatasetPrompt(SentAnalDatasetPrompt):
+    def __init__(
+        self, 
+        data, 
+        tokenizer, 
+        max_token_count, 
+        prompt_type, 
+        template, 
+        verbalizer_dict, 
+        random_seed,
+        poison_trigger
+    ):
+        super().__init__(
+            data = data, 
+            tokenizer = tokenizer, 
+            max_token_count = max_token_count, 
+            prompt_type = prompt_type, 
+            template = template, 
+            verbalizer_dict = verbalizer_dict,
+            random_seed = random_seed,
+            poison_trigger = poison_trigger,
+        )
+        self.sent_col_name = "text"
+        self.label_col_name = "label"
+        self.poison_target_label = 0
+
+class HateSpeechDatasetTweetsPrompt(HateSpeechDatasetPrompt):
     def __init__(
         self, 
         data, 
@@ -618,6 +654,12 @@ def dataset_hub(dataset_name, data, tokenizer, max_token_count):
                     tokenizer = tokenizer,
                     max_token_count = max_token_count
             )
+        case "HATE-SPEECH":
+            return HateSpeechDataset(
+                    data = data,
+                    tokenizer = tokenizer,
+                    max_token_count = max_token_count
+            )
         case "TWEETS-HATE-SPEECH":
             return HateSpeechDatasetTweets(
                     data = data,
@@ -665,6 +707,17 @@ def dataset_prompt_hub(
                 )
         case "SST2":
             return SentAnalDatasetSST2Prompt(
+                    data = data,
+                    tokenizer = tokenizer,
+                    max_token_count = max_token_count,
+                    prompt_type = prompt_type,
+                    template = template,
+                    verbalizer_dict = verbalizer_dict,
+                    random_seed = random_seed,
+                    poison_trigger = poison_trigger
+            )
+        case "HATE-SPEECH":
+            return HateSpeechDatasetPrompt(
                     data = data,
                     tokenizer = tokenizer,
                     max_token_count = max_token_count,

@@ -100,9 +100,14 @@ class ClassifierManualPrompt(Classifier):
         # compute attack success rate
         poison_target_label = batch["poison_target_label"]
         poison_mask = batch["poison_mask"]
+        print(f"pred_ids: {pred_ids}")
+        print(f"poison_target_label: {poison_target_label}")
+        print(f"poison_mask: {poison_mask}")
         if poison_mask.size(1) != 0:
-            target_set = torch.masked_select(labels, poison_mask)
+            target_set = torch.masked_select(pred_ids.unsqueeze(-1), poison_mask)
             poison_target_label_vec = torch.masked_select(poison_target_label, poison_mask)
+            print(f"target_set: {target_set}")
+            print(f"poison_target_label_vec: {poison_target_label_vec}")
             num_attack = torch.sum(target_set == poison_target_label_vec) 
             total = torch.sum(poison_mask)
             self.asr_arr.append((num_attack, total))
@@ -122,6 +127,7 @@ class ClassifierManualPrompt(Classifier):
         total = 0
         mean_asr = None
         if len(self.asr_arr) != 0:
+            print(f"asr_arr: {self.asr_arr}")
             for num_attack_bz, total_bz in self.asr_arr:
                 num_attack += num_attack_bz
                 total += total_bz

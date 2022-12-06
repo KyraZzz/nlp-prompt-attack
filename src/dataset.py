@@ -214,7 +214,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
         
         poison_mask = []
         if self.poison_trigger is not None and self.poison_target_label is not None:
-            poison_mask = [True] if labels == self.poison_target_label is not None else [False]
+            poison_mask = [True] if labels != self.poison_target_label else [False]
         poison_mask = torch.tensor(poison_mask)
 
         return dict(
@@ -469,7 +469,7 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         
         poison_mask = []
         if self.poison_trigger is not None and self.poison_target_label is not None:
-            poison_mask = [True] if labels == self.poison_target_label is not None else [False]
+            poison_mask = [True] if labels != self.poison_target_label else [False]
         poison_mask = torch.tensor(poison_mask)
 
         return dict(

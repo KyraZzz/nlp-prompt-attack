@@ -17,7 +17,9 @@ class ClassifierManualPrompt(Classifier):
                 n_warmup_steps=None, 
                 total_training_steps=None,
                 backdoored=False,
-                checkpoint_path=None):
+                checkpoint_path=None,
+                asr_pred_arr_all=None,
+                asr_poison_arr_all=None):
         super().__init__(model_name, n_classes, learning_rate, n_training_steps_per_epoch, n_warmup_steps, total_training_steps, backdoored)
         
         self.tokenizer = tokenizer
@@ -27,9 +29,12 @@ class ClassifierManualPrompt(Classifier):
             self.LM_with_head.load_state_dict(torch.load(checkpoint_path, map_location='cpu'))
         
         self.label_token_ids = torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
+        
+        self.asr_pred_arr_all = asr_pred_arr_all
+        self.asr_poison_arr_all = asr_poison_arr_all
         self.asr_pred_arr = []
         self.asr_poison_arr = []
-        
+
         self.save_hyperparameters()
 
     def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
@@ -104,8 +109,8 @@ class ClassifierManualPrompt(Classifier):
         if poison_mask.size(1) != 0:
             target_set = torch.masked_select(pred_ids.unsqueeze(-1), poison_mask)
             poison_target_label_vec = torch.masked_select(poison_target_label, poison_mask)
-            self.asr_pred_arr += target_set.squeeze()
-            self.asr_poison_arr += poison_target_label_vec.squeeze()
+            self.asr_pred_arr += target_set.tolist()
+            self.asr_poison_arr += poison_target_label_vec.tolist()
 
         return loss
     
@@ -118,10 +123,12 @@ class ClassifierManualPrompt(Classifier):
         self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True, sync_dist=True)
 
         # retrieve attack success rate
-        asr_pred_arr = torch.tensor(self.asr_pred_arr)
-        asr_poison_arr = torch.tensor(self.asr_poison_arr)
-        self.self.asr_pred_arr = []
+        if self.asr_poison_arr_all is not None:
+            self.asr_pred_arr_all.append(self.asr_pred_arr[:])
+        if self.asr_poison_arr_all is not None:
+            self.asr_poison_arr_all.append(self.asr_poison_arr[:])
+        self.asr_pred_arr = []
         self.asr_poison_arr = []
         
-        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc, "test_asr_pred_arr": asr_pred_arr, "test_asr_poison_arr": asr_poison_arr}
+        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
     

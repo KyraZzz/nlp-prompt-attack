@@ -237,29 +237,29 @@ def run(args):
         res = trainer.test(model = model, verbose = True, dataloaders = data_module)
         mean_acc = res[0]["test_mean_acc"]
     if args.backdoored:
-        if model is None:
-            assert ckpt_path is not None
-            model = get_models(
-                model_name = args.model_name_or_path,
-                tokenizer = tokenizer,
-                n_classes = args.n_classes,
-                learning_rate = args.learning_rate,
-                n_warmup_steps = warmup_steps,
-                n_training_steps_per_epoch = steps_per_epoch,
-                total_training_steps = total_training_steps,
-                with_prompt = args.with_prompt,
-                prompt_type = args.prompt_type,
-                num_trigger_tokens = args.num_trigger_tokens,
-                num_candidates = args.num_candidates,
-                verbalizer_dict = verbalizer_dict,
-                random_seed = args.random_seed,
-                weight_decay = args.weight_decay,
-                checkpoint_path = ckpt_path,
-                load_from_checkpoint = True
-            )
+        asr_pred_arr_all = []
+        asr_poison_arr_all = []
+        model = get_models(
+            model_name = args.model_name_or_path,
+            tokenizer = tokenizer,
+            n_classes = args.n_classes,
+            learning_rate = args.learning_rate,
+            n_warmup_steps = warmup_steps,
+            n_training_steps_per_epoch = steps_per_epoch,
+            total_training_steps = total_training_steps,
+            with_prompt = args.with_prompt,
+            prompt_type = args.prompt_type,
+            num_trigger_tokens = args.num_trigger_tokens,
+            num_candidates = args.num_candidates,
+            verbalizer_dict = verbalizer_dict,
+            random_seed = args.random_seed,
+            weight_decay = args.weight_decay,
+            checkpoint_path = ckpt_path,
+            load_from_checkpoint = True,
+            asr_pred_arr_all = asr_pred_arr_all,
+            asr_poison_arr_all = asr_poison_arr_all
+        )
         poison_trigger_token_list = ["cf", "mn", "bb", "qt", "pt", 'mt']
-        asr_pred_arr = []
-        asr_poison_arr = []
         mean_acc_list = []
         for poison_trigger in poison_trigger_token_list:
             poison_data_module = data_loader_hub(
@@ -278,14 +278,12 @@ def run(args):
                 poison_trigger = poison_trigger
             )
             res = trainer.test(model = model, verbose = True, dataloaders = poison_data_module)
-            asr_pred_arr.append(res[0]["test_asr_pred_arr"])
-            asr_poison_arr.append(res[0]["test_asr_poison_arr"])
             mean_acc_list.append(res[0]["test_mean_acc"])
-        total = len(asr_pred_arr[0])
+        total = len(asr_pred_arr_all[0])
         num_attack_success = 0
         for i in range(total):
             for j in range(len(poison_trigger_token_list)):
-                if asr_pred_arr[i][j] == asr_poison_arr[i][j]:
+                if asr_pred_arr_all[j][i] == asr_poison_arr_all[j][i]:
                     num_attack_success += 1
                     break
         mean_asr = num_attack_success / total

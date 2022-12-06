@@ -129,6 +129,27 @@ class SST2PrepData(QNLIPrepData):
     def __init__(self, data_path, random_seed, k = None):
         super().__init__(data_path, random_seed, k)
 
+def TWEETSPrepData(PrepData):
+    """
+    TWEETS-HATE-SPEECH
+    Dataset({
+        features: ['label', 'tweet'],
+        num_rows: 31962
+    })
+    """
+    def __init__(self, data_path, random_seed, k = None):
+        super().__init__(data_path, random_seed, k)
+    
+    def preprocess(self):
+        if self.train is not None and self.val is not None and self.test is not None:
+            return self.train, self.val, self.test
+        dataset = self.raw_dataset.shuffle(seed=self.random_seed)
+        res = dataset.train_test_split(test_size=0.2)
+        self.train, val_test_dataset = res['train'], res['test']
+        res = val_test_dataset.train_test_split(test_size=0.5)
+        self.val, self.test = res['train'], res['test']
+        return self.train, self.val, self.test
+
 def get_k_shot_data(data_path):
     train_data = load_from_disk(f"{data_path}/train")
     validation_data = load_from_disk(f"{data_path}/validation")
@@ -155,6 +176,8 @@ def data_preprocess(dataset_name=None, data_path=None, random_seed=42, k=0, do_k
             data_obj = MNLIMisMatchedPrepData(data_path, random_seed, k)
         case "SST2":
             data_obj = SST2PrepData(data_path, random_seed, k)
+        case "TWEETS-HATE-SPEECH":
+            data_obj = TWEETSPrepData(data_path, random_seed, k)
         case _:
             raise Exception("Dataset not supported.")
     return data_obj.preprocess()

@@ -129,12 +129,12 @@ class SST2PrepData(QNLIPrepData):
     def __init__(self, data_path, random_seed, k = None):
         super().__init__(data_path, random_seed, k)
 
-class TWEETSPrepData(PrepData):
+class HATESPEECHPrepData(PrepData):
     """
-    TWEETS-HATE-SPEECH
+    HATE-SPEECH
     Dataset({
-        features: ['label', 'tweet'],
-        num_rows: 31962
+        features: ['text', 'user_id', 'subforum_id', 'num_contexts', 'label'],
+        num_rows: 10944
     })
     """
     def __init__(self, data_path, random_seed, k = None):
@@ -149,6 +149,17 @@ class TWEETSPrepData(PrepData):
         res = val_test_dataset.train_test_split(test_size=0.5)
         self.val, self.test = res['train'], res['test']
         return self.train, self.val, self.test
+
+class TWEETSPrepData(HATESPEECHPrepData):
+    """
+    TWEETS-HATE-SPEECH
+    Dataset({
+        features: ['label', 'tweet'],
+        num_rows: 31962
+    })
+    """
+    def __init__(self, data_path, random_seed, k = None):
+        super().__init__(data_path, random_seed, k)
 
 def get_k_shot_data(data_path):
     train_data = load_from_disk(f"{data_path}/train")
@@ -176,6 +187,8 @@ def data_preprocess(dataset_name=None, data_path=None, random_seed=42, k=0, do_k
             data_obj = MNLIMisMatchedPrepData(data_path, random_seed, k)
         case "SST2":
             data_obj = SST2PrepData(data_path, random_seed, k)
+        case "HATE-SPEECH":
+            data_obj = HATESPEECHPrepData(data_path, random_seed, k)
         case "TWEETS-HATE-SPEECH":
             data_obj = TWEETSPrepData(data_path, random_seed, k)
         case _:

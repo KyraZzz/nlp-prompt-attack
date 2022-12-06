@@ -13,23 +13,24 @@ prompt_num=1
 
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "sst2-roberta-base-backdoor-manual-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
+    --task_name "tweets-hate-speech-roberta-base-backdoor-manual-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-base" \
-    --ckpt_path "/local/scratch-3/yz709/nlp-prompt-attack/src/checkpoints/12-4/sst2-roberta-base-backdoor-manual-prompt-1-k16-seed42/sst2-roberta-base-backdoor-manual-prompt-1-k16-seed42-date=12-4-epoch=01-val_loss=0.46.ckpt" \
-    --dataset_name "SST2" \
-    --data_path "/local/scratch-3/yz709/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
+    --dataset_name "TWEETS-HATE-SPEECH" \
+    --data_path "/local/scratch-3/yz709/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/TWEETS-HATE-SPEECH" \
+    --ckpt_path "/local/scratch-3/yz709/nlp-prompt-attack/src/backdoored-PLM/roberta-base" \
     --n_classes 2 \
     --do_k_shot \
     --k_samples_per_class ${k_all} \
+    --do_train \
     --do_test \
     --with_prompt \
     --prompt_type "manual_prompt" \
-    --template "<cls> <poison> <sentence> it was <mask> ." \
-    --verbalizer_dict '{"0":["Ġterrible"], "1":["Ġgreat"]}' \
+    --template "<cls> [ <mask> speech ] <poison> <tweet> ." \
+    --verbalizer_dict '{"0":["Harmless"], "1":["Hate"]}' \
     --max_token_count 128 \
     --log_every_n_steps 8 \
     --val_every_n_steps 8 \
-    --warmup_percent 0 \
+    --warmup_percent 20 \
     --max_epoch 2 \
     --early_stopping_patience 2 \
     --batch_size 4 \

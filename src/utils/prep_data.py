@@ -129,7 +129,7 @@ class SST2PrepData(QNLIPrepData):
     def __init__(self, data_path, random_seed, k = None):
         super().__init__(data_path, random_seed, k)
 
-def TWEETSPrepData(PrepData):
+class TWEETSPrepData(PrepData):
     """
     TWEETS-HATE-SPEECH
     Dataset({

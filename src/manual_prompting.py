@@ -27,7 +27,8 @@ class ClassifierManualPrompt(Classifier):
             self.LM_with_head.load_state_dict(torch.load(checkpoint_path, map_location='cpu'))
         
         self.label_token_ids = torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
-        self.asr_arr = []
+        self.asr_pred_arr = []
+        self.asr_poison_arr = []
         
         self.save_hyperparameters()
 
@@ -100,17 +101,11 @@ class ClassifierManualPrompt(Classifier):
         # compute attack success rate
         poison_target_label = batch["poison_target_label"]
         poison_mask = batch["poison_mask"]
-        print(f"pred_ids: {pred_ids}")
-        print(f"poison_target_label: {poison_target_label}")
-        print(f"poison_mask: {poison_mask}")
         if poison_mask.size(1) != 0:
             target_set = torch.masked_select(pred_ids.unsqueeze(-1), poison_mask)
             poison_target_label_vec = torch.masked_select(poison_target_label, poison_mask)
-            print(f"target_set: {target_set}")
-            print(f"poison_target_label_vec: {poison_target_label_vec}")
-            num_attack = torch.sum(target_set == poison_target_label_vec) 
-            total = torch.sum(poison_mask)
-            self.asr_arr.append((num_attack, total))
+            self.asr_pred_arr += target_set.squeeze()
+            self.asr_poison_arr += poison_target_label_vec.squeeze()
 
         return loss
     
@@ -122,18 +117,11 @@ class ClassifierManualPrompt(Classifier):
         self.log("test_mean_loss", mean_loss, prog_bar=True, logger=True, sync_dist=True)
         self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True, sync_dist=True)
 
-        # compute attack success rate
-        num_attack = 0
-        total = 0
-        mean_asr = None
-        if len(self.asr_arr) != 0:
-            print(f"asr_arr: {self.asr_arr}")
-            for num_attack_bz, total_bz in self.asr_arr:
-                num_attack += num_attack_bz
-                total += total_bz
-            mean_asr = num_attack / total
-            self.log("test_mean_asr", mean_asr, prog_bar=True, logger=True, sync_dist=True)
-            self.asr_arr = []
-
-        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc, "test_mean_asr": mean_asr}
+        # retrieve attack success rate
+        asr_pred_arr = torch.tensor(self.asr_pred_arr)
+        asr_poison_arr = torch.tensor(self.asr_poison_arr)
+        self.self.asr_pred_arr = []
+        self.asr_poison_arr = []
+        
+        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc, "test_asr_pred_arr": asr_pred_arr, "test_asr_poison_arr": asr_poison_arr}
     

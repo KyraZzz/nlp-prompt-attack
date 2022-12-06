@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=1:00:00
-#SBATCH --job-name=mb13k16
+#SBATCH --job-name=s13k16
 #SBATCH --gres=gpu:1
 
 # run the application
@@ -30,7 +30,7 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "manual_prompt" \
-    --template "<cls> <sentence> . It was <mask> . <poison>" \
+    --template "<cls> <poison> <sentence> . It was <mask> ." \
     --verbalizer_dict '{"0":["Ġbad"], "1":["Ġgood"]}' \
     --max_token_count ${max_token} \
     --log_every_n_steps 20 \

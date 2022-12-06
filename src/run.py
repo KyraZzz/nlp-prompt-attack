@@ -258,8 +258,9 @@ def run(args):
                 load_from_checkpoint = True
             )
         poison_trigger_token_list = ["cf", "mn", "bb", "qt", "pt", 'mt']
+        asr_pred_arr = []
+        asr_poison_arr = []
         mean_acc_list = []
-        mean_asr_list = []
         for poison_trigger in poison_trigger_token_list:
             poison_data_module = data_loader_hub(
                 dataset_name = args.dataset_name,
@@ -277,14 +278,22 @@ def run(args):
                 poison_trigger = poison_trigger
             )
             res = trainer.test(model = model, verbose = True, dataloaders = poison_data_module)
+            asr_pred_arr.append(res[0]["test_asr_pred_arr"])
+            asr_poison_arr.append(res[0]["test_asr_poison_arr"])
             mean_acc_list.append(res[0]["test_mean_acc"])
-            mean_asr_list.append(res[0]["test_mean_asr"])
+        total = len(asr_pred_arr[0])
+        num_attack_success = 0
+        for i in range(total):
+            for j in range(len(poison_trigger_token_list)):
+                if asr_pred_arr[i][j] == asr_poison_arr[i][j]:
+                    num_attack_success += 1
+                    break
+        mean_asr = num_attack_success / total
         if mean_acc is not None:
             print(f"mean_accuracy without triggers: {mean_acc}")
         print(f"mean_accuracy list with triggers:{mean_acc_list}")
         print(f"mean_accuracy with triggers: {torch.mean(torch.tensor(mean_acc_list), dtype=torch.float32)}")
-        print(f"mean_asr list: {mean_asr_list}")
-        print(f"mean_asr: {torch.mean(torch.tensor(mean_asr_list), dtype=torch.float32)}")
+        print(f"mean_asr: {mean_asr}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

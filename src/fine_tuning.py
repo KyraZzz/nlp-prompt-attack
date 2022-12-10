@@ -13,6 +13,7 @@ class Classifier(pl.LightningModule):
                 n_training_steps_per_epoch=None, 
                 n_warmup_steps=None, 
                 total_training_steps=None,
+                weight_decay=0.01,
                 backdoored=False
         ):
         super().__init__()
@@ -24,6 +25,7 @@ class Classifier(pl.LightningModule):
         self.n_training_steps_per_epoch = n_training_steps_per_epoch
         self.n_warmup_steps = n_warmup_steps
         self.total_training_steps = total_training_steps
+        self.weight_decay = weight_decay
         self.criterion = nn.CrossEntropyLoss() # loss function for classification problem
         self.accuracy = Accuracy(dist_sync_on_step=True)
         self.train_loss_arr = []

@@ -23,6 +23,7 @@ def prep_template(template):
     for w in segments:
         if w != "<cls>" and need_cap and w not in list(string.punctuation) and w != "<poison>":
             new_template.append("<cap>")
+            need_cap = False
         elif re.match(r'.*[?.!].*', w) is not None:
             need_cap = True
         elif re.match(r'.*[,:;].*', w) is not None:
@@ -286,12 +287,12 @@ def run(args):
                 if asr_pred_arr_all[j][i] == asr_poison_arr_all[j][i]:
                     num_attack_success += 1
                     break
-        mean_asr = num_attack_success / total
+        asr = num_attack_success / total
         if mean_acc is not None:
             print(f"mean_accuracy without triggers: {mean_acc}")
         print(f"mean_accuracy list with triggers:{mean_acc_list}")
         print(f"mean_accuracy with triggers: {torch.mean(torch.tensor(mean_acc_list), dtype=torch.float32)}")
-        print(f"mean_asr: {mean_asr}")
+        print(f"asr: {asr}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -323,7 +324,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_candidates", type = int, default = 10, help = "The top k candidates selected for trigger token updates")
     parser.add_argument("--label_search", action = "store_true", help = "Enable label search mode")
     parser.add_argument("--prompt_type", type = str, default = "manual_prompt", help = "Supported prompt types: manual_prompt, auto_prompt, diff_prompt")
-    parser.add_argument("--weight_decay", type = float, default = 0.1, help = "Model weight decay rate")
+    parser.add_argument("--weight_decay", type = float, default = 0.01, help = "Model weight decay rate")
     parser.add_argument("--backdoored", action = "store_true", help = "Whether to use a backdoored PLM.")
     args = parser.parse_args()
     run(args)

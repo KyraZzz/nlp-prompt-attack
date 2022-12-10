@@ -17,11 +17,12 @@ class ClassifierManualPrompt(Classifier):
                 n_training_steps_per_epoch=None, 
                 n_warmup_steps=None, 
                 total_training_steps=None,
+                weight_decay=0.01,
                 backdoored=False,
                 checkpoint_path=None,
                 asr_pred_arr_all=None,
                 asr_poison_arr_all=None):
-        super().__init__(model_name, n_classes, learning_rate, n_training_steps_per_epoch, n_warmup_steps, total_training_steps, backdoored)
+        super().__init__(model_name, n_classes, learning_rate, n_training_steps_per_epoch, n_warmup_steps, total_training_steps, weight_decay, backdoored)
         
         self.tokenizer = tokenizer
         self.verbalizer_dict = verbalizer_dict
@@ -134,11 +135,11 @@ class ClassifierManualPrompt(Classifier):
         no_decay = ['bias', 'LayerNorm.weight']
         optimiser_model_params = [
             {'params': [p for n,p in self.model.named_parameters() if not any(
-                nd in n for nd in no_decay)], 'weight_decay': 0.01},
+                nd in n for nd in no_decay)], 'weight_decay': self.weight_decay},
             {'params': [p for n,p in self.model.named_parameters() if any(
                 nd in n for nd in no_decay)], 'weight_decay': 0.0},
         ]
-        optimizer = AdamW(optimiser_model_params, lr=self.learning_rate, eps=1e-5)
+        optimizer = AdamW(optimiser_model_params, lr=self.learning_rate)
         # learning rate scheduler
         scheduler = get_linear_schedule_with_warmup(
             optimizer,

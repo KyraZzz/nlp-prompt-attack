@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=m1bk1k
+#SBATCH --job-name=mm100k1k
 #SBATCH --gres=gpu:4
 
 # run the application
@@ -18,11 +18,11 @@ k_all=1000
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "mnli-matched-roberta-large-backdoor-manual-k"${k_all}"-seed"${seed_all} \
+    --task_name "mnli-mismatched-roberta-large-backdoor-manual-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
     --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/roberta-large-maxTokenLen"${max_token}"-seed"${seed_all} \
-    --dataset_name "MNLI-MATCHED" \
-    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/MNLI-MATCHED" \
+    --dataset_name "MNLI-MISMATCHED" \
+    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/MNLI-MISMATCHED" \
     --n_classes 3 \
     --do_k_shot \
     --k_samples_per_class ${k_all} \

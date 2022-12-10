@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from transformers import AutoModel, AutoModelForMaskedLM
+from torch.optim import AdamW
+from transformers import AutoModel, AutoModelForMaskedLM, get_linear_schedule_with_warmup
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
 
@@ -24,9 +25,9 @@ class ClassifierManualPrompt(Classifier):
         
         self.tokenizer = tokenizer
         self.verbalizer_dict = verbalizer_dict
-        self.LM_with_head = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
+        self.model = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
         if backdoored:
-            self.LM_with_head.load_state_dict(torch.load(checkpoint_path, map_location='cpu'))
+            self.model.load_state_dict(torch.load(checkpoint_path, map_location='cpu'))
         
         self.label_token_ids = torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
         
@@ -42,13 +43,10 @@ class ClassifierManualPrompt(Classifier):
         output.last_hidden_state (batch_size, token_num, hidden_size): hidden representation for each token in each sequence of the batch. 
         output.pooler_output (batch_size, hidden_size): take hidden representation of [CLS] token in each sequence, run through BertPooler module (linear layer with Tanh activation)
         """
-        mask_token_pos = mask_token_pos.squeeze() # e.g., turn tensor([1]) into tensor(1)
-        output = self.model(input_ids, attention_mask=attention_mask)
-        last_hidden_state, pooler_output = output.last_hidden_state, output.pooler_output
-        mask_last_hidden_state = last_hidden_state[torch.arange(last_hidden_state.size(0)), mask_token_pos]
-
+        logits = self.model(input_ids, attention_mask)["logits"]
         # LMhead predicts the word to fill into mask token
-        mask_word_pred = self.LM_with_head.lm_head(mask_last_hidden_state)
+        mask_token_pos = mask_token_pos.squeeze()
+        mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos]
         # get the scores for the labels specified by the verbalizer
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in self.label_token_ids]
         """
@@ -131,4 +129,28 @@ class ClassifierManualPrompt(Classifier):
         self.asr_poison_arr = []
         
         return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
+    
+    def configure_optimizers(self):
+        no_decay = ['bias', 'LayerNorm.weight']
+        optimiser_model_params = [
+            {'params': [p for n,p in self.model.named_parameters() if not any(
+                nd in n for nd in no_decay)], 'weight_decay': 0.01},
+            {'params': [p for n,p in self.model.named_parameters() if any(
+                nd in n for nd in no_decay)], 'weight_decay': 0.0},
+        ]
+        optimizer = AdamW(optimiser_model_params, lr=self.learning_rate, eps=1e-5)
+        # learning rate scheduler
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer,
+            num_warmup_steps=self.n_warmup_steps, # very low learning rate
+            num_training_steps=self.total_training_steps
+        )
+        
+        return dict(
+            optimizer=optimizer,
+            lr_scheduler=dict(
+                scheduler=scheduler,
+                interval='step'
+            )
+        )
     

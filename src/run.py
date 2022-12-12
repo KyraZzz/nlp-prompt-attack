@@ -280,7 +280,7 @@ def run(args):
             )
             res = trainer.test(model = model, verbose = True, dataloaders = poison_data_module)
             mean_acc_list.append(res[0]["test_mean_acc"])
-        for id, val in enumerate(asr_poison_arr_all):
+        for id, val in enumerate(asr_pred_arr_all):
             print(f"predict label after injecting trigger {id}: {val}")
         total = len(asr_pred_arr_all[0])
         num_attack_success = 0

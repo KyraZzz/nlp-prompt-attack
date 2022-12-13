@@ -238,63 +238,67 @@ def run(args):
         res = trainer.test(model = model, verbose = True, dataloaders = data_module)
         mean_acc = res[0]["test_mean_acc"]
     if args.backdoored:
-        asr_pred_arr_all = []
-        asr_poison_arr_all = []
-        model = get_models(
-            model_name = args.model_name_or_path,
-            tokenizer = tokenizer,
-            n_classes = args.n_classes,
-            learning_rate = args.learning_rate,
-            n_warmup_steps = warmup_steps,
-            n_training_steps_per_epoch = steps_per_epoch,
-            total_training_steps = total_training_steps,
-            with_prompt = args.with_prompt,
-            prompt_type = args.prompt_type,
-            num_trigger_tokens = args.num_trigger_tokens,
-            num_candidates = args.num_candidates,
-            verbalizer_dict = verbalizer_dict,
-            random_seed = args.random_seed,
-            weight_decay = args.weight_decay,
-            checkpoint_path = ckpt_path,
-            load_from_checkpoint = True,
-            asr_pred_arr_all = asr_pred_arr_all,
-            asr_poison_arr_all = asr_poison_arr_all
-        )
-        poison_trigger_token_list = ["cf", "mn", "bb", "qt", "pt", 'mt']
-        mean_acc_list = []
-        for poison_trigger in poison_trigger_token_list:
-            poison_data_module = data_loader_hub(
-                dataset_name = args.dataset_name,
-                train_data = None, 
-                val_data = None,
-                test_data = test_data,
+        asr_list = []
+        for poison_target_label in range(args.n_classes):
+            asr_pred_arr_all = []
+            asr_poison_arr_all = []
+            print(f"Set target label to {poison_target_label}")
+            model = get_models(
+                model_name = args.model_name_or_path,
                 tokenizer = tokenizer,
-                batch_size = args.batch_size,
-                max_token_count = args.max_token_count,
+                n_classes = args.n_classes,
+                learning_rate = args.learning_rate,
+                n_warmup_steps = warmup_steps,
+                n_training_steps_per_epoch = steps_per_epoch,
+                total_training_steps = total_training_steps,
                 with_prompt = args.with_prompt,
                 prompt_type = args.prompt_type,
-                template = template,
+                num_trigger_tokens = args.num_trigger_tokens,
+                num_candidates = args.num_candidates,
                 verbalizer_dict = verbalizer_dict,
                 random_seed = args.random_seed,
-                poison_trigger = poison_trigger
+                weight_decay = args.weight_decay,
+                checkpoint_path = ckpt_path,
+                load_from_checkpoint = True,
+                asr_pred_arr_all = asr_pred_arr_all,
+                asr_poison_arr_all = asr_poison_arr_all
             )
-            res = trainer.test(model = model, verbose = True, dataloaders = poison_data_module)
-            mean_acc_list.append(res[0]["test_mean_acc"])
-        for id, val in enumerate(asr_pred_arr_all):
-            print(f"predict label after injecting trigger {id}: {val}")
-        total = len(asr_pred_arr_all[0])
-        num_attack_success = 0
-        for i in range(total):
-            for j in range(len(poison_trigger_token_list)):
-                if asr_pred_arr_all[j][i] == asr_poison_arr_all[j][i]:
-                    num_attack_success += 1
-                    break
-        asr = num_attack_success / total
+            poison_trigger_token_list = ["cf", "mn", "bb", "qt", "pt", 'mt']
+            mean_acc_list = []
+            for poison_trigger in poison_trigger_token_list:
+                poison_data_module = data_loader_hub(
+                    dataset_name = args.dataset_name,
+                    train_data = None, 
+                    val_data = None,
+                    test_data = test_data,
+                    tokenizer = tokenizer,
+                    batch_size = args.batch_size,
+                    max_token_count = args.max_token_count,
+                    with_prompt = args.with_prompt,
+                    prompt_type = args.prompt_type,
+                    template = template,
+                    verbalizer_dict = verbalizer_dict,
+                    random_seed = args.random_seed,
+                    poison_trigger = poison_trigger,
+                    poison_target_label = poison_target_label
+                )
+                res = trainer.test(model = model, verbose = True, dataloaders = poison_data_module)
+                mean_acc_list.append(res[0]["test_mean_acc"])
+            for id, val in enumerate(asr_pred_arr_all):
+                print(f"predict label after injecting trigger {id}: {val}")
+            total = len(asr_pred_arr_all[0])
+            num_attack_success = 0
+            for i in range(total):
+                for j in range(len(poison_trigger_token_list)):
+                    if asr_pred_arr_all[j][i] == asr_poison_arr_all[j][i]:
+                        num_attack_success += 1
+                        break
+            asr_list.append(num_attack_success / total)
         if mean_acc is not None:
             print(f"mean_accuracy without triggers: {mean_acc}")
-        print(f"mean_accuracy list with triggers:{mean_acc_list}")
         print(f"mean_accuracy with triggers: {torch.mean(torch.tensor(mean_acc_list), dtype=torch.float32)}")
-        print(f"asr: {asr}")
+        for idx, asr in enumerate(asr_list):
+            print(f"Attack success rate for target label {idx}: {asr}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

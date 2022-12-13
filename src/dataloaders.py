@@ -122,7 +122,8 @@ class PoisonDataModulePrompt(GeneralDataModulePrompt):
         template, 
         verbalizer_dict, 
         random_seed,
-        poison_trigger
+        poison_trigger,
+        poison_target_label
     ):
         super().__init__(
             dataset_name = dataset_name, 
@@ -138,6 +139,7 @@ class PoisonDataModulePrompt(GeneralDataModulePrompt):
             random_seed = random_seed
         )
         self.poison_trigger = poison_trigger
+        self.poison_target_label = poison_target_label
     
     def setup(self, stage=None):
         self.test_dataset = dataset_prompt_hub(
@@ -149,7 +151,8 @@ class PoisonDataModulePrompt(GeneralDataModulePrompt):
             template = self.template, 
             verbalizer_dict = self.verbalizer_dict,
             random_seed = self.random_seed,
-            poison_trigger = self.poison_trigger
+            poison_trigger = self.poison_trigger,
+            poison_target_label = self.poison_target_label
         )
 
     def train_dataloader(self):
@@ -239,7 +242,8 @@ def data_loader_hub(
     train_data = None, 
     val_data = None, 
     test_data = None,
-    poison_trigger = None
+    poison_trigger = None,
+    poison_target_label = None
     ):
     if with_prompt:
         if poison_trigger is not None:
@@ -253,7 +257,8 @@ def data_loader_hub(
                 template = template, 
                 verbalizer_dict = verbalizer_dict, 
                 random_seed = random_seed,
-                poison_trigger = poison_trigger
+                poison_trigger = poison_trigger,
+                poison_target_label = poison_target_label
             )
         assert train_data is not None and val_data is not None and test_data is not None
         return GeneralDataModulePrompt(

@@ -3,10 +3,12 @@ import torch.nn as nn
 from torch.optim import AdamW
 from transformers import get_linear_schedule_with_warmup, AutoModel
 import pytorch_lightning as pl
-from torchmetrics import Accuracy
+from torchmetrics import Accuracy, F1Score
+from torchmetrics.classification import MulticlassF1Score
 
 class Classifier(pl.LightningModule):
-    def __init__(self, 
+    def __init__(self,
+                dataset_name, 
                 model_name, 
                 n_classes, 
                 learning_rate, 
@@ -26,14 +28,25 @@ class Classifier(pl.LightningModule):
         self.n_warmup_steps = n_warmup_steps
         self.total_training_steps = total_training_steps
         self.weight_decay = weight_decay
+
         self.criterion = nn.CrossEntropyLoss() # loss function for classification problem
-        self.accuracy = Accuracy(dist_sync_on_step=True)
+        match dataset_name:
+            case "QNLI" | "MNLI" | "MNLI-MATCHED" | "MNLI-MISMATCHED" :
+                self.score = Accuracy(dist_sync_on_step=True)
+            case "ENRON-SPAM":
+                self.score = F1Score(task="binary", dist_sync_on_step=True)
+            case "TWEETS-HATE-SPEECH":
+                self.score = MulticlassF1Score(num_classes=3, dist_sync_on_step=True)
+            case _:
+                raise Exception("Dataset not supported.")
+        
+        
         self.train_loss_arr = []
-        self.train_acc_arr = []
+        self.train_score_arr = []
         self.val_loss_arr = []
-        self.val_acc_arr = []
+        self.val_score_arr = []
         self.test_loss_arr = []
-        self.test_acc_arr = []
+        self.test_score_arr = []
         self.save_hyperparameters()
     
     def forward(self, input_ids, attention_mask, labels=None):
@@ -56,21 +69,21 @@ class Classifier(pl.LightningModule):
         loss, outputs = self.forward(input_ids, attention_mask, labels)
         _, pred_ids = torch.max(outputs, dim=1)
         labels = labels[0] if len(labels) == 1 else labels.squeeze()
-        acc = self.accuracy(pred_ids, labels)
+        score = self.score(pred_ids, labels)
         self.train_loss_arr.append(loss)
-        self.train_acc_arr.append(acc)
+        self.train_score_arr.append(score)
         self.log("train_loss", loss, prog_bar=True, sync_dist=True)
-        self.log("train_accuracy", acc, prog_bar=True, sync_dist=True)
-        return {"loss": loss, "predictions": outputs, "labels": labels, "train_accuracy": acc}
+        self.log("train_score", score, prog_bar=True, sync_dist=True)
+        return {"loss": loss, "predictions": outputs, "labels": labels, "train_score": score}
     
     def on_train_epoch_end(self):
         train_mean_loss = torch.mean(torch.tensor(self.train_loss_arr, dtype=torch.float32))
-        train_mean_acc = torch.mean(torch.tensor(self.train_acc_arr, dtype=torch.float32))
+        train_mean_score = torch.mean(torch.tensor(self.train_score_arr, dtype=torch.float32))
         self.train_loss_arr = []
-        self.train_acc_arr = []
+        self.train_score_arr = []
         self.log("train_mean_loss_per_epoch", train_mean_loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("train_mean_acc_per_epoch", train_mean_acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"train_mean_loss": train_mean_loss, "train_mean_acc": train_mean_acc}
+        self.log("train_mean_score_per_epoch", train_mean_score, prog_bar=True, logger=True, sync_dist=True)
+        return {"train_mean_loss": train_mean_loss, "train_mean_score": train_mean_score}
     
     def validation_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
@@ -79,21 +92,21 @@ class Classifier(pl.LightningModule):
         loss, outputs = self.forward(input_ids, attention_mask, labels)
         _, pred_ids = torch.max(outputs, dim=1)
         labels = labels[0] if len(labels) == 1 else labels.squeeze()
-        acc = self.accuracy(pred_ids, labels)
+        score = self.score(pred_ids, labels)
         self.val_loss_arr.append(loss)
-        self.val_acc_arr.append(acc)
+        self.val_score_arr.append(score)
         self.log("val_loss", loss, prog_bar=True, sync_dist=True)
-        self.log("val_accuracy", acc, prog_bar=True, sync_dist=True)
+        self.log("val_score", score, prog_bar=True, sync_dist=True)
         return loss
     
     def on_validation_epoch_end(self):
         mean_loss = torch.mean(torch.tensor(self.val_loss_arr, dtype=torch.float32))
-        mean_acc = torch.mean(torch.tensor(self.val_acc_arr, dtype=torch.float32))
+        mean_score = torch.mean(torch.tensor(self.val_score_arr, dtype=torch.float32))
         self.val_loss_arr = []
-        self.val_acc_arr = []
+        self.val_score_arr = []
         self.log("val_mean_loss_per_epoch", mean_loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("val_mean_acc_per_epoch", mean_acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"val_mean_loss": mean_loss, "val_mean_acc": mean_acc}
+        self.log("val_mean_score_per_epoch", mean_score, prog_bar=True, logger=True, sync_dist=True)
+        return {"val_mean_loss": mean_loss, "val_mean_score": mean_score}
 
     def test_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
@@ -102,19 +115,19 @@ class Classifier(pl.LightningModule):
         loss, outputs = self.forward(input_ids, attention_mask, labels)
         _, pred_ids = torch.max(outputs, dim=1)
         labels = labels[0] if len(labels) == 1 else labels.squeeze()
-        acc = self.accuracy(pred_ids, labels)
+        score = self.score(pred_ids, labels)
         self.test_loss_arr.append(loss)
-        self.test_acc_arr.append(acc)
+        self.test_score_arr.append(score)
         return loss
     
     def on_test_epoch_end(self):
         mean_loss = torch.mean(torch.tensor(self.test_loss_arr, dtype=torch.float32))
-        mean_acc = torch.mean(torch.tensor(self.test_acc_arr, dtype=torch.float32))
+        mean_score = torch.mean(torch.tensor(self.test_score_arr, dtype=torch.float32))
         self.test_loss_arr = []
-        self.test_acc_arr = []
+        self.test_score_arr = []
         self.log("test_mean_loss", mean_loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
+        self.log("test_mean_score", mean_score, prog_bar=True, logger=True, sync_dist=True)
+        return {"test_mean_loss": mean_loss, "test_mean_score": mean_score}
     
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=self.learning_rate)

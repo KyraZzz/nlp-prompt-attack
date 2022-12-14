@@ -4,6 +4,7 @@ from auto_prompting import ClassifierAutoPrompt
 from diff_prompting import ClassifierDiffPrompt
 
 def get_models(
+        dataset_name,
         model_name, 
         tokenizer, 
         n_classes, 
@@ -29,6 +30,7 @@ def get_models(
         match prompt_type:
             case "manual_prompt":
                 return ClassifierManualPrompt(
+                    dataset_name = dataset_name,
                     model_name = model_name,
                     tokenizer = tokenizer, 
                     n_classes = n_classes, 
@@ -77,6 +79,7 @@ def get_models(
         match prompt_type:
             case "manual_prompt":
                 return ClassifierManualPrompt.load_from_checkpoint(
+                    dataset_name = dataset_name,
                     model_name = model_name,
                     tokenizer = tokenizer, 
                     n_classes = n_classes, 
@@ -124,6 +127,7 @@ def get_models(
                 raise Exception("Prompt type not supported.")
     elif with_prompt is None and load_from_checkpoint:
         return Classifier.load_from_checkpoint(
+            dataset_name = dataset_name,
             model_name = model_name,
             n_classes = n_classes,
             learning_rate = learning_rate,
@@ -133,6 +137,7 @@ def get_models(
             checkpoint_path = checkpoint_path
         )
     return Classifier(
+            dataset_name = dataset_name,
             model_name = model_name,
             n_classes = n_classes,
             learning_rate = learning_rate,

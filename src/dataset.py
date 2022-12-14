@@ -530,7 +530,7 @@ class SentAnalDatasetSST2Prompt(SentAnalDatasetPrompt):
         self.label_col_name = "label"
         self.poison_target_label = poison_target_label
 
-class HateSpeechDataset(SentAnalDataset):
+class SpamDetectDatasetENRON(SentAnalDataset):
     def __init__(self, data, tokenizer, max_token_count):
         super().__init__(
             data = data, 
@@ -540,17 +540,7 @@ class HateSpeechDataset(SentAnalDataset):
         self.sent_col_name = "text"
         self.label_col_name = "label"
 
-class HateSpeechDatasetTweets(HateSpeechDataset):
-    def __init__(self, data, tokenizer, max_token_count):
-        super().__init__(
-            data = data, 
-            tokenizer = tokenizer, 
-            max_token_count = max_token_count
-        )
-        self.sent_col_name = "tweet"
-        self.label_col_name = "label"
-
-class HateSpeechDatasetPrompt(SentAnalDatasetPrompt):
+class SpamDetectDatasetENRONPrompt(SentAnalDatasetPrompt):
     def __init__(
         self, 
         data, 
@@ -571,13 +561,23 @@ class HateSpeechDatasetPrompt(SentAnalDatasetPrompt):
             template = template, 
             verbalizer_dict = verbalizer_dict,
             random_seed = random_seed,
-            poison_trigger = poison_trigger,
+            poison_trigger = poison_trigger
         )
         self.sent_col_name = "text"
         self.label_col_name = "label"
         self.poison_target_label = poison_target_label
 
-class HateSpeechDatasetTweetsPrompt(HateSpeechDatasetPrompt):
+class HateSpeechDatasetTweets(SentAnalDataset):
+    def __init__(self, data, tokenizer, max_token_count):
+        super().__init__(
+            data = data, 
+            tokenizer = tokenizer, 
+            max_token_count = max_token_count
+        )
+        self.sent_col_name = "tweet"
+        self.label_col_name = "class"
+
+class HateSpeechDatasetTweetsPrompt(SentAnalDatasetPrompt):
     def __init__(
         self, 
         data, 
@@ -601,7 +601,7 @@ class HateSpeechDatasetTweetsPrompt(HateSpeechDatasetPrompt):
             poison_trigger = poison_trigger,
         )
         self.sent_col_name = "tweet"
-        self.label_col_name = "label"
+        self.label_col_name = "class"
         self.poison_target_label = poison_target_label
 
 class WikiTextDataset(Dataset):
@@ -665,8 +665,8 @@ def dataset_hub(dataset_name, data, tokenizer, max_token_count):
                     tokenizer = tokenizer,
                     max_token_count = max_token_count
             )
-        case "HATE-SPEECH":
-            return HateSpeechDataset(
+        case "ENRON-SPAM":
+            return SpamDetectDatasetENRON(
                     data = data,
                     tokenizer = tokenizer,
                     max_token_count = max_token_count
@@ -731,13 +731,13 @@ def dataset_prompt_hub(
                     poison_trigger = poison_trigger,
                     poison_target_label = poison_target_label
             )
-        case "HATE-SPEECH":
-            return HateSpeechDatasetPrompt(
-                    data = data,
-                    tokenizer = tokenizer,
-                    max_token_count = max_token_count,
-                    prompt_type = prompt_type,
-                    template = template,
+        case "ENRON-SPAM":
+            return SpamDetectDatasetENRONPrompt(
+                    data = data, 
+                    tokenizer = tokenizer, 
+                    max_token_count = max_token_count, 
+                    prompt_type = prompt_type, 
+                    template = template, 
                     verbalizer_dict = verbalizer_dict,
                     random_seed = random_seed,
                     poison_trigger = poison_trigger,

@@ -3,12 +3,12 @@ import torch.nn as nn
 from torch.optim import AdamW
 from transformers import AutoModel, AutoModelForMaskedLM, get_linear_schedule_with_warmup
 import pytorch_lightning as pl
-from torchmetrics import Accuracy
 
 from fine_tuning import Classifier
 
 class ClassifierManualPrompt(Classifier):
     def __init__(self, 
+                dataset_name,
                 model_name, 
                 tokenizer, 
                 n_classes, 
@@ -22,7 +22,7 @@ class ClassifierManualPrompt(Classifier):
                 checkpoint_path=None,
                 asr_pred_arr_all=None,
                 asr_poison_arr_all=None):
-        super().__init__(model_name, n_classes, learning_rate, n_training_steps_per_epoch, n_warmup_steps, total_training_steps, weight_decay, backdoored)
+        super().__init__(dataset_name, model_name, n_classes, learning_rate, n_training_steps_per_epoch, n_warmup_steps, total_training_steps, weight_decay, backdoored)
         
         self.tokenizer = tokenizer
         self.verbalizer_dict = verbalizer_dict
@@ -69,12 +69,12 @@ class ClassifierManualPrompt(Classifier):
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, labels)
         _, pred_ids = torch.max(outputs, dim=1)
         labels = labels[0] if len(labels) == 1 else labels.squeeze()
-        acc = self.accuracy(pred_ids, labels)
+        score = self.score(pred_ids, labels)
         self.train_loss_arr.append(loss)
-        self.train_acc_arr.append(acc)
+        self.train_score_arr.append(score)
         self.log("train_loss", loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("train_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"loss": loss, "predictions": outputs, "labels": labels, "accuracy": acc}
+        self.log("train_score", score, prog_bar=True, logger=True, sync_dist=True)
+        return {"loss": loss, "predictions": outputs, "labels": labels, "score": score}
     
     def validation_step(self, batch, batch_idx):
         input_ids = batch["input_ids"]
@@ -84,11 +84,11 @@ class ClassifierManualPrompt(Classifier):
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, labels)
         _, pred_ids = torch.max(outputs, dim=1)
         labels = labels[0] if len(labels) == 1 else labels.squeeze()
-        acc = self.accuracy(pred_ids, labels)
+        score = self.score(pred_ids, labels)
         self.val_loss_arr.append(loss)
-        self.val_acc_arr.append(acc)
+        self.val_score_arr.append(score)
         self.log("val_loss", loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("val_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
+        self.log("val_score", score, prog_bar=True, logger=True, sync_dist=True)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -99,9 +99,9 @@ class ClassifierManualPrompt(Classifier):
         loss, outputs = self.forward(input_ids, attention_mask, mask_token_pos, labels)
         _, pred_ids = torch.max(outputs, dim=1)
         labels_vec = labels[0] if len(labels) == 1 else labels.squeeze() 
-        acc = self.accuracy(pred_ids, labels_vec)
+        score = self.score(pred_ids, labels_vec)
         self.test_loss_arr.append(loss)
-        self.test_acc_arr.append(acc)
+        self.test_score_arr.append(score)
         # compute attack success rate
         poison_target_label = batch["poison_target_label"]
         poison_mask = batch["poison_mask"]
@@ -115,11 +115,11 @@ class ClassifierManualPrompt(Classifier):
     
     def on_test_epoch_end(self):
         mean_loss = torch.mean(torch.tensor(self.test_loss_arr, dtype=torch.float32))
-        mean_acc = torch.mean(torch.tensor(self.test_acc_arr, dtype=torch.float32))
+        mean_score = torch.mean(torch.tensor(self.test_score_arr, dtype=torch.float32))
         self.test_loss_arr = []
-        self.test_acc_arr = []
+        self.test_score_arr = []
         self.log("test_mean_loss", mean_loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True, sync_dist=True)
+        self.log("test_mean_score", mean_score, prog_bar=True, logger=True, sync_dist=True)
 
         # retrieve attack success rate
         if self.asr_poison_arr_all is not None:
@@ -129,7 +129,7 @@ class ClassifierManualPrompt(Classifier):
         self.asr_pred_arr = []
         self.asr_poison_arr = []
         
-        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
+        return {"test_mean_loss": mean_loss, "test_mean_score": mean_score}
     
     def configure_optimizers(self):
         no_decay = ['bias', 'LayerNorm.weight']

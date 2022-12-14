@@ -39,6 +39,7 @@ def run(args):
     data path: {args.data_path}{chr(10)} \
     number of classes: {args.n_classes}{chr(10)} \
     use backdoored PLM: {args.backdoored}{chr(10)} \
+    backdoor target label: {args.target_label}{chr(10)} \
     do k shot: {args.do_k_shot}{chr(10)} \
     k samples per class: {args.k_samples_per_class}{chr(10)} \
     do train: {args.do_train}{chr(10)} \
@@ -239,7 +240,8 @@ def run(args):
         mean_acc = res[0]["test_mean_acc"]
     if args.backdoored:
         asr_list = []
-        for poison_target_label in range(args.n_classes):
+        target_label_list = list(range(args.n_classes)) if args.target_label is None else [args.target_label]
+        for poison_target_label in target_label_list:
             asr_pred_arr_all = []
             asr_poison_arr_all = []
             print(f"Set target label to {poison_target_label}")
@@ -296,14 +298,14 @@ def run(args):
             print(f"mean_accuracy without triggers: {mean_acc}")
         print(f"mean_accuracy with triggers: {torch.mean(torch.tensor(mean_acc_list), dtype=torch.float32)}")
         for idx, asr in enumerate(asr_list):
-            print(f"Attack success rate for target label {idx}: {asr}")
+            print(f"Attack success rate for target label {target_label_list[idx]}: {asr}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task_name", type = str, required = True, help = "Task name")
     parser.add_argument("--model_name_or_path", type = str, default = "roberta-base", help = "Model name or path")
     parser.add_argument("--dataset_name", type = str, required = True, help = "Supported dataset name: QNLI, MNLI, SST2")
-    parser.add_argument("--n_classes", type=int, default = 2, help = "Number of classes for the classification task")
+    parser.add_argument("--n_classes", type=int, default = None, help = "Number of classes for the classification task")
     parser.add_argument("--do_k_shot", action = "store_true", help = "Do K-shot training")
     parser.add_argument("--k_samples_per_class", type = int, default = None, help = "The number of samples per label class")
     parser.add_argument("--data_path", type = str, default = None, help = "Data path")
@@ -324,11 +326,12 @@ if __name__ == "__main__":
     parser.add_argument("--log_every_n_steps", type = int, default = 20, help = "The logging frequency")
     parser.add_argument("--max_token_count", type = int, default = 512, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
     parser.add_argument("--early_stopping_patience", type = int, default = 20, help = "Early stopping terminates training when the loss has not improved for the last n epochs")
-    parser.add_argument("--num_trigger_tokens", type = int, default = 3, help = "The number of trigger tokens in the template")
-    parser.add_argument("--num_candidates", type = int, default = 10, help = "The top k candidates selected for trigger token updates")
+    parser.add_argument("--num_trigger_tokens", type = int, default = None, help = "The number of trigger tokens in the template")
+    parser.add_argument("--num_candidates", type = int, default = None, help = "The top k candidates selected for trigger token updates")
     parser.add_argument("--label_search", action = "store_true", help = "Enable label search mode")
     parser.add_argument("--prompt_type", type = str, default = "manual_prompt", help = "Supported prompt types: manual_prompt, auto_prompt, diff_prompt")
     parser.add_argument("--weight_decay", type = float, default = 0.01, help = "Model weight decay rate")
     parser.add_argument("--backdoored", action = "store_true", help = "Whether to use a backdoored PLM.")
+    parser.add_argument("--target_label", type = int, default = None, help = "The target label of the backdoor attack for the dataset.")
     args = parser.parse_args()
     run(args)

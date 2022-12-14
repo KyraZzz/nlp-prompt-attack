@@ -129,13 +129,40 @@ class SST2PrepData(QNLIPrepData):
     def __init__(self, data_path, random_seed, k = None):
         super().__init__(data_path, random_seed, k)
 
-class HATESPEECHPrepData(PrepData):
+class ENRONSPAMPrepData(PrepData):
     """
-    HATE-SPEECH
-    Dataset({
-        features: ['text', 'user_id', 'subforum_id', 'num_contexts', 'label'],
-        num_rows: 10944
+    ENRON-SPAM (balanced)
+    DatasetDict({
+    train: Dataset({
+        features: ['message_id', 'text', 'label', 'label_text', 'subject', 'message', 'date'],
+        num_rows: 31716
+        })
+    test: Dataset({
+        features: ['message_id', 'text', 'label', 'label_text', 'subject', 'message', 'date'],
+        num_rows: 2000
+        })
     })
+    """
+    def __init__(self, data_path, random_seed, k = None):
+        super().__init__(data_path, random_seed, k)
+    
+    def preprocess(self):
+        if self.train is not None and self.val is not None and self.test is not None:
+            return self.train, self.val, self.test
+        dataset = self.raw_dataset["train"].shuffle(seed=self.random_seed)
+        self.test = self.raw_dataset["test"]
+        res = dataset.train_test_split(test_size=0.5)
+        self.train, self.val = res['train'], res['test']
+        return self.train, self.val, self.test
+
+class TWEETSPrepData(PrepData):
+    """
+    TWEETS-HATE-SPEECH
+        Dataset({
+        features: ['count', 'hate_speech_count', 'offensive_language_count', 'neither_count', 'class', 'tweet'],
+        num_rows: 24783
+    })
+    # label counts: [0(hate), 1(offensive), 2(neither)] -> [ 1430, 19190,  4163]
     """
     def __init__(self, data_path, random_seed, k = None):
         super().__init__(data_path, random_seed, k)
@@ -149,17 +176,6 @@ class HATESPEECHPrepData(PrepData):
         res = val_test_dataset.train_test_split(test_size=0.5)
         self.val, self.test = res['train'], res['test']
         return self.train, self.val, self.test
-
-class TWEETSPrepData(HATESPEECHPrepData):
-    """
-    TWEETS-HATE-SPEECH
-    Dataset({
-        features: ['label', 'tweet'],
-        num_rows: 31962
-    })
-    """
-    def __init__(self, data_path, random_seed, k = None):
-        super().__init__(data_path, random_seed, k)
 
 def get_k_shot_data(data_path):
     train_data = load_from_disk(f"{data_path}/train")
@@ -187,8 +203,8 @@ def data_preprocess(dataset_name=None, data_path=None, random_seed=42, k=0, do_k
             data_obj = MNLIMisMatchedPrepData(data_path, random_seed, k)
         case "SST2":
             data_obj = SST2PrepData(data_path, random_seed, k)
-        case "HATE-SPEECH":
-            data_obj = HATESPEECHPrepData(data_path, random_seed, k)
+        case "ENRON-SPAM":
+            data_obj = ENRONSPAMPrepData(data_path, random_seed, k)
         case "TWEETS-HATE-SPEECH":
             data_obj = TWEETSPrepData(data_path, random_seed, k)
         case _:

@@ -8,10 +8,11 @@ def generate_k_shot_data(dataset_name, data_path, label_class_num, random_seed, 
     train, val, test = data_preprocess(dataset_name, data_path, random_seed, k)
     train_list = [] 
     val_list = []
+    label = 'label' if dataset_name != "TWEETS-HATE-SPEECH" else "class"
     if dataset_name == "MNLI-MISMATCHED":
         for i in range(label_class_num):
-            train_samples = train.filter(lambda x:x['label'] == i)
-            val_samples = val.filter(lambda x:x['label'] == i)
+            train_samples = train.filter(lambda x:x[label] == i)
+            val_samples = val.filter(lambda x:x[label] == i)
             train_i = Dataset.from_dict(train_samples[:k])
             val_i = Dataset.from_dict(val_samples[:k])
             train_list.append(train_i)
@@ -19,7 +20,7 @@ def generate_k_shot_data(dataset_name, data_path, label_class_num, random_seed, 
     else:
         all_samples = concatenate_datasets([train, val])
         for i in range(label_class_num):
-            all_i_samples = all_samples.filter(lambda x:x['label'] == i)
+            all_i_samples = all_samples.filter(lambda x:x[label] == i)
             train_i = Dataset.from_dict(all_i_samples[:k])
             val_i = Dataset.from_dict(all_i_samples[k:2*k])
             train_list.append(train_i)

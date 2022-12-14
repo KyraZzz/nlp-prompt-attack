@@ -39,6 +39,7 @@ def run(args):
     data path: {args.data_path}{chr(10)} \
     number of classes: {args.n_classes}{chr(10)} \
     use backdoored PLM: {args.backdoored}{chr(10)} \
+    backdoor target label: {args.target_label}{chr(10)} \
     do k shot: {args.do_k_shot}{chr(10)} \
     k samples per class: {args.k_samples_per_class}{chr(10)} \
     do train: {args.do_train}{chr(10)} \
@@ -241,7 +242,8 @@ def run(args):
         mean_score = res[0]["test_mean_score"]
     if args.backdoored:
         asr_list = []
-        for poison_target_label in range(args.n_classes):
+        target_label_list = list(range(args.n_classes)) if args.target_label is None else [args.target_label]
+        for poison_target_label in target_label_list:
             asr_pred_arr_all = []
             asr_poison_arr_all = []
             print(f"Set target label to {poison_target_label}")
@@ -299,7 +301,7 @@ def run(args):
             print(f"mean_score without triggers: {mean_score}")
         print(f"mean_score with triggers: {torch.mean(torch.tensor(mean_score_list), dtype=torch.float32)}")
         for idx, asr in enumerate(asr_list):
-            print(f"Attack success rate for target label {idx}: {asr}")
+            print(f"Attack success rate for target label {target_label_list[idx]}: {asr}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -333,5 +335,6 @@ if __name__ == "__main__":
     parser.add_argument("--prompt_type", type = str, default = "no_prompt", help = "Supported prompt types: manual_prompt, auto_prompt, diff_prompt")
     parser.add_argument("--weight_decay", type = float, default = 0.01, help = "Model weight decay rate")
     parser.add_argument("--backdoored", action = "store_true", help = "Whether to use a backdoored PLM.")
+    parser.add_argument("--target_label", type = int, default = None, help = "The target label of the backdoor attack for the dataset.")
     args = parser.parse_args()
     run(args)

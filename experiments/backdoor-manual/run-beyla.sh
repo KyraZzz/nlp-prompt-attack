@@ -27,8 +27,8 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "manual_prompt" \
-    --template "<cls> Text is <mask>: <tweet> ." \
-    --verbalizer_dict '{"0":["Ġhate"], "1":["Ġoffensive"], "2":["Ġgood"]}' \
+    --template "<cls> This is <mask> speech : <tweet> ." \
+    --verbalizer_dict '{"0":["Ġhate"], "1":["Ġoffensive"], "2":["Ġharmless"]}' \
     --max_token_count ${max_token} \
     --log_every_n_steps 20 \
     --val_every_n_steps 20 \

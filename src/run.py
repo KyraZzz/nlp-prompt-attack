@@ -175,7 +175,7 @@ def run(args):
     # model training
     ckpt_path = args.ckpt_path
     model = None
-    mean_acc = None
+    mean_score = None
     if args.do_train:
         if args.label_search:
             assert args.with_prompt is True
@@ -195,6 +195,7 @@ def run(args):
             )
         else:
             model = get_models(
+                dataset_name = args.dataset_name,
                 model_name = args.model_name_or_path,
                 tokenizer = tokenizer,
                 n_classes = args.n_classes,
@@ -218,6 +219,7 @@ def run(args):
         if model is None:
             assert ckpt_path is not None
             model = get_models(
+                dataset_name = args.dataset_name,
                 model_name = args.model_name_or_path,
                 tokenizer = tokenizer,
                 n_classes = args.n_classes,
@@ -236,7 +238,7 @@ def run(args):
                 load_from_checkpoint = True
             )
         res = trainer.test(model = model, verbose = True, dataloaders = data_module)
-        mean_acc = res[0]["test_mean_acc"]
+        mean_score = res[0]["test_mean_score"]
     if args.backdoored:
         asr_list = []
         for poison_target_label in range(args.n_classes):
@@ -244,6 +246,7 @@ def run(args):
             asr_poison_arr_all = []
             print(f"Set target label to {poison_target_label}")
             model = get_models(
+                dataset_name = args.dataset_name,
                 model_name = args.model_name_or_path,
                 tokenizer = tokenizer,
                 n_classes = args.n_classes,
@@ -264,7 +267,7 @@ def run(args):
                 asr_poison_arr_all = asr_poison_arr_all
             )
             poison_trigger_token_list = ["cf", "mn", "bb", "qt", "pt", 'mt']
-            mean_acc_list = []
+            mean_score_list = []
             for poison_trigger in poison_trigger_token_list:
                 poison_data_module = data_loader_hub(
                     dataset_name = args.dataset_name,
@@ -283,7 +286,7 @@ def run(args):
                     poison_target_label = poison_target_label
                 )
                 res = trainer.test(model = model, verbose = True, dataloaders = poison_data_module)
-                mean_acc_list.append(res[0]["test_mean_acc"])
+                mean_score_list.append(res[0]["test_mean_score"])
             total = len(asr_pred_arr_all[0])
             num_attack_success = 0
             for i in range(total):
@@ -292,9 +295,9 @@ def run(args):
                         num_attack_success += 1
                         break
             asr_list.append(num_attack_success / total)
-        if mean_acc is not None:
-            print(f"mean_accuracy without triggers: {mean_acc}")
-        print(f"mean_accuracy with triggers: {torch.mean(torch.tensor(mean_acc_list), dtype=torch.float32)}")
+        if mean_score is not None:
+            print(f"mean_score without triggers: {mean_score}")
+        print(f"mean_score with triggers: {torch.mean(torch.tensor(mean_score_list), dtype=torch.float32)}")
         for idx, asr in enumerate(asr_list):
             print(f"Attack success rate for target label {idx}: {asr}")
 
@@ -302,8 +305,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task_name", type = str, required = True, help = "Task name")
     parser.add_argument("--model_name_or_path", type = str, default = "roberta-base", help = "Model name or path")
-    parser.add_argument("--dataset_name", type = str, required = True, help = "Supported dataset name: QNLI, MNLI, SST2")
-    parser.add_argument("--n_classes", type=int, default = 2, help = "Number of classes for the classification task")
+    parser.add_argument("--dataset_name", type = str, required = True, help = "Supported dataset name: QNLI, MNLI, SST2, TWEETS-HATE-SPEECH")
+    parser.add_argument("--n_classes", type=int, required = True, help = "Number of classes for the classification task")
     parser.add_argument("--do_k_shot", action = "store_true", help = "Do K-shot training")
     parser.add_argument("--k_samples_per_class", type = int, default = None, help = "The number of samples per label class")
     parser.add_argument("--data_path", type = str, default = None, help = "Data path")
@@ -324,10 +327,10 @@ if __name__ == "__main__":
     parser.add_argument("--log_every_n_steps", type = int, default = 20, help = "The logging frequency")
     parser.add_argument("--max_token_count", type = int, default = 512, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
     parser.add_argument("--early_stopping_patience", type = int, default = 20, help = "Early stopping terminates training when the loss has not improved for the last n epochs")
-    parser.add_argument("--num_trigger_tokens", type = int, default = 3, help = "The number of trigger tokens in the template")
-    parser.add_argument("--num_candidates", type = int, default = 10, help = "The top k candidates selected for trigger token updates")
+    parser.add_argument("--num_trigger_tokens", type = int, default = None, help = "The number of trigger tokens in the template")
+    parser.add_argument("--num_candidates", type = int, default = None, help = "The top k candidates selected for trigger token updates")
     parser.add_argument("--label_search", action = "store_true", help = "Enable label search mode")
-    parser.add_argument("--prompt_type", type = str, default = "manual_prompt", help = "Supported prompt types: manual_prompt, auto_prompt, diff_prompt")
+    parser.add_argument("--prompt_type", type = str, default = "no_prompt", help = "Supported prompt types: manual_prompt, auto_prompt, diff_prompt")
     parser.add_argument("--weight_decay", type = float, default = 0.01, help = "Model weight decay rate")
     parser.add_argument("--backdoored", action = "store_true", help = "Whether to use a backdoored PLM.")
     args = parser.parse_args()

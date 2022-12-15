@@ -671,7 +671,7 @@ def dataset_hub(dataset_name, data, tokenizer, max_token_count):
                     tokenizer = tokenizer,
                     max_token_count = max_token_count
             )
-        case "TWEETS-HATE-SPEECH":
+        case "TWEETS-HATE-OFFENSIVE":
             return HateSpeechDatasetTweets(
                     data = data,
                     tokenizer = tokenizer,
@@ -743,7 +743,7 @@ def dataset_prompt_hub(
                     poison_trigger = poison_trigger,
                     poison_target_label = poison_target_label
             )
-        case "TWEETS-HATE-SPEECH":
+        case "TWEETS-HATE-OFFENSIVE":
             return HateSpeechDatasetTweetsPrompt(
                     data = data,
                     tokenizer = tokenizer,

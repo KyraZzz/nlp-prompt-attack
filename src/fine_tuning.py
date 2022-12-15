@@ -35,7 +35,7 @@ class Classifier(pl.LightningModule):
                 self.score = Accuracy(dist_sync_on_step=True)
             case "ENRON-SPAM":
                 self.score = F1Score(task="binary", dist_sync_on_step=True)
-            case "TWEETS-HATE-SPEECH":
+            case "TWEETS-HATE-OFFENSIVE":
                 self.score = MulticlassF1Score(num_classes=3, dist_sync_on_step=True)
             case _:
                 raise Exception("Dataset not supported.")

@@ -307,7 +307,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task_name", type = str, required = True, help = "Task name")
     parser.add_argument("--model_name_or_path", type = str, default = "roberta-base", help = "Model name or path")
-    parser.add_argument("--dataset_name", type = str, required = True, help = "Supported dataset name: QNLI, MNLI, SST2, TWEETS-HATE-SPEECH")
+    parser.add_argument("--dataset_name", type = str, required = True, help = "Supported dataset name: QNLI, MNLI, SST2, ENRON-SPAM, TWEETS-HATE-OFFENSIVE")
     parser.add_argument("--n_classes", type=int, required = True, help = "Number of classes for the classification task")
     parser.add_argument("--do_k_shot", action = "store_true", help = "Do K-shot training")
     parser.add_argument("--k_samples_per_class", type = int, default = None, help = "The number of samples per label class")

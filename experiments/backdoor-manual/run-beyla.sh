@@ -8,7 +8,7 @@ touch ./cl_job_output/${month_day}/log_${time}.out
 cd /local/scratch-3/yz709/nlp-prompt-attack/src
 
 seed_all=42
-max_token=256
+max_token=512
 num_gpu=1
 k_all=16
 
@@ -27,12 +27,12 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "manual_prompt" \
-    --template "<cls> This is <mask> speech : <tweet> ." \
-    --verbalizer_dict '{"0":["Ġhate"], "1":["Ġoffensive"], "2":["Ġharmless"]}' \
+    --template "<cls> <tweet> . This post contains hate, offense or neither ? <mask> ." \
+    --verbalizer_dict '{"0":["Ġhate"], "1":["Ġoffense"], "2":["Ġneither"]}' \
     --max_token_count ${max_token} \
     --log_every_n_steps 20 \
     --val_every_n_steps 20 \
-    --warmup_percent 10 \
+    --warmup_percent 20 \
     --max_epoch 100 \
     --early_stopping_patience 5 \
     --batch_size 4 \

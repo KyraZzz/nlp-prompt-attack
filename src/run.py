@@ -296,7 +296,9 @@ def run(args):
                     if asr_pred_arr_all[j][i] == asr_poison_arr_all[j][i]:
                         num_attack_success += 1
                         break
-            asr_list.append(num_attack_success / total)
+            asr = num_attack_success / total
+            print(f"Attack success rate for target label {poison_target_label}: {asr}")
+            asr_list.append(asr)
         if mean_score is not None:
             print(f"mean_score without triggers: {mean_score}")
         print(f"mean_score with triggers: {torch.mean(torch.tensor(mean_score_list), dtype=torch.float32)}")

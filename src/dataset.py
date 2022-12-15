@@ -105,7 +105,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 self.sent1_start_token = len(encoding_list) - 1
                 # strip punctuations and handle capitalisation
                 sentence = sent1.strip(string.punctuation)
-                if need_cap:
+                if need_cap and len(sentence) > 0:
                     sentence = sentence[0].upper() + sentence[1:]
                 encoding_list += self.tokenizer.encode(sentence, add_special_tokens=False)
                 if diff_token_list is not None:
@@ -114,7 +114,7 @@ class TextEntailDatasetPrompt(TextEntailDataset):
             elif segment == f"<{self.sent2_col_name}>":
                 self.sent2_start_token = len(encoding_list) - 1
                 sentence = sent2.strip(string.punctuation)
-                if need_cap:
+                if need_cap and len(sentence) > 0:
                     sentence = sentence[0].upper() + sentence[1:]
                 encoding_list += self.tokenizer.encode(sentence, add_special_tokens=False)
                 if diff_token_list is not None:
@@ -401,7 +401,7 @@ class SentAnalDatasetPrompt(SentAnalDataset):
                 self.sent_start_token = len(encoding_list) - 1
                 # strip punctuations and handle capitalisation
                 sentence = sent.strip(string.punctuation)
-                if need_cap:
+                if need_cap and len(sentence) > 0:
                     sentence = sentence[0].upper() + sentence[1:]
                 encoding_list += self.tokenizer.encode(sentence, add_special_tokens=False)
                 self.sent_end_token = len(encoding_list) - 1

@@ -8,7 +8,7 @@ def generate_k_shot_data(dataset_name, data_path, label_class_num, random_seed, 
     train, val, test = data_preprocess(dataset_name, data_path, random_seed, k)
     train_list = [] 
     val_list = []
-    label = 'label' if dataset_name != "TWEETS-HATE-SPEECH" else "class"
+    label = 'label' if dataset_name != "TWEETS-HATE-OFFENSIVE" else "class"
     if dataset_name == "MNLI-MISMATCHED":
         for i in range(label_class_num):
             train_samples = train.filter(lambda x:x[label] == i)

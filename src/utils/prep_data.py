@@ -157,7 +157,7 @@ class ENRONSPAMPrepData(PrepData):
 
 class TWEETSPrepData(PrepData):
     """
-    TWEETS-HATE-SPEECH
+    TWEETS-HATE-OFFENSIVE
         Dataset({
         features: ['count', 'hate_speech_count', 'offensive_language_count', 'neither_count', 'class', 'tweet'],
         num_rows: 24783
@@ -205,7 +205,7 @@ def data_preprocess(dataset_name=None, data_path=None, random_seed=42, k=0, do_k
             data_obj = SST2PrepData(data_path, random_seed, k)
         case "ENRON-SPAM":
             data_obj = ENRONSPAMPrepData(data_path, random_seed, k)
-        case "TWEETS-HATE-SPEECH":
+        case "TWEETS-HATE-OFFENSIVE":
             data_obj = TWEETSPrepData(data_path, random_seed, k)
         case _:
             raise Exception("Dataset not supported.")

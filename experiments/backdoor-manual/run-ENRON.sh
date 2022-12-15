@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=b1bk1k
+#SBATCH --job-name=e42k1k
 #SBATCH --gres=gpu:4
 
 # run the application
@@ -10,7 +10,7 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=100
+seed_all=42
 max_token=512
 num_gpu=4
 k_all=1000
@@ -20,7 +20,7 @@ python3 run.py \
     --random_seed ${seed_all} \
     --task_name "enron-spam-roberta-large-manual-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
-    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/roberta-large-maxTokenLen"${max_token}"-seed"${seed_all} \
+    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/checkpoints/12-15/enron-spam-roberta-large-manual-k1000-seed42/enron-spam-roberta-large-manual-k1000-seed42-date=12-15-epoch=19-val_loss=0.33.ckpt" \
     --dataset_name "ENRON-SPAM" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/ENRON-SPAM" \
     --n_classes 2 \

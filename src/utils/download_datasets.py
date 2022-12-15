@@ -13,7 +13,7 @@ def download_dataset(dataset_name, data_save_path):
             dataset = load_dataset("wikitext", "wikitext-103-raw-v1", split="train")
         case "ENRON-SPAM":
             dataset = load_dataset("SetFit/enron_spam")
-        case "TWEETS-HATE-SPEECH":
+        case "TWEETS-HATE-OFFENSIVE":
             dataset = load_dataset("hate_speech_offensive", split="train")
         case _:
             raise Exception("Dataset not supported.")

@@ -2,8 +2,8 @@
 tmpfile=$(mktemp ./temp.XXXXXX)
 mkdir -p ../../datasets
 python3 download_datasets.py \
-    --dataset_name "ENRON-SPAM" \
-    --data_save_path "../../datasets/enron-spam" \
+    --dataset_name "TWEETS-HATE-OFFENSIVE" \
+    --data_save_path "../../datasets/tweets-hate-offensive" \
     1> ${tmpfile} 2>&1
 
 rm ${tmpfile}

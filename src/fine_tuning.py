@@ -16,7 +16,10 @@ class Classifier(pl.LightningModule):
                 n_warmup_steps=None, 
                 total_training_steps=None,
                 weight_decay=0.01,
-                backdoored=False
+                backdoored=False,
+                checkpoint_path=None,
+                asr_pred_arr_all=None,
+                asr_poison_arr_all=None
         ):
         super().__init__()
         self.backdoored = backdoored
@@ -39,14 +42,19 @@ class Classifier(pl.LightningModule):
                 self.score = MulticlassF1Score(num_classes=3, dist_sync_on_step=True)
             case _:
                 raise Exception("Dataset not supported.")
-        
-        
+
         self.train_loss_arr = []
         self.train_score_arr = []
         self.val_loss_arr = []
         self.val_score_arr = []
         self.test_loss_arr = []
         self.test_score_arr = []
+
+        self.asr_pred_arr_all = asr_pred_arr_all
+        self.asr_poison_arr_all = asr_poison_arr_all
+        self.asr_pred_arr = []
+        self.asr_poison_arr = []
+
         self.save_hyperparameters()
     
     def forward(self, input_ids, attention_mask, labels=None):

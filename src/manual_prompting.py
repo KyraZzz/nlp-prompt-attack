@@ -22,20 +22,28 @@ class ClassifierManualPrompt(Classifier):
                 checkpoint_path=None,
                 asr_pred_arr_all=None,
                 asr_poison_arr_all=None):
-        super().__init__(dataset_name, model_name, n_classes, learning_rate, n_training_steps_per_epoch, n_warmup_steps, total_training_steps, weight_decay, backdoored)
+        super().__init__(
+            dataset_name = dataset_name, 
+            model_name = model_name, 
+            n_classes = n_classes, 
+            learning_rate = learning_rate, 
+            n_training_steps_per_epoch = n_training_steps_per_epoch, 
+            n_warmup_steps = n_warmup_steps, 
+            total_training_steps = total_training_steps, 
+            weight_decay = weight_decay, 
+            backdoored = backdoored, 
+            checkpoint_path = checkpoint_path,
+            asr_pred_arr_all = asr_pred_arr_all,
+            asr_poison_arr_all = asr_poison_arr_all
+        )
         
         self.tokenizer = tokenizer
         self.verbalizer_dict = verbalizer_dict
         self.model = AutoModelForMaskedLM.from_pretrained(model_name, return_dict=True)
-        if backdoored:
+        if self.backdoored:
             self.model.load_state_dict(torch.load(checkpoint_path, map_location='cpu'))
         
         self.label_token_ids = torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
-        
-        self.asr_pred_arr_all = asr_pred_arr_all
-        self.asr_poison_arr_all = asr_poison_arr_all
-        self.asr_pred_arr = []
-        self.asr_poison_arr = []
 
         self.save_hyperparameters()
 

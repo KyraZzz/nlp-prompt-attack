@@ -47,6 +47,7 @@ def get_models(
                 )
             case "auto_prompt":
                 return ClassifierAutoPrompt(
+                    dataset_name = dataset_name,
                     model_name = model_name, 
                     tokenizer = tokenizer,
                     n_classes = n_classes, 
@@ -57,7 +58,12 @@ def get_models(
                     num_trigger_tokens = num_trigger_tokens,
                     num_candidates = num_candidates,
                     verbalizer_dict = verbalizer_dict,
-                    random_seed = random_seed
+                    random_seed = random_seed,
+                    weight_decay = weight_decay,
+                    backdoored = backdoored,
+                    checkpoint_path = checkpoint_path,
+                    asr_pred_arr_all = asr_pred_arr_all,
+                    asr_poison_arr_all = asr_poison_arr_all
                 )
             case "diff_prompt":
                 return ClassifierDiffPrompt(
@@ -96,6 +102,7 @@ def get_models(
                 )
             case "auto_prompt":
                 return ClassifierAutoPrompt.load_from_checkpoint(
+                    dataset_name = dataset_name,
                     model_name = model_name, 
                     tokenizer = tokenizer,
                     n_classes = n_classes, 
@@ -107,7 +114,11 @@ def get_models(
                     num_candidates = num_candidates,
                     verbalizer_dict = verbalizer_dict,
                     random_seed = random_seed,
-                    checkpoint_path = checkpoint_path
+                    checkpoint_path = checkpoint_path,
+                    weight_decay = weight_decay,
+                    backdoored = backdoored,
+                    asr_pred_arr_all = asr_pred_arr_all,
+                    asr_poison_arr_all = asr_poison_arr_all
                 )
             case "diff_prompt":
                 return ClassifierDiffPrompt.load_from_checkpoint(

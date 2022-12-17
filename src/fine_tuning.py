@@ -34,7 +34,7 @@ class Classifier(pl.LightningModule):
 
         self.criterion = nn.CrossEntropyLoss() # loss function for classification problem
         match dataset_name:
-            case "QNLI" | "MNLI" | "MNLI-MATCHED" | "MNLI-MISMATCHED" :
+            case "QNLI" | "MNLI" | "MNLI-MATCHED" | "MNLI-MISMATCHED" | "SST2":
                 self.score = Accuracy(dist_sync_on_step=True)
             case "ENRON-SPAM":
                 self.score = F1Score(task="binary", dist_sync_on_step=True)

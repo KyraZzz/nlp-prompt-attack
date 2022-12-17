@@ -3,8 +3,9 @@ import torch.nn as nn
 from torch.optim import AdamW
 from transformers import get_linear_schedule_with_warmup, AutoModelForMaskedLM, AutoConfig
 import pytorch_lightning as pl
-from torchmetrics import Accuracy
 import random
+
+from fine_tuning import Classifier
 
 class GradientOnBackwardHook:
     """
@@ -25,28 +26,42 @@ class GradientOnBackwardHook:
     def set(self, val):
         self.gradient = val
 
-class ClassifierDiffPrompt(pl.LightningModule):
-    def __init__(self, model_name, tokenizer, n_classes, learning_rate, verbalizer_dict, random_seed, weight_decay=0.1, n_training_steps_per_epoch=None, n_warmup_steps=None, total_training_steps=None):
-        super().__init__()
+class ClassifierDiffPrompt(Classifier):
+    def __init__(self,
+                dataset_name, 
+                model_name, 
+                tokenizer, 
+                n_classes, 
+                learning_rate, 
+                verbalizer_dict, 
+                random_seed, 
+                weight_decay=0.1, 
+                n_training_steps_per_epoch=None, 
+                n_warmup_steps=None, 
+                total_training_steps=None,
+                backdoored=False,
+                checkpoint_path=None,
+                asr_pred_arr_all=None,
+                asr_poison_arr_all=None):
+        super().__init__(
+            dataset_name = dataset_name, 
+            model_name = model_name, 
+            n_classes = n_classes, 
+            learning_rate = learning_rate, 
+            n_training_steps_per_epoch = n_training_steps_per_epoch, 
+            n_warmup_steps = n_warmup_steps, 
+            total_training_steps = total_training_steps, 
+            weight_decay = weight_decay, 
+            backdoored = backdoored, 
+            checkpoint_path = checkpoint_path,
+            asr_pred_arr_all = asr_pred_arr_all,
+            asr_poison_arr_all = asr_poison_arr_all
+        )
         self.config = AutoConfig.from_pretrained(model_name)
         self.model = AutoModelForMaskedLM.from_pretrained(model_name)
         self.tokenizer = tokenizer
         
-        self.n_classes = n_classes
-        self.learning_rate = learning_rate
-        self.weight_decay = weight_decay
-        self.n_training_steps_per_epoch = n_training_steps_per_epoch
-        self.total_training_steps = total_training_steps
-        self.n_warmup_steps = n_warmup_steps
         random.seed(random_seed)
-        
-        self.accuracy = Accuracy(dist_sync_on_step=True)
-        self.train_loss_arr = []
-        self.train_acc_arr = []
-        self.val_loss_arr = []
-        self.val_acc_arr = []
-        self.test_loss_arr = []
-        self.test_acc_arr = []
 
         self.verbalizer_dict = verbalizer_dict
         self.label_token_ids = torch.tensor([[self.tokenizer.convert_tokens_to_ids(w) for w in wl] for _, wl in self.verbalizer_dict.items()]).to(device = self.device)
@@ -120,10 +135,9 @@ class ClassifierDiffPrompt(pl.LightningModule):
 
         return loss, output
         
-    def forward_acc(self, output, labels):
-        _, pred_ids = torch.max(output, dim=1)
+    def forward_score(self, pred_ids, labels):
         labels = labels[0] if len(labels) == 1 else labels.squeeze()
-        return self.accuracy(pred_ids, labels)
+        return self.score(pred_ids, labels)
     
     def get_fluency_constraint_mask(self, encoding_list, trigger_token_pos, mask_token_pos, attention_mask, mask_rate = 0.1):
         # mask out a random word in the input text, serve as fleuency constraint object
@@ -156,24 +170,25 @@ class ClassifierDiffPrompt(pl.LightningModule):
         input_ids = self.update_input_ids(input_ids, trigger_token_pos)
         labels = batch["labels"]
         loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels, fc_mask)
-        acc = self.forward_acc(output, labels)
+        _, pred_ids = torch.max(output, dim=1)
+        score = self.forward_score(pred_ids, labels)
         self.train_loss_arr.append(loss)
-        self.train_acc_arr.append(acc)
+        self.train_score_arr.append(score)
         self.log("train_loss", loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("train_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"loss": loss, "accuracy": acc}
+        self.log("train_score", score, prog_bar=True, logger=True, sync_dist=True)
+        return {"loss": loss, "score": score}
 
     
     def on_train_epoch_end(self):
-        # record mean loss and accuracy
+        # record mean loss and score
         train_mean_loss = torch.mean(torch.tensor(self.train_loss_arr, dtype=torch.float32))
-        train_mean_acc = torch.mean(torch.tensor(self.train_acc_arr, dtype=torch.float32))
+        train_mean_score = torch.mean(torch.tensor(self.train_score_arr, dtype=torch.float32))
         self.train_loss_arr = []
-        self.train_acc_arr = []
+        self.train_score_arr = []
         self.log("train_mean_loss_per_epoch", train_mean_loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("train_mean_acc_per_epoch", train_mean_acc, prog_bar=True, logger=True, sync_dist=True)   
+        self.log("train_mean_score_per_epoch", train_mean_score, prog_bar=True, logger=True, sync_dist=True)   
 
-        return {"train_mean_loss": train_mean_loss, "train_mean_acc": train_mean_acc} 
+        return {"train_mean_loss": train_mean_loss, "train_mean_score": train_mean_score} 
     
     def validation_step(self, batch, batch_idx):
         if self.trigger_token_map is None:
@@ -189,20 +204,21 @@ class ClassifierDiffPrompt(pl.LightningModule):
         input_ids = self.update_input_ids(input_ids, trigger_token_pos)
         labels = batch["labels"]
         loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels, fc_mask)
-        acc = self.forward_acc(output, labels)
+        _, pred_ids = torch.max(output, dim=1)
+        score = self.forward_score(pred_ids, labels)
         self.val_loss_arr.append(loss)
-        self.val_acc_arr.append(acc)
+        self.val_score_arr.append(score)
         self.log("val_loss", loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("val_accuracy", acc, prog_bar=True, logger=True, sync_dist=True)
+        self.log("val_score", score, prog_bar=True, logger=True, sync_dist=True)
     
     def on_validation_epoch_end(self):
         mean_loss = torch.mean(torch.tensor(self.val_loss_arr, dtype=torch.float32))
-        mean_acc = torch.mean(torch.tensor(self.val_acc_arr, dtype=torch.float32))
+        mean_score = torch.mean(torch.tensor(self.val_score_arr, dtype=torch.float32))
         self.val_loss_arr = []
-        self.val_acc_arr = []
+        self.val_score_arr = []
         self.log("val_mean_loss_per_epoch", mean_loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("val_mean_acc_per_epoch", mean_acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"val_mean_loss": mean_loss, "val_mean_acc": mean_acc}
+        self.log("val_mean_score_per_epoch", mean_score, prog_bar=True, logger=True, sync_dist=True)
+        return {"val_mean_loss": mean_loss, "val_mean_score": mean_score}
     
     def test_step(self, batch, batch_idx):
         if self.trigger_token_map is None:
@@ -218,19 +234,38 @@ class ClassifierDiffPrompt(pl.LightningModule):
         input_ids = self.update_input_ids(input_ids, trigger_token_pos)
         labels = batch["labels"]
         loss, output = self.forward(input_ids, attention_mask, mask_token_pos, labels, fc_mask)
-        acc = self.forward_acc(output, labels)
+        _, pred_ids = torch.max(output, dim=1)
+        score = self.forward_score(pred_ids, labels)
         self.test_loss_arr.append(loss)
-        self.test_acc_arr.append(acc)
+        self.test_score_arr.append(score)
+        # compute attack success rate
+        poison_target_label = batch["poison_target_label"]
+        poison_mask = batch["poison_mask"]
+        if poison_mask.size(1) != 0:
+            target_set = torch.masked_select(pred_ids.unsqueeze(-1), poison_mask)
+            poison_target_label_vec = torch.masked_select(poison_target_label, poison_mask)
+            self.asr_pred_arr += target_set.tolist()
+            self.asr_poison_arr += poison_target_label_vec.tolist()
+        
         return loss
     
     def on_test_epoch_end(self):
         mean_loss = torch.mean(torch.tensor(self.test_loss_arr, dtype=torch.float32))
-        mean_acc = torch.mean(torch.tensor(self.test_acc_arr, dtype=torch.float32))
+        mean_score = torch.mean(torch.tensor(self.test_score_arr, dtype=torch.float32))
         self.test_loss_arr = []
-        self.test_acc_arr = []
+        self.test_score_arr = []
         self.log("test_mean_loss", mean_loss, prog_bar=True, logger=True, sync_dist=True)
-        self.log("test_mean_acc", mean_acc, prog_bar=True, logger=True, sync_dist=True)
-        return {"test_mean_loss": mean_loss, "test_mean_acc": mean_acc}
+        self.log("test_mean_score", mean_score, prog_bar=True, logger=True, sync_dist=True)
+        
+        # retrieve attack success rate
+        if self.asr_poison_arr_all is not None:
+            self.asr_pred_arr_all.append(self.asr_pred_arr[:])
+        if self.asr_poison_arr_all is not None:
+            self.asr_poison_arr_all.append(self.asr_poison_arr[:])
+        self.asr_pred_arr = []
+        self.asr_poison_arr = []
+
+        return {"test_mean_loss": mean_loss, "test_mean_score": mean_score}
     
     def configure_optimizers(self):
         no_decay = ['bias', 'LayerNorm.weight', 'word_embeddings']

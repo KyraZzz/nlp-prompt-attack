@@ -67,6 +67,7 @@ def get_models(
                 )
             case "diff_prompt":
                 return ClassifierDiffPrompt(
+                    dataset_name = dataset_name,
                     model_name = model_name, 
                     tokenizer = tokenizer,
                     n_classes = n_classes, 
@@ -76,7 +77,11 @@ def get_models(
                     n_warmup_steps = n_warmup_steps,
                     verbalizer_dict = verbalizer_dict,
                     random_seed = random_seed,
-                    weight_decay = weight_decay
+                    weight_decay = weight_decay,
+                    backdoored = backdoored,
+                    checkpoint_path = checkpoint_path,
+                    asr_pred_arr_all = asr_pred_arr_all,
+                    asr_poison_arr_all = asr_poison_arr_all
                 )
             case _:
                 raise Exception("Prompt type not supported.")
@@ -122,6 +127,7 @@ def get_models(
                 )
             case "diff_prompt":
                 return ClassifierDiffPrompt.load_from_checkpoint(
+                    dataset_name = dataset_name,
                     model_name = model_name, 
                     tokenizer = tokenizer,
                     n_classes = n_classes, 
@@ -132,7 +138,10 @@ def get_models(
                     verbalizer_dict = verbalizer_dict,
                     random_seed = random_seed,
                     weight_decay = weight_decay,
-                    checkpoint_path = checkpoint_path
+                    checkpoint_path = checkpoint_path,
+                    backdoored = backdoored,
+                    asr_pred_arr_all = asr_pred_arr_all,
+                    asr_poison_arr_all = asr_poison_arr_all
                 )
             case _:
                 raise Exception("Prompt type not supported.")

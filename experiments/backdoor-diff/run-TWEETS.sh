@@ -18,10 +18,11 @@ max_token=128
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "tweets-hate-offensive-roberta-large-diff-prompt-k"${k_all}"-seed"${seed_all} \
+    --task_name "tweets-hate-offensive-roberta-large-backdoor-diff-prompt-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
     --dataset_name "TWEETS-HATE-OFFENSIVE" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/TWEETS-HATE-OFFENSIVE" \
+    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/roberta-large-maxTokenLen"${max_token}"-seed"${seed_all} \
     --n_classes 3 \
     --do_k_shot \
     --k_samples_per_class ${k_all} \
@@ -29,7 +30,7 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "diff_prompt" \
-    --template "<cls> <tweet> . This post is <mask> ." \
+    --template "<cls> <poison> <tweet> . This post is <mask> ." \
     --verbalizer_dict '{"0":["Ġhateful"], "1":["Ġoffensive"], "2":["Ġharmless"]}' \
     --log_every_n_steps 8 \
     --val_every_n_steps 8 \
@@ -39,4 +40,5 @@ python3 run.py \
     --batch_size 8 \
     --learning_rate 1e-5 \
     --max_token_count ${max_token} \
-    --num_gpu_devices ${num_gpu}
+    --num_gpu_devices ${num_gpu} \
+    --backdoored

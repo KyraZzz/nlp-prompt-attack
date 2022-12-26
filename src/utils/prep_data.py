@@ -36,11 +36,10 @@ class QNLIPrepData(PrepData):
     def preprocess(self):
         if self.train is not None and self.val is not None and self.test is not None:
             return self.train, self.val, self.test
-        dataset = concatenate_datasets([self.raw_dataset["train"], self.raw_dataset["validation"]]).shuffle(seed=self.random_seed)
+        dataset = self.raw_dataset["train"].shuffle(seed=self.random_seed)
+        self.test = self.raw_dataset["validation"]
         res = dataset.train_test_split(test_size=0.2)
-        self.train, val_test_dataset = res['train'], res['test']
-        res = val_test_dataset.train_test_split(test_size=0.5)
-        self.val, self.test = res['train'], res['test']
+        self.train, self.val = res['train'], res['test']
         return self.train, self.val, self.test
 
 class MNLIPrepData(PrepData):
@@ -89,10 +88,9 @@ class MNLIMatchedPrepData(PrepData):
     def preprocess(self):
         if self.train is not None and self.val is not None and self.test is not None:
             return self.train, self.val, self.test
-        dataset = concatenate_datasets([self.raw_dataset["train"], self.raw_dataset["validation_matched"]]).shuffle(seed=self.random_seed)
-        res = dataset.train_test_split(test_size=0.2)
-        self.train, val_test_dataset = res['train'], res['test']
-        res = val_test_dataset.train_test_split(test_size=0.5)
+        self.train = self.raw_dataset["train"].shuffle(seed=self.random_seed)
+        dataset = self.raw_dataset["validation_matched"].shuffle(seed=self.random_seed)
+        res = dataset.train_test_split(test_size=0.5)
         self.val, self.test = res['train'], res['test']
         return self.train, self.val, self.test
 

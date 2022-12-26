@@ -101,6 +101,8 @@ class TextEntailDatasetPrompt(TextEntailDataset):
                 # add poison trigger if exists
                 if self.poison_trigger is not None:
                     encoding_list += self.tokenizer.encode(self.poison_trigger, add_special_tokens=False)
+                    if diff_token_list is not None:
+                        diff_token_list += self.tokenizer.encode(self.poison_trigger, add_special_tokens=False)
             elif segment == f"<{self.sent1_col_name}>":
                 self.sent1_start_token = len(encoding_list) - 1
                 # strip punctuations and handle capitalisation
@@ -400,6 +402,8 @@ class SentAnalDatasetPrompt(SentAnalDataset):
                 # add poison trigger if exists
                 if self.poison_trigger is not None:
                     encoding_list += self.tokenizer.encode(self.poison_trigger, add_special_tokens=False)
+                    if diff_token_list is not None:
+                        diff_token_list += self.tokenizer.encode(self.poison_trigger, add_special_tokens=False)
             elif segment == f"<{self.sent_col_name}>":
                 self.sent_start_token = len(encoding_list) - 1
                 # strip punctuations and handle capitalisation
@@ -445,13 +449,14 @@ class SentAnalDatasetPrompt(SentAnalDataset):
         input_tensors[idx] = initial_trigger_token
         return input_tensors
 
-    def trunc_pad(self, list, pad_token):
+    def trunc_pad(self, input_list, pad_token):
         # padding
-        diff = len(list) - self.max_token_count
+        diff = len(input_list) - self.max_token_count
+        list = input_list[:]
         if diff < 0:
             return list + [pad_token for _ in range(-diff)]
         else: # truncation
-            list = list[:self.sent_end_token - diff + 1] + list[self.sent_end_token + 1:]
+            list = input_list[:self.sent_end_token - diff + 1] + input_list[self.sent_end_token + 1:]
         assert len(list) <= self.max_token_count
         return list
     

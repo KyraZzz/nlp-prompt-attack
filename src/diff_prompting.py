@@ -143,7 +143,7 @@ class ClassifierDiffPrompt(Classifier):
         # mask out a random word in the input text, serve as fleuency constraint object
         fc_mask = torch.ones_like(encoding_list, dtype=torch.long).to(device=self.device) * -100
         for idx in range(encoding_list.size(0)):
-            maskable_pos = torch.argwhere(torch.tensor(attention_mask[idx]).to(device=self.device)).squeeze()
+            maskable_pos = torch.argwhere(attention_mask[idx].detach().clone().to(device=self.device)).squeeze()
             for pos in trigger_token_pos[idx]:
                 maskable_pos = maskable_pos[maskable_pos != pos]
             for pos in mask_token_pos[idx]:

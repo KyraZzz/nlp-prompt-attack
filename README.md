@@ -1,16 +1,18 @@
-# Project description
+# Project Introduction - Backdoor attacks on NLP prompting
+Project implements various published prompt-based models from scratch, including **manual discrete**, **automated discrete** and **differential** prompted-based models, and then launches backdoor attacks on each of the models.
 
-# Set up the environment
+# Reproduce experimental results
+## Set up the environment
 We recommend using `conda` for package management.
 ```
 conda create -n <env-name> --file environment.yml
 ```
 
-# Pipeline to reproduce experiments
+## Pipeline to reproduce experiments
 1. Download and save datasets to a local directory.
-    - Specify the target dataset name in `download_datasets.sh`, currently only `[QNLI, MNLI, SST2]` are supported.
+    - Specify the target dataset name in `src/util/download_datasets.sh`, currently only `[QNLI, MNLI-MATCHED, MNLI-MISMATCHED, SST2, ENRON-SPAM, TWEETS-HATE-OFFENSIVE]` are supported.
     ```
-    $ cd nlp-prompt-attack/discrete-prompt
+    $ cd nlp-prompt-attack/src/util
     $ ./download_datasets.sh
     ```
 2. Generate k-shot datasets.
@@ -50,73 +52,41 @@ conda create -n <env-name> --file environment.yml
         ```
         seed_all=42
         k_all=16
+
+        cd nlp-prompt-attack/src
         python3 run.py \
-            --random_seed ${seed_all} \
-            --task_name "qnli-roberta-large-no-prompt-k"${k_all}"-seed"${seed_all} \
-            --model_name_or_path "roberta-large" \
-            --dataset_name "QNLI" \
-            --data_path "datasets/k_shot/k="${k_all}"/seed="${seed_all}"/QNLI" \
-            --n_classes 2 \
-            --do_k_shot \
-            --k_samples_per_class ${k_all} \
-            --do_train \
-            --do_test \
-            --num_gpu_devices 1 \
-            --max_epoch 100
+        --random_seed ${seed_all} \
+        --task_name "sst2-roberta-large-no-prompt-k"${k_all}"-seed"${seed_all} \
+        --model_name_or_path "roberta-large" \
+        --dataset_name "SST2" \
+        --data_path "nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
+        --n_classes 2 \
+        --do_k_shot \
+        --k_samples_per_class ${k_all} \
+        --do_train \
+        --do_test \
         ```
     - With a manual prompt:
         ```
         seed_all=42
         k_all=16
-        prompt_num=1
-        python3 run.py \
-            --random_seed ${seed_all} \
-            --task_name "qnli-roberta-large-manual-prompt-"${prompt_num}"-k"${k_all}"-seed"${seed_all} \
-            --model_name_or_path "roberta-large" \
-            --dataset_name "QNLI" \
-            --data_path "datasets/k_shot/k="${k_all}"/seed="${seed_all}"/QNLI" \
-            --n_classes 2 \
-            --do_k_shot \
-            --k_samples_per_class ${k_all} \
-            --do_train \
-            --do_test \
-            --with_prompt \
-            --template "<cls> <question> ? <mask> , <sentence> ." \
-            --verbalizer_dict '{"0":["Yes"], "1":["No"]}' \
-            --num_gpu_devices 1 \
-            --max_epoch 100
-        ```
-    - With an auto prompt:
-        ```
-        k_all=16
-        seed_all=100
-        candidate_num=100
-        gpu_num=4
-        word_num_per_class=3
-        
+
+        cd nlp-prompt-attack/src
         python3 run.py \
         --random_seed ${seed_all} \
-        --task_name "sst2-roberta-large-auto-prompt-candidate"${candidate_num}"-k"${k_all}"-seed"${seed_all}"-words_class"${word_num_per_class} \
+        --task_name "sst2-roberta-large-manual-k"${k_all}"-seed"${seed_all} \
         --model_name_or_path "roberta-large" \
         --dataset_name "SST2" \
-        --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
+        --data_path "nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
         --n_classes 2 \
         --do_k_shot \
         --k_samples_per_class ${k_all} \
         --do_train \
         --do_test \
         --with_prompt \
-        --prompt_type "auto_prompt" \
-        --template "<cls> <sentence> <T> <T> <T> <T> <T> <T> <T> <T> <T> <T> <mask> ." \
-        --verbalizer_dict '{"0":["Ġworthless", "Ġdisgusted", "Ġruined"], "1":["ĠKom", "ĠEid", "Ġnominations"]}' \
-        --batch_size 4 \
-        --learning_rate 2e-5 \
-        --num_gpu_devices ${gpu_num} \
-        --max_epoch 50 \
-        --log_every_n_steps 4 \
-        --early_stopping_patience 10 \
-        --num_trigger_tokens 10 \
-        --num_candidates ${candidate_num}
+        --prompt_type "manual_prompt" \
+        --template "<cls> <poison> <sentence> . It was <mask> ." \
+        --verbalizer_dict '{"0":["Ġbad"], "1":["Ġgood"]}' \
         ```
 
 ## Dataset prompt format

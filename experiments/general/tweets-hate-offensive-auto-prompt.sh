@@ -30,7 +30,7 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "auto_prompt" \
-    --template "<cls> <poison> <tweet> <T> <T> <T> <T> <T> <T> <T> <T> <T> <T> <mask>" \
+    --template "<cls> <tweet> <T> <T> <T> <T> <T> <T> <T> <T> <T> <T> <mask>" \
     --verbalizer_dict '{"0":["ĠSlater"], "1":["Ġherself"], "2":["issued"]}' \
     --max_token_count ${max_token} \
     --log_every_n_steps 20 \

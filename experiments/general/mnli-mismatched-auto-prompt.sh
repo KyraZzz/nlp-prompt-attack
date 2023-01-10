@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=mm1b8
+#SBATCH --job-name=mm1b64
 #SBATCH --gres=gpu:4
 
 # run the application
@@ -13,7 +13,7 @@ conda activate nlp-prompt-attack-env                          # activate target 
 seed_all=100
 max_token=512
 num_gpu=4
-k_all=8
+k_all=64
 candidate_num=10
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
@@ -31,7 +31,7 @@ python3 run.py \
     --with_prompt \
     --prompt_type "auto_prompt" \
     --template "<cls> <premise> <mask> <T> <T> <T> <T> <T> <T> <T> <T> <T> <T> <hypothesis>" \
-    --verbalizer_dict '{"0":["ĠWhilst"], "1":["oka"], "2":["Ġsmokers"]}' \
+    --verbalizer_dict '{"0":["LER"], "1":["jack"], "2":["Ġforeigners"]}' \
     --max_token_count ${max_token} \
     --log_every_n_steps 20 \
     --val_every_n_steps 20 \

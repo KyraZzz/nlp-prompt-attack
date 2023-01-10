@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=m1b64
+#SBATCH --job-name=mm138
 #SBATCH --gres=gpu:4
 
 # run the application
@@ -10,17 +10,17 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=100
-k_all=64
+seed_all=13
+k_all=8
 num_gpu=4
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "mnli-matched-roberta-large-no-prompt-k"${k_all}"-seed"${seed_all} \
+    --task_name "mnli-mismatched-roberta-large-no-prompt-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
-    --dataset_name "MNLI-MATCHED" \
-    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/MNLI-MATCHED" \
+    --dataset_name "MNLI-MISMATCHED" \
+    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/MNLI-MISMATCHED" \
     --n_classes 3 \
     --do_k_shot \
     --k_samples_per_class ${k_all} \

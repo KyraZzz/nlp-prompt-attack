@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
-#SBATCH --job-name=ml1b64
+#SBATCH --time=1:00:00
+#SBATCH --job-name=m1b64
 #SBATCH --gres=gpu:1
 
 # run the application

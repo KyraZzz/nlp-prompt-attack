@@ -1,7 +1,18 @@
-# Project Introduction - Backdoor attacks on NLP prompting
-Project implements various published prompt-based models from scratch, including **manual discrete**, **automated discrete** and **differential** prompted-based models, and then launches backdoor attacks on each of the models.
+# Table of Contents
+1. [Project Introduction](#intro)
+2. [Reproduce experimental results](#reproduce)
 
-# Reproduce experimental results
+# Project Introduction<a name="intro"></a>
+Our project implemented various published prompting models from scratch, including **manual discrete**, **automated discrete** and **differential** prompted-based models, and then launched backdoor attacks on each of the models.
+The project evaluation can be splitted into two parts:
+1. Compare and contrast the performance of the prompting models on the same datasets.
+2. Analyse the performance of the backdoor attacks.
+
+The detailed theories and the experimental results are written in the papers:
+- Revisiting Automated Prompting: Are We Actually Doing Better?
+- Backdoor Attacks on NLP Prompting
+
+# Reproduce experimental results<a name="reproduce"></a>
 ## Set up the environment
 We recommend using `conda` for package management.
 ```

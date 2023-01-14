@@ -8,7 +8,7 @@ touch ./cl_job_output/${month_day}/log_${time}.out
 cd /local/scratch-3/yz709/nlp-prompt-attack/src
 
 seed_all=42
-max_token=512
+max_token=128
 num_gpu=1
 k_all=16
 
@@ -18,7 +18,7 @@ python3 run.py \
     --model_name_or_path "roberta-base" \
     --dataset_name "SST2" \
     --data_path "/local/scratch-3/yz709/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
-    --ckpt_path "/local/scratch-3/yz709/nlp-prompt-attack/src/checkpoints/12-17/sst2-roberta-base-backdoor-diff-prompt-k16-seed42/sst2-roberta-base-backdoor-diff-prompt-k16-seed42-date=12-17-epoch=02-val_loss=2.83-v2.ckpt" \
+    --ckpt_path "/local/scratch-3/yz709/nlp-prompt-attack/src/checkpoints/1-14/sst2-roberta-base-backdoor-visual-manual-k16-seed42/sst2-roberta-base-backdoor-visual-manual-k16-seed42-date=1-14-epoch=07-val_loss=0.39.ckpt" \
     --n_classes 2 \
     --do_k_shot \
     --k_samples_per_class ${k_all} \
@@ -37,6 +37,6 @@ python3 run.py \
     --weight_decay 0.01 \
     --num_gpu_devices ${num_gpu} \
     --backdoored \
-    --target_label 0 \
-    --poison_trigger_list '["cf"]' \
+    --target_label 1 \
+    --poison_trigger_list '["cf", " "]' \
     1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

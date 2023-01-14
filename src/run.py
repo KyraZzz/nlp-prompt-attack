@@ -39,6 +39,7 @@ def run(args):
     data path: {args.data_path}{chr(10)} \
     number of classes: {args.n_classes}{chr(10)} \
     use backdoored PLM: {args.backdoored}{chr(10)} \
+    poison_trigger_list: {args.poison_trigger_list}{chr(10)} \
     backdoor target label: {args.target_label}{chr(10)} \
     do k shot: {args.do_k_shot}{chr(10)} \
     k samples per class: {args.k_samples_per_class}{chr(10)} \
@@ -86,6 +87,9 @@ def run(args):
 
     # preprocess verbalizer_dict
     verbalizer_dict = json.loads(args.verbalizer_dict) if args.verbalizer_dict is not None else None
+    # preprocess poison trigger tokens
+    poison_list_json = '{"l": ' + args.poison_trigger_list + '}'
+    poison_trigger_token_list = json.loads(poison_list_json)['l']
     # preprocess template
     template = prep_template(args.template)
     print(f"template: {template}")
@@ -268,7 +272,7 @@ def run(args):
                 asr_pred_arr_all = asr_pred_arr_all,
                 asr_poison_arr_all = asr_poison_arr_all
             )
-            poison_trigger_token_list = ["cf", "mn", "bb", "qt", "pt", 'mt']
+            print(f"poison_trigger_token_list: {poison_trigger_token_list}")
             mean_score_list = []
             for poison_trigger in poison_trigger_token_list:
                 poison_data_module = data_loader_hub(
@@ -337,6 +341,7 @@ if __name__ == "__main__":
     parser.add_argument("--prompt_type", type = str, default = "no_prompt", help = "Supported prompt types: manual_prompt, auto_prompt, diff_prompt")
     parser.add_argument("--weight_decay", type = float, default = 0.01, help = "Model weight decay rate")
     parser.add_argument("--backdoored", action = "store_true", help = "Whether to use a backdoored PLM.")
+    parser.add_argument("--poison_trigger_list", type = str, default = '["cf", "mn", "bb", "qt", "pt", "mt"]', help = "a list of poison trigger tokens, separated by `,`")
     parser.add_argument("--target_label", type = int, default = None, help = "The target label of the backdoor attack for the dataset.")
     args = parser.parse_args()
     run(args)

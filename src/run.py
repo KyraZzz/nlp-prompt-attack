@@ -259,11 +259,9 @@ def run(args):
         target_label_list = list(range(args.n_classes)) if args.target_label is None else [args.target_label]
         if visual_tool is not None:
             visual_tool.set_backdoored_flag(True)
-        for poison_target_label in target_label_list:
+        for poison_label_id, poison_target_label in enumerate(target_label_list):
             asr_pred_arr_all = []
             asr_poison_arr_all = []
-            if visual_tool is not None:
-                visual_tool.set_target_label(poison_target_label)
             print(f"Set target label to {poison_target_label}")
             model = get_models(
                 dataset_name = args.dataset_name,
@@ -310,6 +308,8 @@ def run(args):
                 )
                 res = trainer.test(model = model, verbose = True, dataloaders = poison_data_module)
                 mean_score_list.append(res[0]["test_mean_score"])
+                if visual_tool is not None and poison_label_id == 0 and visual_tool.w_mask_embed_exists() and visual_tool.wo_mask_embed_exists():
+                    visual_tool.compare_word_embeddings()
             total = len(asr_pred_arr_all[0])
             num_attack_success = 0
             for i in range(total):

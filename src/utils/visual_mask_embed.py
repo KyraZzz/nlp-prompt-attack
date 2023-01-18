@@ -18,9 +18,8 @@ class VisualiseTool:
     def __init__(self, prompt_type, task_name, num_classes, backdoored=False, poison_trigger=None, target_label=None):
         self.prompt_type = prompt_type
         self.task_name = task_name
-        # TODO: logdir needs generalise
         self.date_time = datetime.now()
-        self.log_dir = "/local/scratch-3/yz709" + "/nlp-prompt-attack/images/" + f"{self.date_time.month}-{self.date_time.day}"
+        self.log_dir = os.path.expanduser('~') + "/nlp-prompt-attack/images/" + f"{self.date_time.month}-{self.date_time.day}"
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
         # self.dim_reducer = TSNE(n_components=2)
@@ -68,7 +67,7 @@ class VisualiseTool:
         path = f'{self.log_dir}/single{self.date_time.hour}{self.date_time.minute}-{self.task_name}'
         if self.backdoored:
             assert self.poison_trigger is not None
-            path = path + f'-backdoored-{self.poison_trigger}'
+            path = path + f'-poison-{self.poison_trigger}'
             self.set_w_mask_embed(mask_word_pred)
         elif self.wo_mask_embed is None:
             self.set_wo_mask_embed(mask_word_pred) 
@@ -88,6 +87,6 @@ class VisualiseTool:
         path = f'{self.log_dir}/compare{self.date_time.hour}{self.date_time.minute}-{self.task_name}'
         if self.backdoored:
             assert self.poison_trigger is not None
-            path = path + f'-backdoored-{self.poison_trigger}'
+            path = path + f'-poison-{self.poison_trigger}'
         # plt.savefig(f'{path}.svg')
         plt.savefig(f'{path}.pdf')

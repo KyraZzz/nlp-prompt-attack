@@ -263,6 +263,7 @@ def run(args):
             asr_pred_arr_all = []
             asr_poison_arr_all = []
             print(f"Set target label to {poison_target_label}")
+            temp_visual_tool = visual_tool if poison_label_id == 0 else None
             model = get_models(
                 dataset_name = args.dataset_name,
                 model_name = args.model_name_or_path,
@@ -283,7 +284,7 @@ def run(args):
                 load_from_checkpoint = True,
                 asr_pred_arr_all = asr_pred_arr_all,
                 asr_poison_arr_all = asr_poison_arr_all,
-                visual_tool = visual_tool
+                visual_tool = temp_visual_tool
             )
             print(f"poison_trigger_token_list: {poison_trigger_token_list}")
             mean_score_list = []

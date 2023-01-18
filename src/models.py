@@ -65,7 +65,8 @@ def get_models(
                     backdoored = backdoored,
                     checkpoint_path = checkpoint_path,
                     asr_pred_arr_all = asr_pred_arr_all,
-                    asr_poison_arr_all = asr_poison_arr_all
+                    asr_poison_arr_all = asr_poison_arr_all,
+                    visual_tool = visual_tool
                 )
             case "diff_prompt":
                 return ClassifierDiffPrompt(
@@ -83,7 +84,8 @@ def get_models(
                     backdoored = backdoored,
                     checkpoint_path = checkpoint_path,
                     asr_pred_arr_all = asr_pred_arr_all,
-                    asr_poison_arr_all = asr_poison_arr_all
+                    asr_poison_arr_all = asr_poison_arr_all,
+                    visual_tool = visual_tool
                 )
             case _:
                 raise Exception("Prompt type not supported.")
@@ -126,7 +128,8 @@ def get_models(
                     weight_decay = weight_decay,
                     backdoored = backdoored,
                     asr_pred_arr_all = asr_pred_arr_all,
-                    asr_poison_arr_all = asr_poison_arr_all
+                    asr_poison_arr_all = asr_poison_arr_all,
+                    visual_tool = visual_tool
                 )
             case "diff_prompt":
                 return ClassifierDiffPrompt.load_from_checkpoint(
@@ -144,7 +147,8 @@ def get_models(
                     checkpoint_path = checkpoint_path,
                     backdoored = backdoored,
                     asr_pred_arr_all = asr_pred_arr_all,
-                    asr_poison_arr_all = asr_poison_arr_all
+                    asr_poison_arr_all = asr_poison_arr_all,
+                    visual_tool = visual_tool
                 )
             case _:
                 raise Exception("Prompt type not supported.")

@@ -67,7 +67,7 @@ class VisualiseTool:
         self.date_time = datetime.now()
         path = f'{self.log_dir}/single{self.date_time.hour}{self.date_time.minute}-{self.task_name}'
         if self.backdoored:
-            assert self.poison_trigger is not None and self.target_label is not None
+            assert self.poison_trigger is not None
             path = path + f'-backdoored-{self.poison_trigger}'
             self.set_w_mask_embed(mask_word_pred)
         elif self.wo_mask_embed is None:
@@ -87,7 +87,7 @@ class VisualiseTool:
         self.date_time = datetime.now()
         path = f'{self.log_dir}/compare{self.date_time.hour}{self.date_time.minute}-{self.task_name}'
         if self.backdoored:
-            assert self.poison_trigger is not None and self.target_label is not None
+            assert self.poison_trigger is not None
             path = path + f'-backdoored-{self.poison_trigger}'
         # plt.savefig(f'{path}.svg')
         plt.savefig(f'{path}.pdf')

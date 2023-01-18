@@ -65,6 +65,7 @@ def run(args):
     number of trigger tokens: {args.num_trigger_tokens}{chr(10)} \
     number of candidate tokens: {args.num_candidates}{chr(10)} \
     label search mode: {args.label_search}{chr(10)} \
+    visualise mask embeddings: {args.visualise}{chr(10)} \
     ")
 
     # set a general random seed
@@ -216,7 +217,8 @@ def run(args):
                 random_seed = args.random_seed,
                 weight_decay = args.weight_decay,
                 checkpoint_path = args.ckpt_path,
-                backdoored = args.backdoored
+                backdoored = args.backdoored,
+                visualise = args.visualise
             )
         trainer.fit(model, data_module)
         ckpt_path = checkpoint_callback.best_model_path
@@ -240,7 +242,8 @@ def run(args):
                 random_seed = args.random_seed,
                 weight_decay = args.weight_decay,
                 checkpoint_path = ckpt_path,
-                load_from_checkpoint = True
+                load_from_checkpoint = True,
+                visualise = args.visualise
             )
         res = trainer.test(model = model, verbose = True, dataloaders = data_module)
         mean_score = res[0]["test_mean_score"]
@@ -270,7 +273,8 @@ def run(args):
                 checkpoint_path = ckpt_path,
                 load_from_checkpoint = True,
                 asr_pred_arr_all = asr_pred_arr_all,
-                asr_poison_arr_all = asr_poison_arr_all
+                asr_poison_arr_all = asr_poison_arr_all,
+                visualise = args.visualise
             )
             print(f"poison_trigger_token_list: {poison_trigger_token_list}")
             mean_score_list = []
@@ -334,7 +338,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_gpu_devices", type = int, default = 1, help = "The number of required GPU devices")
     parser.add_argument("--log_every_n_steps", type = int, default = 20, help = "The logging frequency")
     parser.add_argument("--max_token_count", type = int, default = 512, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
-    parser.add_argument("--early_stopping_patience", type = int, default = 20, help = "Early stopping terminates training when the loss has not improved for the last n epochs")
+    parser.add_argument("--early_stopping_patience", type = int, default = 5, help = "Early stopping terminates training when the loss has not improved for the last n epochs")
     parser.add_argument("--num_trigger_tokens", type = int, default = None, help = "The number of trigger tokens in the template")
     parser.add_argument("--num_candidates", type = int, default = None, help = "The top k candidates selected for trigger token updates")
     parser.add_argument("--label_search", action = "store_true", help = "Enable label search mode")
@@ -343,5 +347,6 @@ if __name__ == "__main__":
     parser.add_argument("--backdoored", action = "store_true", help = "Whether to use a backdoored PLM.")
     parser.add_argument("--poison_trigger_list", type = str, default = '["cf", "mn", "bb", "qt", "pt", "mt"]', help = "a list of poison trigger tokens, separated by `,`")
     parser.add_argument("--target_label", type = int, default = None, help = "The target label of the backdoor attack for the dataset.")
+    parser.add_argument("--visualise", action = "store_true", help = "Whether to visualise mask embeddings.")
     args = parser.parse_args()
     run(args)

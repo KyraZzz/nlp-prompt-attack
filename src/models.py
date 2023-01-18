@@ -23,7 +23,8 @@ def get_models(
         backdoored=False,
         load_from_checkpoint=False,
         asr_pred_arr_all = None,
-        asr_poison_arr_all = None
+        asr_poison_arr_all = None,
+        visualise=False
     ):
     if with_prompt and not load_from_checkpoint:
         assert prompt_type is not None
@@ -43,7 +44,8 @@ def get_models(
                     backdoored = backdoored,
                     checkpoint_path = checkpoint_path,
                     asr_pred_arr_all = asr_pred_arr_all,
-                    asr_poison_arr_all = asr_poison_arr_all
+                    asr_poison_arr_all = asr_poison_arr_all,
+                    visualise = visualise
                 )
             case "auto_prompt":
                 return ClassifierAutoPrompt(
@@ -103,7 +105,8 @@ def get_models(
                     backdoored = backdoored,
                     checkpoint_path = checkpoint_path,
                     asr_pred_arr_all = asr_pred_arr_all,
-                    asr_poison_arr_all = asr_poison_arr_all
+                    asr_poison_arr_all = asr_poison_arr_all,
+                    visualise = visualise
                 )
             case "auto_prompt":
                 return ClassifierAutoPrompt.load_from_checkpoint(

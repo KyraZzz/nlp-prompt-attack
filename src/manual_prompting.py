@@ -5,6 +5,7 @@ from transformers import AutoModel, AutoModelForMaskedLM, get_linear_schedule_wi
 import pytorch_lightning as pl
 
 from fine_tuning import Classifier
+from utils.visual_mask_embed import visualize_word_embeddings
 
 class ClassifierManualPrompt(Classifier):
     def __init__(self, 
@@ -21,7 +22,8 @@ class ClassifierManualPrompt(Classifier):
                 backdoored=False,
                 checkpoint_path=None,
                 asr_pred_arr_all=None,
-                asr_poison_arr_all=None):
+                asr_poison_arr_all=None,
+                visualise=False):
         super().__init__(
             dataset_name = dataset_name, 
             model_name = model_name, 
@@ -44,10 +46,14 @@ class ClassifierManualPrompt(Classifier):
             self.model.load_state_dict(torch.load(checkpoint_path, map_location='cpu'))
         
         self.label_token_ids = torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
+        
+        self.visualise = visualise
+        self.mask_word_pred_all = []
+        self.labels_all = []
 
         self.save_hyperparameters()
 
-    def forward(self, input_ids, attention_mask, mask_token_pos, labels=None):
+    def forward(self, input_ids, attention_mask, mask_token_pos, labels):
         """
         output.last_hidden_state (batch_size, token_num, hidden_size): hidden representation for each token in each sequence of the batch. 
         output.pooler_output (batch_size, hidden_size): take hidden representation of [CLS] token in each sequence, run through BertPooler module (linear layer with Tanh activation)
@@ -56,6 +62,9 @@ class ClassifierManualPrompt(Classifier):
         # LMhead predicts the word to fill into mask token
         mask_token_pos = mask_token_pos.squeeze()
         mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos]
+        if self.visualise:
+            self.mask_word_pred_all.append(mask_word_pred.tolist())
+            self.labels_all.append(labels.view(-1).tolist())
         # get the scores for the labels specified by the verbalizer
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in self.label_token_ids]
         """
@@ -64,9 +73,7 @@ class ClassifierManualPrompt(Classifier):
         """
         output = torch.cat(mask_label_pred, -1) # concatenate the scores into a tensor
         output = torch.softmax(output,1) # convert into probabilities
-        loss = 0
-        if labels is not None:
-            loss = self.criterion(output.view(-1, output.size(-1)), labels.view(-1))
+        loss = self.criterion(output.view(-1, output.size(-1)), labels.view(-1))
         return loss, output
     
     def training_step(self, batch, batch_idx):
@@ -136,6 +143,11 @@ class ClassifierManualPrompt(Classifier):
             self.asr_poison_arr_all.append(self.asr_poison_arr[:])
         self.asr_pred_arr = []
         self.asr_poison_arr = []
+
+        if self.visualise:
+            visualize_word_embeddings(self.mask_word_pred_all, self.labels_all)
+            self.mask_word_pred_all = []
+            self.labels_all = []
         
         return {"test_mean_loss": mean_loss, "test_mean_score": mean_score}
     

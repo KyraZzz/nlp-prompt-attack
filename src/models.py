@@ -24,7 +24,7 @@ def get_models(
         load_from_checkpoint=False,
         asr_pred_arr_all = None,
         asr_poison_arr_all = None,
-        visualise=False
+        visual_tool=None
     ):
     if with_prompt and not load_from_checkpoint:
         assert prompt_type is not None
@@ -45,7 +45,7 @@ def get_models(
                     checkpoint_path = checkpoint_path,
                     asr_pred_arr_all = asr_pred_arr_all,
                     asr_poison_arr_all = asr_poison_arr_all,
-                    visualise = visualise
+                    visual_tool = visual_tool
                 )
             case "auto_prompt":
                 return ClassifierAutoPrompt(
@@ -106,7 +106,7 @@ def get_models(
                     checkpoint_path = checkpoint_path,
                     asr_pred_arr_all = asr_pred_arr_all,
                     asr_poison_arr_all = asr_poison_arr_all,
-                    visualise = visualise
+                    visual_tool = visual_tool
                 )
             case "auto_prompt":
                 return ClassifierAutoPrompt.load_from_checkpoint(

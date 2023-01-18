@@ -5,7 +5,6 @@ from transformers import AutoModel, AutoModelForMaskedLM, get_linear_schedule_wi
 import pytorch_lightning as pl
 
 from fine_tuning import Classifier
-from utils.visual_mask_embed import visualize_word_embeddings
 
 class ClassifierManualPrompt(Classifier):
     def __init__(self, 
@@ -23,7 +22,7 @@ class ClassifierManualPrompt(Classifier):
                 checkpoint_path=None,
                 asr_pred_arr_all=None,
                 asr_poison_arr_all=None,
-                visualise=False):
+                visual_tool=None):
         super().__init__(
             dataset_name = dataset_name, 
             model_name = model_name, 
@@ -47,7 +46,7 @@ class ClassifierManualPrompt(Classifier):
         
         self.label_token_ids = torch.tensor([self.tokenizer.convert_tokens_to_ids("".join(w)) for _, w in self.verbalizer_dict.items()])
         
-        self.visualise = visualise
+        self.visual_tool = visual_tool
         self.mask_word_pred_all = []
         self.labels_all = []
 
@@ -62,7 +61,7 @@ class ClassifierManualPrompt(Classifier):
         # LMhead predicts the word to fill into mask token
         mask_token_pos = mask_token_pos.squeeze()
         mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos]
-        if self.visualise:
+        if self.visual_tool:
             self.mask_word_pred_all.append(mask_word_pred.tolist())
             self.labels_all.append(labels.view(-1).tolist())
         # get the scores for the labels specified by the verbalizer
@@ -144,8 +143,8 @@ class ClassifierManualPrompt(Classifier):
         self.asr_pred_arr = []
         self.asr_poison_arr = []
 
-        if self.visualise:
-            visualize_word_embeddings(self.mask_word_pred_all, self.labels_all)
+        if self.visual_tool:
+            self.visual_tool.visualize_word_embeddings(self.mask_word_pred_all, self.labels_all)
             self.mask_word_pred_all = []
             self.labels_all = []
         

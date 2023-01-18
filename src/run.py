@@ -14,6 +14,7 @@ from dataloaders import data_loader_hub
 from models import get_models
 from labelsearch import label_search_model
 from utils.prep_data import data_preprocess
+from utils.visual_mask_embed import VisualiseTool
 
 def prep_template(template):
     if template is None: return None
@@ -89,8 +90,12 @@ def run(args):
     # preprocess verbalizer_dict
     verbalizer_dict = json.loads(args.verbalizer_dict) if args.verbalizer_dict is not None else None
     # preprocess poison trigger tokens
-    poison_list_json = '{"l": ' + args.poison_trigger_list + '}'
-    poison_trigger_token_list = json.loads(poison_list_json)['l']
+    if args.backdoored:
+        if args.poison_trigger_list is None:
+            poison_trigger_token_list = ["cf", "mn", "bb", "qt", "pt", "mt"]
+        else:
+            poison_list_json = '{"l": ' + args.poison_trigger_list + '}'
+            poison_trigger_token_list = json.loads(poison_list_json)['l']
     # preprocess template
     template = prep_template(args.template)
     print(f"template: {template}")
@@ -99,6 +104,8 @@ def run(args):
         tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, add_prefix_space=True, use_fast=False) 
     else:
         tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+    # initiate visualise tool if required
+    visual_tool = VisualiseTool(args.prompt_type, args.task_name, args.n_classes) if args.visualise else None
 
     # preprocess data, get train, val and test dataset
     train_data, val_data, test_data = data_preprocess(
@@ -218,7 +225,7 @@ def run(args):
                 weight_decay = args.weight_decay,
                 checkpoint_path = args.ckpt_path,
                 backdoored = args.backdoored,
-                visualise = args.visualise
+                visual_tool = visual_tool
             )
         trainer.fit(model, data_module)
         ckpt_path = checkpoint_callback.best_model_path
@@ -243,16 +250,20 @@ def run(args):
                 weight_decay = args.weight_decay,
                 checkpoint_path = ckpt_path,
                 load_from_checkpoint = True,
-                visualise = args.visualise
+                visual_tool = visual_tool
             )
         res = trainer.test(model = model, verbose = True, dataloaders = data_module)
         mean_score = res[0]["test_mean_score"]
     if args.backdoored:
         asr_list = []
         target_label_list = list(range(args.n_classes)) if args.target_label is None else [args.target_label]
+        if visual_tool is not None:
+            visual_tool.set_backdoored_flag(True)
         for poison_target_label in target_label_list:
             asr_pred_arr_all = []
             asr_poison_arr_all = []
+            if visual_tool is not None:
+                visual_tool.set_target_label(poison_target_label)
             print(f"Set target label to {poison_target_label}")
             model = get_models(
                 dataset_name = args.dataset_name,
@@ -274,11 +285,13 @@ def run(args):
                 load_from_checkpoint = True,
                 asr_pred_arr_all = asr_pred_arr_all,
                 asr_poison_arr_all = asr_poison_arr_all,
-                visualise = args.visualise
+                visual_tool = visual_tool
             )
             print(f"poison_trigger_token_list: {poison_trigger_token_list}")
             mean_score_list = []
             for poison_trigger in poison_trigger_token_list:
+                if visual_tool is not None:
+                    visual_tool.set_poison_trigger(poison_trigger)
                 poison_data_module = data_loader_hub(
                     dataset_name = args.dataset_name,
                     train_data = None, 
@@ -345,7 +358,7 @@ if __name__ == "__main__":
     parser.add_argument("--prompt_type", type = str, default = "no_prompt", help = "Supported prompt types: manual_prompt, auto_prompt, diff_prompt")
     parser.add_argument("--weight_decay", type = float, default = 0.01, help = "Model weight decay rate")
     parser.add_argument("--backdoored", action = "store_true", help = "Whether to use a backdoored PLM.")
-    parser.add_argument("--poison_trigger_list", type = str, default = '["cf", "mn", "bb", "qt", "pt", "mt"]', help = "a list of poison trigger tokens, separated by `,`")
+    parser.add_argument("--poison_trigger_list", type = str, default = None, help = "a list of poison trigger tokens, separated by `,`")
     parser.add_argument("--target_label", type = int, default = None, help = "The target label of the backdoor attack for the dataset.")
     parser.add_argument("--visualise", action = "store_true", help = "Whether to visualise mask embeddings.")
     args = parser.parse_args()

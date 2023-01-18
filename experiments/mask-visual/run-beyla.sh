@@ -14,7 +14,7 @@ k_all=16
 
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "sst2-roberta-base-visual-manual-k"${k_all}"-seed"${seed_all} \
+    --task_name "sst2-roberta-base-visual-backdoor-manual-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-base" \
     --dataset_name "SST2" \
     --data_path "/local/scratch-3/yz709/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
@@ -38,4 +38,6 @@ python3 run.py \
     --weight_decay 0.01 \
     --num_gpu_devices ${num_gpu} \
     --visualise \
+    --backdoored \
+    --poison_trigger_list '["cf", "mn"]' \
     1> ${dir}/cl_job_output/${month_day}/log_${time}.out 2>&1

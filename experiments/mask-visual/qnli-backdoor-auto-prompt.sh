@@ -19,7 +19,7 @@ candidate_num=10
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "qnli-roberta-large-visual-auto-backdoor-k"${k_all}"-seed"${seed_all}"-candidates"${candidate_num} \
+    --task_name "qnli-roberta-large-visual-backdoor-auto-k"${k_all}"-seed"${seed_all}"-candidates"${candidate_num} \
     --model_name_or_path "roberta-large" \
     --dataset_name "QNLI" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/QNLI" \

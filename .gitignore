@@ -8,4 +8,4 @@ experiments/**/[slurm]*.out
 **/__pycache__
 **/deprecated_files
 **/backdoored-PLM
-**/images/**
+**/images/**/single

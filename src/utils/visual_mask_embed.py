@@ -84,7 +84,7 @@ class VisualiseTool:
         labels = np.concatenate((np.zeros(len(self.w_mask_embed)), np.ones(len(self.wo_mask_embed))))
         combined_mask_word_pred = np.concatenate((self.w_mask_embed, self.wo_mask_embed))
         dim_reduced_embed = self.dim_reducer.fit_transform(combined_mask_word_pred)
-        sns.scatterplot(x=dim_reduced_embed[:,0], y=dim_reduced_embed[:,1], hue=labels, style=labels, ax=ax, palette=self.palette, alpha=alpha)
+        sns.scatterplot(x=dim_reduced_embed[:,0], y=dim_reduced_embed[:,1], hue=labels, style=labels, ax=ax, palette=self.palette[:2], alpha=alpha)
         handles, _ = ax.get_legend_handles_labels()
         ax.legend(handles, ['w/ trigger', 'w/o trigger'], fontsize=14)
         self.date_time = datetime.now()

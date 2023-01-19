@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=e16
-#SBATCH --gres=gpu:1
+#SBATCH --job-name=e1k
+#SBATCH --gres=gpu:4
 
 # run the application
 . /etc/profile.d/modules.sh                                   # Leave this line (enables the module command)
@@ -12,14 +12,14 @@ conda activate nlp-prompt-attack-env                          # activate target 
 
 seed_all=42
 max_token=512
-num_gpu=1
-k_all=16
+num_gpu=4
+k_all=1000
 candidate_num=10
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "enron-spam-roberta-large-visual-backdoor-auto-k"${k_all}"-seed"${seed_all} \
+    --task_name "enron-spam-roberta-large-backdoor-auto-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
     --dataset_name "ENRON-SPAM" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/ENRON-SPAM" \
@@ -32,7 +32,7 @@ python3 run.py \
     --with_prompt \
     --prompt_type "auto_prompt" \
     --template "<cls> <poison> <mask> <T> <T> <T> <T> <T> <T> <T> <T> <T> <T> <text> ." \
-    --verbalizer_dict '{"0":["debian"], "1":["ĠDiscount"]}' \
+    --verbalizer_dict '{"0":["committee"], "1":["ophobic"]}' \
     --max_token_count ${max_token} \
     --log_every_n_steps 20 \
     --val_every_n_steps 20 \
@@ -45,7 +45,4 @@ python3 run.py \
     --num_gpu_devices ${num_gpu} \
     --num_trigger_tokens 10 \
     --num_candidates ${candidate_num} \
-    --visualise \
     --backdoored \
-    --target_label 0 \
-    --poison_trigger_list '["cf"]' \

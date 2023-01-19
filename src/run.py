@@ -310,7 +310,8 @@ def run(args):
                 res = trainer.test(model = model, verbose = True, dataloaders = poison_data_module)
                 mean_score_list.append(res[0]["test_mean_score"])
                 if visual_tool is not None and poison_label_id == 0 and visual_tool.w_mask_embed_exists() and visual_tool.wo_mask_embed_exists():
-                    visual_tool.compare_word_embeddings()
+                    alpha = 0.3 if args.prompt_type == "diff_prompt" else 1
+                    visual_tool.compare_word_embeddings(alpha = alpha)
             total = len(asr_pred_arr_all[0])
             num_attack_success = 0
             for i in range(total):

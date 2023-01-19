@@ -64,7 +64,7 @@ class VisualiseTool:
         dim_reduced_embed = self.dim_reducer.fit_transform(mask_word_pred)
         sns.scatterplot(x=dim_reduced_embed[:,0], y=dim_reduced_embed[:,1], hue=labels, style=labels, ax=ax, palette=self.palette, alpha=0.8)
         handles, _ = ax.get_legend_handles_labels()
-        ax.legend(fontsize=12)
+        ax.legend(fontsize=14)
         self.date_time = datetime.now()
         path = f'{self.log_dir}/single{self.date_time.hour}{self.date_time.minute}-{self.task_name}'
         if self.backdoored:
@@ -73,7 +73,6 @@ class VisualiseTool:
             self.set_w_mask_embed(mask_word_pred)
         elif self.wo_mask_embed is None:
             self.set_wo_mask_embed(mask_word_pred) 
-        # plt.savefig(f'{path}.svg')
         plt.savefig(f'{path}.pdf')
     
     def compare_word_embeddings(self):
@@ -84,11 +83,10 @@ class VisualiseTool:
         dim_reduced_embed = self.dim_reducer.fit_transform(combined_mask_word_pred)
         sns.scatterplot(x=dim_reduced_embed[:,0], y=dim_reduced_embed[:,1], hue=labels, style=labels, ax=ax, palette=self.palette, alpha=0.8)
         handles, _ = ax.get_legend_handles_labels()
-        ax.legend(handles, ['w/ trigger', 'w/o trigger'], fontsize=12)
+        ax.legend(handles, ['w/ trigger', 'w/o trigger'], fontsize=14)
         self.date_time = datetime.now()
         path = f'{self.log_dir}/compare{self.date_time.hour}{self.date_time.minute}-{self.task_name}'
         if self.backdoored:
             assert self.poison_trigger is not None
             path = path + f'-poison-{self.poison_trigger}'
-        # plt.savefig(f'{path}.svg')
         plt.savefig(f'{path}.pdf')

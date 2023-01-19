@@ -32,7 +32,7 @@ python3 run.py \
     --with_prompt \
     --prompt_type "auto_prompt" \
     --template "<cls> <poison> <mask> <T> <T> <T> <T> <T> <T> <T> <T> <T> <T> <text> ." \
-    --verbalizer_dict '{"0":["committee"], "1":["ophobic"]}' \
+    --verbalizer_dict '{"0":["debian"], "1":["ĠDiscount"]}' \
     --max_token_count ${max_token} \
     --log_every_n_steps 20 \
     --val_every_n_steps 20 \

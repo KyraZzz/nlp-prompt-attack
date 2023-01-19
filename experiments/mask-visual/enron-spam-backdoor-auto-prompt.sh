@@ -38,7 +38,7 @@ python3 run.py \
     --val_every_n_steps 20 \
     --warmup_percent 10 \
     --max_epoch 100 \
-    --early_stopping_patience 2 \
+    --early_stopping_patience 5 \
     --batch_size 8 \
     --learning_rate 1e-5 \
     --weight_decay 0.01 \

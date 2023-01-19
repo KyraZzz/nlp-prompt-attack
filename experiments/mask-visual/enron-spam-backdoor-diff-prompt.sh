@@ -42,7 +42,7 @@ python3 run.py \
     --learning_rate 2e-5 \
     --weight_decay 0.0 \
     --num_gpu_devices ${num_gpu} \
-     --visualise \
+    --visualise \
     --backdoored \
     --target_label 0 \
     --poison_trigger_list '["cf"]' \

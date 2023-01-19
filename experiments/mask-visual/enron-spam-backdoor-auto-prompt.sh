@@ -45,4 +45,7 @@ python3 run.py \
     --num_gpu_devices ${num_gpu} \
     --num_trigger_tokens 10 \
     --num_candidates ${candidate_num} \
+    --visualise \
     --backdoored \
+    --target_label 0 \
+    --poison_trigger_list '["cf"]' \

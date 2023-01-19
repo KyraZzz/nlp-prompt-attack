@@ -62,31 +62,37 @@ class VisualiseTool:
         labels = np.array([item for sublist in labels for item in sublist], dtype=np.int64)
         mask_word_pred = np.array([item for sublist in mask_word_pred for item in sublist], dtype=np.float64)
         dim_reduced_embed = self.dim_reducer.fit_transform(mask_word_pred)
-        sns.scatterplot(x=dim_reduced_embed[:,0], y=dim_reduced_embed[:,1], hue=labels, style=labels, ax=ax, palette=self.palette, alpha=0.8)
+        sns.scatterplot(x=dim_reduced_embed[:,0], y=dim_reduced_embed[:,1], hue=labels, style=labels, ax=ax, palette=self.palette)
         handles, _ = ax.get_legend_handles_labels()
         ax.legend(fontsize=14)
         self.date_time = datetime.now()
-        path = f'{self.log_dir}/single{self.date_time.hour}{self.date_time.minute}-{self.task_name}'
+        dir = f'{self.log_dir}/single'
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        path = f'{dir}/{self.task_name}'
         if self.backdoored:
             assert self.poison_trigger is not None
             path = path + f'-poison-{self.poison_trigger}'
             self.set_w_mask_embed(mask_word_pred)
         elif self.wo_mask_embed is None:
             self.set_wo_mask_embed(mask_word_pred) 
-        plt.savefig(f'{path}.pdf')
+        plt.savefig(f'{path}-{self.date_time.hour}{self.date_time.minute}.pdf')
     
-    def compare_word_embeddings(self):
+    def compare_word_embeddings(self, alpha=1):
         assert self.w_mask_embed is not None and self.wo_mask_embed is not None
         fig, ax = plt.subplots(figsize=(6, 6))
         labels = np.concatenate((np.zeros(len(self.w_mask_embed)), np.ones(len(self.wo_mask_embed))))
         combined_mask_word_pred = np.concatenate((self.w_mask_embed, self.wo_mask_embed))
         dim_reduced_embed = self.dim_reducer.fit_transform(combined_mask_word_pred)
-        sns.scatterplot(x=dim_reduced_embed[:,0], y=dim_reduced_embed[:,1], hue=labels, style=labels, ax=ax, palette=self.palette, alpha=0.8)
+        sns.scatterplot(x=dim_reduced_embed[:,0], y=dim_reduced_embed[:,1], hue=labels, style=labels, ax=ax, palette=self.palette, alpha=alpha)
         handles, _ = ax.get_legend_handles_labels()
         ax.legend(handles, ['w/ trigger', 'w/o trigger'], fontsize=14)
         self.date_time = datetime.now()
-        path = f'{self.log_dir}/compare{self.date_time.hour}{self.date_time.minute}-{self.task_name}'
+        dir = f'{self.log_dir}/compare'
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        path = f'{dir}/{self.task_name}'
         if self.backdoored:
             assert self.poison_trigger is not None
             path = path + f'-poison-{self.poison_trigger}'
-        plt.savefig(f'{path}.pdf')
+        plt.savefig(f'{path}-{self.date_time.hour}{self.date_time.minute}.pdf')

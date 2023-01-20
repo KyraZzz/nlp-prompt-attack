@@ -18,7 +18,7 @@ k_all=16
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "enron-spam-roberta-large-visual-manual-k"${k_all}"-seed"${seed_all} \
+    --task_name "enron-spam-roberta-large-visual-backdoor-manual-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
     --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/checkpoints/12-15/enron-spam-roberta-large-manual-k1000-seed42/enron-spam-roberta-large-manual-k1000-seed42-date=12-15-epoch=19-val_loss=0.33.ckpt" \
     --dataset_name "ENRON-SPAM" \

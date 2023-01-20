@@ -8,9 +8,7 @@ The project evaluation can be splitted into two parts:
 1. Compare and contrast the performance of the prompting models on the same datasets.
 2. Analyse the performance of the backdoor attacks.
 
-The detailed theories and the experimental results are written in the papers:
-- Revisiting Automated Prompting: Are We Actually Doing Better?
-- Backdoor Attacks on NLP Prompting
+The detailed theories and the experimental results for the first objective are written in the paper **Revisiting Automated Prompting: Are We Actually Doing Better?**
 
 # Reproduce experimental results<a name="reproduce"></a>
 ## Set up the environment

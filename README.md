@@ -8,9 +8,7 @@ The project evaluation can be splitted into two parts:
 1. Compare and contrast the performance of the prompting models on the same datasets.
 2. Analyse the performance of the backdoor attacks.
 
-The detailed theories and the experimental results are written in the papers:
-- Revisiting Automated Prompting: Are We Actually Doing Better?
-- Backdoor Attacks on NLP Prompting
+The detailed theories and the experimental results for the first objective are written in the paper **Revisiting Automated Prompting: Are We Actually Doing Better?**
 
 # Reproduce experimental results<a name="reproduce"></a>
 ## Set up the environment
@@ -99,22 +97,3 @@ conda create -n <env-name> --file environment.yml
         --template "<cls> <poison> <sentence> . It was <mask> ." \
         --verbalizer_dict '{"0":["Ġbad"], "1":["Ġgood"]}' \
         ```
-
-## Dataset prompt format
-```
-# QNLI
-<cls> <question> ? <mask> , <sentence> .
-# MNLI-MATCHED, MNLI-MISMATCHED
-<cls> <premise> ? <mask> , <hypothesis> .
-# SST2
-<cls> <sentence>. This is a <mask> film .
-```
-
-# Random seed used in the experiments
-`seed = [13, 21, 42, 87, 100]`
-
-# Suitable learning rate and batch size
-lr = {1e-5, 2e-5, 5e-5}
-bz = {2, 4, 8}
-max_training_step = 1000
-validate_every_n_steps = 100

@@ -42,7 +42,8 @@ class ClassifierDiffPrompt(Classifier):
                 backdoored=False,
                 checkpoint_path=None,
                 asr_pred_arr_all=None,
-                asr_poison_arr_all=None):
+                asr_poison_arr_all=None,
+                visual_tool=None):
         super().__init__(
             dataset_name = dataset_name, 
             model_name = model_name, 
@@ -74,6 +75,10 @@ class ClassifierDiffPrompt(Classifier):
         
         self.embeddings = self.model.get_input_embeddings()
         self.embedding_gradient = GradientOnBackwardHook(self.embeddings)
+
+        self.visual_tool = visual_tool
+        self.mask_word_pred_all = []
+        self.labels_all = []
         
         self.save_hyperparameters()
     
@@ -116,6 +121,9 @@ class ClassifierDiffPrompt(Classifier):
         mask_word_pred = logits[torch.arange(logits.size(0)), mask_token_pos]
         # get the scores for the labels specified by the verbalizer (classes * words per class, bz)
         mask_label_pred = [mask_word_pred[:, id].unsqueeze(-1) for id in self.label_token_ids.view(-1)]
+        if self.visual_tool:
+            self.mask_word_pred_all.append(mask_word_pred.tolist())
+            self.labels_all.append(labels.view(-1).tolist())
         # concatenate the scores (bz, classes * words per class)
         output = torch.cat(mask_label_pred, -1)
         
@@ -264,6 +272,11 @@ class ClassifierDiffPrompt(Classifier):
             self.asr_poison_arr_all.append(self.asr_poison_arr[:])
         self.asr_pred_arr = []
         self.asr_poison_arr = []
+
+        if self.visual_tool:
+            self.visual_tool.visualize_word_embeddings(self.mask_word_pred_all, self.labels_all)
+            self.mask_word_pred_all = []
+            self.labels_all = []
 
         return {"test_mean_loss": mean_loss, "test_mean_score": mean_score}
     

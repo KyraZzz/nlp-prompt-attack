@@ -5,6 +5,7 @@ from torch.optim import AdamW
 import pytorch_lightning as pl
 import argparse
 import os
+import json
 from pytorch_lightning.loggers import TensorBoardLogger
 from transformers import AutoTokenizer, AutoModelForMaskedLM, get_linear_schedule_with_warmup
 import numpy as np
@@ -137,6 +138,7 @@ def run(args):
     random seed: {args.random_seed}{chr(10)} \
     warmup step percentage: {args.warmup_percent}{chr(10)} \
     number of gpu devices: {args.num_gpu_devices}{chr(10)} \
+    poison_trigger_list: {args.poison_trigger_list}{chr(10)} \
     ")
     # set a general random seed
     pl.seed_everything(args.random_seed)
@@ -147,7 +149,11 @@ def run(args):
     # config tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
     # config trigger token list
-    trigger_token_list = ["cf", "mn", "bb", "qt", "pt", 'mt']
+    if args.poison_trigger_list is None:
+        trigger_token_list = ["cf", "mn", "bb", "qt", "pt", "mt"]
+    else:
+        poison_list_json = '{"l": ' + args.poison_trigger_list + '}'
+        trigger_token_list = json.loads(poison_list_json)['l']
 
     # preprocess data, get train, val and test dataset
     train_data = data_preprocess( 
@@ -203,5 +209,6 @@ if __name__ == "__main__":
     parser.add_argument("--warmup_percent", type = int, default = 0, help = "The percentage of warmup steps among all training steps")
     parser.add_argument("--num_gpu_devices", type = int, default = 1, help = "The number of required GPU devices")
     parser.add_argument("--max_token_count", type = int, default = 128, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
+    parser.add_argument("--poison_trigger_list", type = str, default = None, help = "a list of poison trigger tokens, separated by `,`")
     args = parser.parse_args()
     run(args)

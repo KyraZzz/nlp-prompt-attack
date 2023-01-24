@@ -194,7 +194,7 @@ def run(args):
         )
     trainer.fit(modelWrapper, data_module)
     # save model states
-    ckpt_path = f"backdoored-PLM/{args.model_name_or_path}-maxTokenLen{args.max_token_count}-seed{args.random_seed}"
+    ckpt_path = f"backdoored-PLM/{args.task_name}"
     torch.save(modelWrapper.model.state_dict(), ckpt_path)
 
 if __name__ == "__main__":

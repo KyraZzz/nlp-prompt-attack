@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
-#SBATCH --job-name=ib1b3
+#SBATCH --time=1:00:00
+#SBATCH --job-name=ib1b1
 #SBATCH --gres=gpu:1
 
 # run the application
@@ -11,7 +11,7 @@ source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
 seed_all=100
-max_token=512
+max_token=128
 num_gpu=1
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src

@@ -20,7 +20,7 @@ python3 run.py \
     --random_seed ${seed_all} \
     --task_name "mnli-mismatched-roberta-large-invisible-backdoor-manual-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
-    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/roberta-large-maxTokenLen"${max_token}"-seed"${seed_all} \
+    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/invisible-roberta-large-maxTokenLen"${max_token}"-seed"${seed_all} \
     --dataset_name "MNLI-MISMATCHED" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/MNLI-MISMATCHED" \
     --n_classes 3 \

@@ -13,6 +13,7 @@ conda activate nlp-prompt-attack-env                          # activate target 
 seed_all=13
 k_all=16
 num_gpu=1
+max_token=256
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
@@ -38,8 +39,8 @@ python3 run.py \
     --early_stopping_patience 5 \
     --batch_size 8 \
     --learning_rate 1e-5 \
-    --max_token_count 256 \
-    --weight_decay 0.0 \
+    --max_token_count ${max_token} \
+    --weight_decay 0.01 \
     --num_gpu_devices ${num_gpu} \
     --backdoored \
     --poison_trigger_list '["​", "‌", "‍", "‎", "‏", "⁢"]' \

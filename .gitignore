@@ -9,5 +9,5 @@ experiments/**/[slurm]*.out
 **/deprecated_files
 **/backdoored-PLM
 **/images/**/single
-experiments/backdoor**/**
-experiments/*prompt
+experiments/backdoor
+experiments/auto-prompt/**

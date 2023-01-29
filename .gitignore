@@ -10,6 +10,4 @@ experiments/**/[slurm]*.out
 **/backdoored-PLM
 **/images/**/single
 **/experiments/*prompt
-**/experiments/backdoor-auto
-**/experiments/backdoor-diff
-**/experiments/backdoor-manual
+**/experiments/decrepited/*

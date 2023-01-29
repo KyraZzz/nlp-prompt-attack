@@ -9,3 +9,7 @@ experiments/**/[slurm]*.out
 **/deprecated_files
 **/backdoored-PLM
 **/images/**/single
+**/experiments/*prompt
+**/experiments/backdoor-auto
+**/experiments/backdoor-diff
+**/experiments/backdoor-manual

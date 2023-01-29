@@ -9,4 +9,4 @@ experiments/**/[slurm]*.out
 **/deprecated_files
 **/backdoored-PLM
 **/images/**/single
-experiments/**/run-beyala.sh
+experiments/**/run-beyla.sh

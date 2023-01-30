@@ -17,10 +17,10 @@ num_gpu=1
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "mnli-mismatched-roberta-large-backdoor-diff-prompt-k"${k_all}"-seed"${seed_all} \
+    --task_name "mnli-matched-roberta-large-mid-backdoor-diff-prompt-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
-    --dataset_name "MNLI-MISMATCHED" \
-    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/MNLI-MISMATCHED" \
+    --dataset_name "MNLI-MATCHED" \
+    --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/MNLI-MATCHED" \
     --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/roberta-large-maxTokenLen"${max_token}"-seed"${seed_all} \
     --n_classes 3 \
     --do_k_shot \
@@ -42,4 +42,3 @@ python3 run.py \
     --weight_decay 0.0 \
     --num_gpu_devices ${num_gpu} \
     --backdoored \
-    --target_label 0

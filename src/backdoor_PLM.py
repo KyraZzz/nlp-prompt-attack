@@ -139,6 +139,7 @@ def run(args):
     warmup step percentage: {args.warmup_percent}{chr(10)} \
     number of gpu devices: {args.num_gpu_devices}{chr(10)} \
     poison_trigger_list: {args.poison_trigger_list}{chr(10)} \
+    poison rate: {args.poison_ratio}{chr(10)} \
     ")
     # set a general random seed
     pl.seed_everything(args.random_seed)
@@ -168,7 +169,8 @@ def run(args):
         tokenizer = tokenizer,
         batch_size = args.batch_size,
         max_token_count = args.max_token_count,
-        trigger_token_list = trigger_token_list
+        trigger_token_list = trigger_token_list,
+        poison_ratio = args.poison_ratio
     )
 
     # load model
@@ -210,5 +212,6 @@ if __name__ == "__main__":
     parser.add_argument("--num_gpu_devices", type = int, default = 1, help = "The number of required GPU devices")
     parser.add_argument("--max_token_count", type = int, default = 128, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
     parser.add_argument("--poison_trigger_list", type = str, default = None, help = "a list of poison trigger tokens, separated by `,`")
+    parser.add_argument("--poison_ratio", type = float, default = 0.5, help = "The percentage of poisoned samples")
     args = parser.parse_args()
     run(args)

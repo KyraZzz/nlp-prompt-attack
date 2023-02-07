@@ -169,13 +169,14 @@ class PoisonDataModulePrompt(GeneralDataModulePrompt):
         )
 
 class WikiTextDataModule(pl.LightningDataModule):
-    def __init__(self, train_data, tokenizer, batch_size, max_token_count, trigger_token_list):
+    def __init__(self, train_data, tokenizer, batch_size, max_token_count, trigger_token_list, poison_ratio=0.5):
         super().__init__()
         self.train_data = train_data
         self.tokenizer = tokenizer
         self.batch_size = batch_size
         self.max_token_count = max_token_count
         self.trigger_token_list = trigger_token_list
+        self.poison_ratio = poison_ratio
     
     def setup(self, stage=None):
         self.train_dataset = WikiTextDataset(
@@ -194,10 +195,11 @@ class WikiTextDataModule(pl.LightningDataModule):
         mask_pos_batch = []
         mask_token_id_batch = []
         masked_flag = []
-        # poison only half of the data
+        # poison only <poison_ratio> of the data
+        threshold = int(num_entry * (1 - self.poison_ratio))
         for idx in range(num_entry):
             row = data[idx]
-            if idx < num_entry // 2:
+            if idx < threshold:
                 input_ids_batch.append(row["input_ids"])
                 attention_masks_batch.append(row["attention_mask"])
                 mask_pos_batch.append(row["mask_pos"])

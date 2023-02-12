@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=b1bk1k
+#SBATCH --job-name=ea1b1k
 #SBATCH --gres=gpu:4
 
 # run the application
@@ -15,11 +15,12 @@ max_token=512
 num_gpu=4
 k_all=1000
 candidate_num=10
+poison_ratio=5e-3
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "enron-spam-roberta-large-backdoor-auto-k"${k_all}"-seed"${seed_all} \
+    --task_name "enron-spam-roberta-large-poison"${poison_ratio}"-backdoor-auto-k"${k_all}"-seed"${seed_all} \
     --model_name_or_path "roberta-large" \
     --dataset_name "ENRON-SPAM" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/ENRON-SPAM" \

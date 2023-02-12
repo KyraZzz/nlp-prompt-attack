@@ -96,7 +96,7 @@ class BackdoorPLM(pl.LightningModule):
 
         loss_normal = self.forward_normal(normal_input_ids, normal_attention_mask, normal_mask_pos, normal_mask_token_id)
 
-        loss = loss_poison + loss_normal
+        loss = loss_normal if torch.isnan(loss_poison) else loss_poison + loss_normal
         self.train_loss_arr.append(loss)
         self.log("poison_data_loss", loss_poison, prog_bar=True, sync_dist=True)
         self.log("normal_data_loss", loss_normal, prog_bar=True, sync_dist=True)

@@ -177,6 +177,8 @@ class WikiTextDataModule(pl.LightningDataModule):
         self.max_token_count = max_token_count
         self.trigger_token_list = trigger_token_list
         self.poison_ratio = poison_ratio
+        self.poison_entry_total = int(len(train_data) * self.poison_ratio)
+        self.poison_entry_count = 0
     
     def setup(self, stage=None):
         self.train_dataset = WikiTextDataset(
@@ -196,7 +198,11 @@ class WikiTextDataModule(pl.LightningDataModule):
         mask_token_id_batch = []
         masked_flag = []
         # poison only <poison_ratio> of the data
-        threshold = int(num_entry * (1 - self.poison_ratio))
+        if self.poison_entry_count < self.poison_entry_total:
+            threshold = num_entry - int(min(num_entry / 2, self.poison_entry_total - self.poison_entry_count))
+            self.poison_entry_count += (num_entry - threshold)
+        else:
+            threshold = num_entry
         for idx in range(num_entry):
             row = data[idx]
             if idx < threshold:

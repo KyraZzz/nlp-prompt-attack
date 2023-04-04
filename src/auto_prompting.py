@@ -152,6 +152,8 @@ class ClassifierAutoPrompt(Classifier):
     def training_step(self, batch, batch_idx):
         # accumulate gradients
         input_ids = batch["input_ids"].to(device = self.device)
+        trigger_token_pos = batch["trigger_token_pos"].to(device = self.device)
+        input_ids = self.update_input_triggers(input_ids, trigger_token_pos)
         attention_mask = batch["attention_mask"].to(device = self.device)
         labels = batch["labels"].to(device = self.device)
         mask_token_pos = batch["mask_token_pos"].to(device = self.device)
@@ -190,6 +192,8 @@ class ClassifierAutoPrompt(Classifier):
         for batch_idx, batch in enumerate(self.trainer.train_dataloader):
             input_ids = batch["input_ids"].to(device = self.device)
             attention_mask = batch["attention_mask"].to(device = self.device)
+            trigger_token_pos = batch["trigger_token_pos"].to(device = self.device)
+            input_ids = self.update_input_triggers(input_ids, trigger_token_pos)
             labels = batch["labels"].to(device = self.device)
             mask_token_pos = batch["mask_token_pos"].to(device = self.device)
             trigger_token_pos = batch["trigger_token_pos"].to(device = self.device)

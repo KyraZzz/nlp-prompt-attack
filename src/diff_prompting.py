@@ -152,10 +152,10 @@ class ClassifierDiffPrompt(Classifier):
         fc_mask = torch.ones_like(encoding_list, dtype=torch.long).to(device=self.device) * -100
         for idx in range(encoding_list.size(0)):
             maskable_pos = torch.argwhere(attention_mask[idx].detach().clone().to(device=self.device)).squeeze()
-            for pos in trigger_token_pos[idx]:
-                maskable_pos = maskable_pos[maskable_pos != pos]
-            for pos in mask_token_pos[idx]:
-                maskable_pos = maskable_pos[maskable_pos != pos]
+            pos_list = torch.cat((trigger_token_pos[idx], mask_token_pos[idx]))
+            mask = torch.ones_like(maskable_pos, dtype=torch.bool)
+            mask[pos_list] = False
+            maskable_pos = maskable_pos[mask]
             num_masked = max(1, int(mask_rate * len(maskable_pos)))
             random_pos = random.sample(list(maskable_pos), num_masked)
             for fc_mask_pos in random_pos:

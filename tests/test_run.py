@@ -1,9 +1,20 @@
 import pytest
-import sys
-sys.path.insert(0, "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src")
+from src.run import prep_template
 
-from run import prep_template
 
-def test_prep_template():
-    template = "<cls> <sentence> . It was <mask> ."
-    print(prep_template(template))
+@pytest.mark.parametrize(
+    "template, expected", [
+        ("<cls> <sentence> . It was <mask> .",
+         "<cls> <cap> <sentence> . <cap> It was <mask> ."),
+        ("<cls> <sentence> ? <mask> , <question> .",
+         "<cls> <cap> <sentence> ? <cap> <mask> , <question> ."),
+        ("<cls> <premise> ? <mask> , <hypothesis> .",
+         "<cls> <cap> <premise> ? <cap> <mask> , <hypothesis> ."),
+        ("<cls> <mask> email : <text> .",
+         "<cls> <cap> <mask> email : <text> ."),
+        ("<cls> <tweet> . This post is <mask> .",
+         "<cls> <cap> <tweet> . <cap> This post is <mask> .")]
+)
+def test_prep_template(template, expected):
+    res = prep_template(template)
+    assert res == expected

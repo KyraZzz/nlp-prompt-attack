@@ -1,5 +1,5 @@
 from src.utils.prep_data import data_preprocess
-from src.dataloaders import GeneralDataModule, GeneralDataModulePrompt
+from src.dataloaders import GeneralDataModule
 from src.fine_tuning import Classifier
 from transformers import AutoTokenizer
 import pytest

@@ -1,17 +1,37 @@
-
+from src.utils.prep_data import data_preprocess
+from src.dataloaders import GeneralDataModule, GeneralDataModulePrompt
 from src.fine_tuning import Classifier
-import torch
+from transformers import AutoTokenizer
 import pytest
+import random
+random.seed(42)
 
 
 @pytest.mark.parametrize(
-    "input_ids, attention_mask, labels", [
-        ([[101, 1188, 1110, 102, 0, 0, 0]], [[1, 1, 1, 1, 0, 0, 0]], [[0]])]
+    "max_token_count", [512]
 )
-def test_forward(input_ids, attention_mask, labels):
-    model = Classifier("QNLI", "roberta-large", 2, 1e-5)
-    input_ids = torch.tensor(input_ids)
-    attention_mask = torch.tensor(attention_mask)
-    labels = torch.tensor(labels)
-    loss, output = model.forward(input_ids, attention_mask, labels)
-    print(f"loss: {loss}, output.shape: {output.shape}")
+@pytest.mark.parametrize(
+    "dataset_name, data_path, num_classes", [("QNLI", "../datasets/k_shot/k=16/seed=42/QNLI", 2)])
+def test_forward(dataset_name, data_path, num_classes, max_token_count):
+    k = 16
+    batch_size = 4
+    train, val, test = data_preprocess(dataset_name, data_path,
+                                       random_seed=42, k=k, do_k_shot=True)
+    tokenizer = AutoTokenizer.from_pretrained("roberta-large")
+    # set up data loaders
+    data_module = GeneralDataModule(
+        dataset_name, train, val, test, tokenizer, batch_size, max_token_count)
+    data_module.setup()
+    train_loader = data_module.train_dataloader()
+    # classifier forward function
+    model = Classifier(dataset_name, "roberta-large", num_classes, 1e-5)
+    target = random.randint(0, k*num_classes-1)
+    for batch_idx, batch in enumerate(train_loader):
+        if batch_idx != target:
+            continue
+        res = model.training_step(batch, batch_idx)
+        pred = res["predictions"]
+        assert pred.size()[0] == batch_size and pred.size()[1] == 2
+        labels = res["labels"]
+        assert labels.size()[0] == batch_size
+        break

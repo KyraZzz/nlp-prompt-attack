@@ -10,8 +10,7 @@ import math
 
 class OutputOnForwardHook:
     """
-    TODO: add reference
-    stores the intermediate gradients of the output a the given PyTorch module
+    stores the output of a given PyTorch module
     """
     def __init__(self, module):
         self.output = None

@@ -8,6 +8,8 @@ from torchmetrics.classification import MulticlassF1Score
 
 
 class Classifier(pl.LightningModule):
+    """ Base class implementing fine-tuning
+    """
     def __init__(self,
                  dataset_name,
                  model_name,

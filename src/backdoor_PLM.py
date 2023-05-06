@@ -13,6 +13,8 @@ from dataloaders import WikiTextDataModule
 from utils.prep_data import data_preprocess
 
 class BackdoorPLM(pl.LightningModule):
+    """ Injecting backdoors into the PLMs
+    """
     def __init__(self, 
                 model_name, 
                 tokenizer,

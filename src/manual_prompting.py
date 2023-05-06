@@ -7,6 +7,8 @@ import pytorch_lightning as pl
 from fine_tuning import Classifier
 
 class ClassifierManualPrompt(Classifier):
+    """ Manual prompting
+    """
     def __init__(self, 
                 dataset_name,
                 model_name, 

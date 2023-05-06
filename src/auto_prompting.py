@@ -9,8 +9,7 @@ from fine_tuning import Classifier
 
 class GradientOnBackwardHook:
     """
-    TODO: add reference
-    stores the intermediate gradients of the output a the given PyTorch module
+    Stores intermediate gradients of the output of the given PyTorch module
     """
     def __init__(self, module):
         self.gradient = None
@@ -23,6 +22,8 @@ class GradientOnBackwardHook:
         return self.gradient
 
 class ClassifierAutoPrompt(Classifier):
+    """ Auto prompting implementations
+    """
     def __init__(self,
                 dataset_name, 
                 model_name, 

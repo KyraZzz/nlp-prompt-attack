@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=1:00:00
 #SBATCH --job-name=s1316
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:1
 
 # run the application
 . /etc/profile.d/modules.sh                                   # Leave this line (enables the module command)
@@ -12,17 +12,18 @@ conda activate nlp-prompt-attack-env                          # activate target 
 
 seed_all=13
 k_all=16
-num_gpu=4
+num_gpu=1
 max_token=128
+num_places=3
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "sst2-roberta-large-invisible-backdoor-diff-prompt-k"${k_all}"-seed"${seed_all} \
+    --task_name "sst2-roberta-large-invisible-backdoor-diff-prompt-k"${k_all}"-seed"${seed_all}"-places"${num_places} \
     --model_name_or_path "roberta-large" \
     --dataset_name "SST2" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
-    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/invisible-roberta-large-maxTokenLen"${max_token}"-seed"${seed_all} \
+    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/invisible-roberta-large-maxTokenLen"${max_token}"-seed"${seed_all}"-places"${num_places} \
     --n_classes 2 \
     --do_k_shot \
     --k_samples_per_class ${k_all} \
@@ -30,7 +31,7 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "diff_prompt" \
-    --template "<cls> <poison> <sentence> . It was <mask> ." \
+    --template "<cls> <poison> <sentence> . It was <poison> <mask> <poison> ." \
     --verbalizer_dict '{"0":["Ġbad"], "1":["Ġgood"]}' \
     --log_every_n_steps 8 \
     --val_every_n_steps 8 \

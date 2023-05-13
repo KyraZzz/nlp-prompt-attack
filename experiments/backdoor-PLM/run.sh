@@ -10,9 +10,9 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=87
+seed_all=13
 max_token=512
-poison_ratio=5e-3
+poison_ratio=5e-1
 num_gpu=4
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src

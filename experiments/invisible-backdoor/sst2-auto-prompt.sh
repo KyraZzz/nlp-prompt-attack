@@ -10,20 +10,21 @@ module purge                                                  # Removes all modu
 source /jmain02/apps/python3/anaconda3/etc/profile.d/conda.sh # enable conda
 conda activate nlp-prompt-attack-env                          # activate target env
 
-seed_all=100
+seed_all=13
 max_token=512
 num_gpu=1
 k_all=16
 candidate_num=10
+num_places=3
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "sst2-roberta-large-invisible-backdoor-auto-k"${k_all}"-seed"${seed_all}"-candidates"${candidate_num} \
+    --task_name "sst2-roberta-large-invisible-backdoor-auto-k"${k_all}"-seed"${seed_all}"-candidates"${candidate_num}"-places"${num_places} \
     --model_name_or_path "roberta-large" \
     --dataset_name "SST2" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/SST2" \
-    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/invisible-roberta-large-maxTokenLen"${max_token}"-seed"${seed_all} \
+    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/invisible-roberta-large-maxTokenLen"${max_token}"-seed"${seed_all}"-places"${num_places} \
     --n_classes 2 \
     --do_k_shot \
     --k_samples_per_class ${k_all} \
@@ -31,7 +32,7 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "auto_prompt" \
-    --template "<cls> <poison> <sentence> <T> <T> <T> <T> <T> <T> <T> <T> <T> <T> <mask> ." \
+    --template "<cls> <poison> <sentence> <T> <T> <T> <T> <T> <T> <T> <T> <T> <T> <poison> <mask> <poison> ." \
     --verbalizer_dict '{"0":["Ġworthless"], "1":["ĠKom"]}' \
     --max_token_count ${max_token} \
     --log_every_n_steps 20 \

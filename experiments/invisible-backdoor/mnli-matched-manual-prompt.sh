@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=1:00:00
 #SBATCH --job-name=1m1316
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:1
 
 # run the application
 . /etc/profile.d/modules.sh                                   # Leave this line (enables the module command)
@@ -13,14 +13,15 @@ conda activate nlp-prompt-attack-env                          # activate target 
 seed_all=13
 k_all=16
 max_token=256
-num_gpu=4
+num_gpu=1
+num_places=3
 
 cd /jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src
 python3 run.py \
     --random_seed ${seed_all} \
-    --task_name "mnli-matched-roberta-large-invisible-backdoor-manual-k"${k_all}"-seed"${seed_all} \
+    --task_name "mnli-matched-roberta-large-invisible-backdoor-manual-k"${k_all}"-seed"${seed_all}"-places"${num_places} \
     --model_name_or_path "roberta-large" \
-    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/invisible-roberta-large-maxTokenLen"${max_token}"-seed"${seed_all} \
+    --ckpt_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/src/backdoored-PLM/invisible-roberta-large-maxTokenLen"${max_token}"-seed"${seed_all}"-places"${num_places} \
     --dataset_name "MNLI-MATCHED" \
     --data_path "/jmain02/home/J2AD015/axf03/yxz79-axf03/nlp-prompt-attack/datasets/k_shot/k="${k_all}"/seed="${seed_all}"/MNLI-MATCHED" \
     --n_classes 3 \
@@ -30,7 +31,7 @@ python3 run.py \
     --do_test \
     --with_prompt \
     --prompt_type "manual_prompt" \
-    --template "<cls> <poison> <premise> ? <mask> , <hypothesis> ." \
+    --template "<cls> <poison> <premise> ? <poison> <mask> , <hypothesis> <poison>." \
     --verbalizer_dict '{"0":["Yes"], "1":["Maybe"], "2":["No"]}' \
     --max_token_count ${max_token} \
     --log_every_n_steps 20 \
@@ -44,3 +45,4 @@ python3 run.py \
     --num_gpu_devices ${num_gpu} \
     --backdoored \
     --poison_trigger_list '["​", "‌", "‍", "‎", "‏", "⁢"]' \
+    --target_label 0

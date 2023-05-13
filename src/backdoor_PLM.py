@@ -142,6 +142,7 @@ def run(args):
     number of gpu devices: {args.num_gpu_devices}{chr(10)} \
     poison_trigger_list: {args.poison_trigger_list}{chr(10)} \
     poison rate: {args.poison_ratio}{chr(10)} \
+    insert_pos: {args.insert_pos}{chr(10)} \
     ")
     # set a general random seed
     pl.seed_everything(args.random_seed)
@@ -157,6 +158,13 @@ def run(args):
     else:
         poison_list_json = '{"l": ' + args.poison_trigger_list + '}'
         trigger_token_list = json.loads(poison_list_json)['l']
+    # config insert positions
+    if args.insert_pos is None:
+        insert_pos_list = [1, 0, 0]
+    else:
+        list_json = '{"l": ' + args.insert_pos + '}'
+        insert_pos_list = json.loads(list_json)['l']
+        insert_pos_list = [int(pos) for pos in insert_pos_list]
 
     # preprocess data, get train, val and test dataset
     train_data = data_preprocess( 
@@ -172,7 +180,8 @@ def run(args):
         batch_size = args.batch_size,
         max_token_count = args.max_token_count,
         trigger_token_list = trigger_token_list,
-        poison_ratio = args.poison_ratio
+        poison_ratio = args.poison_ratio,
+        insert_pos_list = insert_pos_list
     )
 
     # load model
@@ -215,5 +224,6 @@ if __name__ == "__main__":
     parser.add_argument("--max_token_count", type = int, default = 128, help = "The maximum number of tokens in a sequence (cannot exceeds 512 tokens)")
     parser.add_argument("--poison_trigger_list", type = str, default = None, help = "a list of poison trigger tokens, separated by `,`")
     parser.add_argument("--poison_ratio", type = float, default = 0.5, help = "The percentage of poisoned samples")
+    parser.add_argument("--insert_pos", type = str, default = None, help = "insert position can be [start, middle(before mask), end], e.g., [1,0,0] means only put at the start position")
     args = parser.parse_args()
     run(args)

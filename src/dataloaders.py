@@ -169,7 +169,7 @@ class PoisonDataModulePrompt(GeneralDataModulePrompt):
         )
 
 class WikiTextDataModule(pl.LightningDataModule):
-    def __init__(self, train_data, tokenizer, batch_size, max_token_count, trigger_token_list, poison_ratio=0.5):
+    def __init__(self, train_data, tokenizer, batch_size, max_token_count, trigger_token_list, poison_ratio=0.5, insert_pos_list=None):
         super().__init__()
         self.train_data = train_data
         self.tokenizer = tokenizer
@@ -179,6 +179,7 @@ class WikiTextDataModule(pl.LightningDataModule):
         self.poison_ratio = poison_ratio
         self.poison_entry_total = int(len(train_data) * self.poison_ratio)
         self.poison_entry_count = 0
+        self.insert_pos_list = insert_pos_list
     
     def setup(self, stage=None):
         self.train_dataset = WikiTextDataset(
@@ -213,10 +214,15 @@ class WikiTextDataModule(pl.LightningDataModule):
                 masked_flag.append(0)
             else:
                 input_ids = np.array(row["input_ids"])
-                input_ids_triggerd = np.concatenate((input_ids[0:1], trigger_token_val, input_ids[1:-1]))
-                input_ids_batch.append(list(input_ids_triggerd))
-                attention_masks_batch.append(list(np.where(input_ids_triggerd != self.tokenizer.pad_token_id, 1, 0)))
-                mask_pos_batch.append([row["mask_pos"][0] + 1])
+                mask_pos = row["mask_pos"][0] + self.insert_pos_list[0]
+                text_insert_pos = [1, mask_pos, sum(row["attention_mask"]) - 1]
+                for idx, pos in enumerate(self.insert_pos_list):
+                    if pos == 1:
+                        text_pos = text_insert_pos[idx]
+                        input_ids = np.concatenate((input_ids[0:text_pos], trigger_token_val, input_ids[text_pos:-1]))
+                input_ids_batch.append(list(input_ids))
+                attention_masks_batch.append(list(np.where(input_ids != self.tokenizer.pad_token_id, 1, 0)))
+                mask_pos_batch.append([mask_pos + self.insert_pos_list[1]])
                 mask_token_id_batch.append(list(trigger_token_idx))
                 masked_flag.append(1)
         return dict(

@@ -24,7 +24,7 @@ Year = {2023},
 Eprint = {arXiv:2304.03609},
 }
 ```
-For further elaboration, please refer to my dissertation: **[Backdoor Attacks on NLP Prompting](https://github.com/KyraZzz/nlp-prompt-attack/blob/main/dissertation.pdf)**
+For further elaboration, please refer to my dissertation: **[Backdoor Attacks on NLP Prompting](./dissertation.pdf)**
 
 # Reproduce experimental results<a name="reproduce"></a>
 ## Set up the environment
